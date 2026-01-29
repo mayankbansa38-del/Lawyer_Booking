@@ -107,8 +107,26 @@
   transition: left 0.5s ease;
 }
 
+.home-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
 .home-btn:hover::before {
   left: 100%;
+}
+
+.home-btn:hover::after {
+  width: 300px;
+  height: 300px;
 }
 
 .home-btn:hover {

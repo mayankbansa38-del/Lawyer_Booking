@@ -3,6 +3,7 @@ import "./All_lawyer.css";
 import Lawyer_card from "./Lawyer_card";
 
 const lawyerSpecialists = [
+  "All",
   "Criminal Lawyer",
   "Family Lawyer",
   "Corporate Lawyer",
@@ -11,7 +12,7 @@ const lawyerSpecialists = [
   "Civil Lawyer",
 ];
 const All_lawyer=() => {
-const [selected, setSelected] = useState("Criminal Lawyer");
+const [selected, setSelected] = useState("All");
   return (
     <div className="page">
       {/* LEFT SIDE */}
