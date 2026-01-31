@@ -1,8 +1,20 @@
 /* ===== WRAPPER ===== */
 .top-lawyers-wrapper {
   width: 100%;
-  background: linear-gradient(135deg, #0f172a, #1e293b);
-  padding: 70px 0;
+  background: linear-gradient(180deg, #1a1d2e 0%, #16213e 40%, #1a1d2e 100%);
+  padding: 90px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.top-lawyers-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.5), transparent);
 }
 
 /* ===== SECTION ===== */
@@ -15,91 +27,446 @@
 
 /* ===== HEADINGS ===== */
 .top-lawyers h2 {
-  font-size: 34px;
-  font-weight: 800;
-  color: #f8fafc;
-  margin-bottom: 8px;
+  font-size: 42px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #f8fafc, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
 }
 
 .top-lawyers p {
-  font-size: 15px;
-  color: #cbd5e1;
-  margin-bottom: 40px;
+  font-size: 16px;
+  color: #94a3b8;
+  margin-bottom: 50px;
 }
 
 /* ===== GRID ===== */
 .lawyer-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 35px;
   justify-items: center;
 }
 
-/* ===== CARD ===== */
+/* ===== CARD BASE ===== */
 .lawyer-card {
-  background: #ffffff;
-  border-radius: 18px;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.12), 
+    rgba(255, 255, 255, 0.06)
+  );
+  backdrop-filter: blur(10px) saturate(150%);
+  border-radius: 28px;
   overflow: hidden;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
-  transition: all 0.3s ease;
-  max-width: 300px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 340px;
   width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  position: relative;
+  cursor: pointer;
+}
+
+/* Animated gradient top border */
+.lawyer-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 200%;
+  height: 5px;
+  background: linear-gradient(90deg, 
+    #667eea 0%, 
+    #764ba2 25%, 
+    #f093fb 50%, 
+    #4facfe 75%, 
+    #667eea 100%
+  );
+  background-size: 50% 100%;
+  animation: gradientShift 4s ease infinite;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.lawyer-card:hover::before {
+  opacity: 1;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Glow effect on hover */
+.lawyer-card::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+  opacity: 0;
+  z-index: -1;
+  filter: blur(20px);
+  transition: opacity 0.6s ease;
+}
+
+.lawyer-card:hover::after {
+  opacity: 0.3;
 }
 
 .lawyer-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.35);
+  transform: translateY(-16px) scale(1.02);
+  box-shadow: 
+    0 30px 60px rgba(102, 126, 234, 0.25),
+    0 15px 30px rgba(118, 75, 162, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border-color: rgba(102, 126, 234, 0.4);
 }
 
-/* ===== IMAGE ===== */
-.lawyer-card img {
+/* ===== IMAGE SECTION ===== */
+.card-image-wrapper {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, 
+    rgba(102, 126, 234, 0.05),
+    rgba(118, 75, 162, 0.05)
+  );
+}
+
+.card-image-wrapper img {
   width: 100%;
-  height: 200px;
-  object-fit: contain;
-  background: #f1f5f9;
-  padding: 12px;
+  height: 260px;
+  object-fit: cover;
+  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.5s ease;
 }
 
-/* ===== INFO ===== */
+.lawyer-card:hover .card-image-wrapper img {
+  transform: scale(1.15) rotate(2deg);
+  filter: brightness(1.1) contrast(1.05);
+}
+
+/* ===== OVERLAY BUTTONS ===== */
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(15, 23, 42, 0) 0%,
+    rgba(15, 23, 42, 0.6) 50%,
+    rgba(15, 23, 42, 0.85) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  opacity: 0;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(3px);
+}
+
+.lawyer-card:hover .card-overlay {
+  opacity: 1;
+}
+
+.card-overlay button {
+  padding: 13px 28px;
+  border: none;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translateY(20px);
+  opacity: 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.lawyer-card:hover .card-overlay button {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.lawyer-card:hover .card-overlay button:nth-child(1) {
+  transition-delay: 0.1s;
+}
+
+.lawyer-card:hover .card-overlay button:nth-child(2) {
+  transition-delay: 0.15s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #764ba2, #f093fb);
+  box-shadow: 0 12px 36px rgba(118, 75, 162, 0.6);
+  transform: translateY(-4px) scale(1.05);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-4px) scale(1.05);
+}
+
+/* ===== STATUS BADGE ===== */
+.status-badge {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  backdrop-filter: blur(8px) saturate(150%);
+  border: 1.5px solid;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  z-index: 2;
+  animation: badgeFadeIn 0.6s ease;
+}
+
+@keyframes badgeFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.status-badge.available {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.status-badge.unavailable {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.status-badge .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+.status-badge.available .dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+}
+
+.status-badge.unavailable .dot {
+  background: #ef4444;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+/* ===== INFO SECTION ===== */
 .lawyer-info {
-  padding: 16px;
-  text-align: left;
+  padding: 24px;
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.02) 100%
+  );
 }
 
-/* ===== STATUS ===== */
-.status {
-  display: inline-flex;
+/* ===== INFO HEADER (NAME + RATING) ===== */
+.info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+
+.info-header h4 {
+  font-size: 19px;
+  font-weight: 900;
+  color: #f8fafc;
+  margin: 0 0 6px 0;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #f8fafc, #cbd5e1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+}
+
+.lawyer-card:hover .info-header h4 {
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.specialty {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+/* ===== RATING ===== */
+.rating {
+  display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #16a34a;
-  margin-bottom: 8px;
+  padding: 6px 12px;
+  background: rgba(251, 191, 36, 0.15);
+  border-radius: 50px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  backdrop-filter: blur(6px);
+  animation: ratingPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.dot {
-  width: 7px;
-  height: 7px;
-  background: #22c55e;
-  border-radius: 50%;
+@keyframes ratingPop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-/* ===== TEXT ===== */
-.lawyer-info h4 {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 4px;
+.rating svg {
+  filter: drop-shadow(0 2px 4px rgba(251, 191, 36, 0.4));
+  animation: starSpin 0.6s ease;
 }
 
-.lawyer-info p {
+@keyframes starSpin {
+  from {
+    transform: rotate(-180deg) scale(0);
+  }
+  to {
+    transform: rotate(0) scale(1);
+  }
+}
+
+.rating span {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fbbf24;
+  text-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+/* ===== STATS ===== */
+.stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(96, 165, 250, 0.08);
+  border-radius: 14px;
+  border: 1px solid rgba(96, 165, 250, 0.15);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stat-item:hover {
+  background: rgba(96, 165, 250, 0.15);
+  border-color: rgba(96, 165, 250, 0.3);
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(96, 165, 250, 0.2);
+}
+
+.stat-item svg {
+  color: #60a5fa;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(96, 165, 250, 0.3));
+}
+
+.stat-item span {
   font-size: 13px;
-  color: #475569;
+  font-weight: 700;
+  color: #cbd5e1;
+  white-space: nowrap;
 }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .top-lawyers {
     padding: 0 20px;
+  }
+
+  .lawyer-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .lawyer-card {
+    max-width: 100%;
+  }
+
+  .card-overlay button {
+    padding: 11px 22px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-lawyers h2 {
+    font-size: 32px;
+  }
+
+  .info-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .rating {
+    align-self: flex-start;
+  }
+
+  .stats {
+    flex-direction: column;
+    gap: 10px;
   }
 }

@@ -1,29 +1,32 @@
 .speciality-section {
   text-align: center;
-  padding: 60px 20px;
-  background-color: #ffffff;
+  padding: 80px 30px;
+  background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
   font-family: "Poppins", sans-serif;
 }
 
 .speciality-section h2 {
-  font-size: 32px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 10px;
+  font-size: 42px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1e293b, #3730a3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 14px;
 }
 
 .speciality-section p {
-  max-width: 600px;
-  margin: 0 auto 40px;
-  font-size: 15px;
-  color: #6b7280;
-  line-height: 1.6;
+  max-width: 650px;
+  margin: 0 auto 50px;
+  font-size: 16px;
+  color: #64748b;
+  line-height: 1.7;
 }
 
 .speciality-container {
   display: flex;
   justify-content: center;
-  gap: 35px;
+  gap: 40px;
   flex-wrap: wrap;
 }
 
@@ -32,30 +35,75 @@
   flex-direction: column;
   align-items: center;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 15px;
+  border-radius: 20px;
 }
 
 .speciality-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-12px) scale(1.05);
+}
+
+.speciality-card:hover .icon-circle {
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  box-shadow: 0 15px 35px rgba(96, 165, 250, 0.4);
+  transform: rotate(360deg) scale(1.1);
 }
 
 .icon-circle {
-  width: 90px;
-  height: 90px;
-  background: #eaf0ff;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.icon-circle::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.speciality-card:hover .icon-circle::before {
+  opacity: 1;
 }
 
 .icon-circle span {
-  font-size: 34px;
+  font-size: 38px;
+  transition: transform 0.5s ease;
+}
+
+.icon-circle svg {
+  color: #6366f1;
+  transition: all 0.5s ease;
+}
+
+.speciality-card:hover .icon-circle svg {
+  color: #ffffff;
+  transform: rotate(15deg);
 }
 
 .speciality-card h4 {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  transition: color 0.3s ease;
+}
+
+.speciality-card:hover h4 {
+  color: #6366f1;
 }

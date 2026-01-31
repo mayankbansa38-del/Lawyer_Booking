@@ -1,13 +1,16 @@
 .lawyer-filter {
-  width: 260px;
-  padding: 16px;
+  width: 280px;
+  padding: 20px;
 }
 
 .filter-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: #1f2937;
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #1e293b, #3730a3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .lawyer-list {
@@ -17,24 +20,29 @@
 }
 
 .lawyer-item {
-  padding: 11px 15px;
+  padding: 14px 18px;
   margin-bottom: 12px;
-  border: 1px solid #dbe3ff;
-  border-radius: 7px;
-  font-size: 14px;
-  color: #374151;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 15px;
+  color: #475569;
   cursor: pointer;
-  background-color: #ffffff;
-  transition: all 0.25s ease;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
 }
 
 .lawyer-item:hover {
-  background-color: #eef2ff;
+  background: rgba(99, 102, 241, 0.05);
   border-color: #6366f1;
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
 }
 
 .lawyer-item.active {
-  background-color: #4f46e5;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #ffffff;
-  border-color: #4f46e5;
+  border-color: transparent;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+  transform: translateX(8px);
 }
