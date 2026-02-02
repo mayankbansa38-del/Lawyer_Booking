@@ -1,4 +1,5 @@
-import { Search, MapPin, Briefcase, Trophy, DollarSign, Clock, BookOpen, X } from 'lucide-react';
+import { useState } from 'react';
+import { Search, MapPin, Briefcase, Trophy, DollarSign, Clock, BookOpen, X, ChevronDown, Filter } from 'lucide-react';
 import { DualRangeSlider } from './DualRangeSlider';
 
 const locations = [
@@ -28,6 +29,16 @@ const specialties = [
 const availabilityOptions = ['Available', 'Limited', 'Busy'];
 
 export function FilterSidebar({ filters, setFilters, totalResults }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    location: true,
+    experience: false,
+    casesWon: false,
+    specialty: true,
+    cost: false,
+    availability: false
+  });
+
   const handleCheckboxChange = (category, value) => {
     setFilters({
       ...filters,
@@ -49,6 +60,10 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
     });
   };
 
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
   const hasActiveFilters =
     filters.search ||
     filters.locations.length > 0 ||
@@ -61,44 +76,58 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
     filters.costRange[0] > 0 ||
     filters.costRange[1] < 25000;
 
-  return (
-    <aside className="w-80 bg-white border-r border-gray-200 h-screen overflow-y-auto sticky top-0">
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Filters</h2>
-          {hasActiveFilters && (
-            <button
-              onClick={clearAllFilters}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-            >
-              <X className="w-4 h-4" />
-              Clear all
-            </button>
-          )}
-        </div>
+  const activeFilterCount =
+    filters.locations.length +
+    filters.specialties.length +
+    filters.availability.length +
+    (filters.experienceRange[0] > 0 || filters.experienceRange[1] < 25 ? 1 : 0) +
+    (filters.casesWonRange[0] > 0 || filters.casesWonRange[1] < 350 ? 1 : 0) +
+    (filters.costRange[0] > 0 || filters.costRange[1] < 25000 ? 1 : 0);
 
-        {/* Search */}
-        <div className="mb-6">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-            <Search className="w-4 h-4" />
-            Search
-          </label>
-          <input
-            type="text"
-            placeholder="Search by name, location, specialty..."
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+  const FilterContent = () => (
+    <div className="p-4 lg:p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900">Filters</h2>
+        {hasActiveFilters && (
+          <button
+            onClick={clearAllFilters}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+          >
+            <X className="w-4 h-4" />
+            Clear all
+          </button>
+        )}
+      </div>
 
-        {/* Location */}
-        <div className="mb-6">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+      {/* Search */}
+      <div className="mb-6">
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+          <Search className="w-4 h-4" />
+          Search
+        </label>
+        <input
+          type="text"
+          placeholder="Search by name, location, specialty..."
+          value={filters.search}
+          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Location - Collapsible */}
+      <div className="mb-4 border-b pb-4">
+        <button onClick={() => toggleSection('location')} className="flex items-center justify-between w-full text-left">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <MapPin className="w-4 h-4" />
             Location
+            {filters.locations.length > 0 && (
+              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">{filters.locations.length}</span>
+            )}
           </label>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.location ? 'rotate-180' : ''}`} />
+        </button>
+        {expandedSections.location && (
+          <div className="space-y-2 max-h-48 overflow-y-auto mt-3">
             {locations.map(location => (
               <label key={location} className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -111,15 +140,20 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
               </label>
             ))}
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Experience */}
-        <div className="mb-6">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+      {/* Experience - Collapsible */}
+      <div className="mb-4 border-b pb-4">
+        <button onClick={() => toggleSection('experience')} className="flex items-center justify-between w-full text-left">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <Briefcase className="w-4 h-4" />
             Experience (years)
           </label>
-          <div className="space-y-3">
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.experience ? 'rotate-180' : ''}`} />
+        </button>
+        {expandedSections.experience && (
+          <div className="space-y-3 mt-3">
             <div className="flex items-center gap-3">
               <input
                 type="number"
@@ -152,15 +186,20 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
               onChange={(value) => setFilters({ ...filters, experienceRange: value })}
             />
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Cases Won */}
-        <div className="mb-6">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+      {/* Cases Won - Collapsible */}
+      <div className="mb-4 border-b pb-4">
+        <button onClick={() => toggleSection('casesWon')} className="flex items-center justify-between w-full text-left">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <Trophy className="w-4 h-4" />
             Cases Won
           </label>
-          <div className="space-y-3">
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.casesWon ? 'rotate-180' : ''}`} />
+        </button>
+        {expandedSections.casesWon && (
+          <div className="space-y-3 mt-3">
             <div className="flex items-center gap-3">
               <input
                 type="number"
@@ -193,15 +232,23 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
               onChange={(value) => setFilters({ ...filters, casesWonRange: value })}
             />
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Specialty */}
-        <div className="mb-6">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+      {/* Specialty - Collapsible */}
+      <div className="mb-4 border-b pb-4">
+        <button onClick={() => toggleSection('specialty')} className="flex items-center justify-between w-full text-left">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <BookOpen className="w-4 h-4" />
             Specialty
+            {filters.specialties.length > 0 && (
+              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">{filters.specialties.length}</span>
+            )}
           </label>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.specialty ? 'rotate-180' : ''}`} />
+        </button>
+        {expandedSections.specialty && (
+          <div className="space-y-2 max-h-48 overflow-y-auto mt-3">
             {specialties.map(specialty => (
               <label key={specialty} className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -214,15 +261,20 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
               </label>
             ))}
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Average Cost */}
-        <div className="mb-6">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+      {/* Average Cost - Collapsible */}
+      <div className="mb-4 border-b pb-4">
+        <button onClick={() => toggleSection('cost')} className="flex items-center justify-between w-full text-left">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <DollarSign className="w-4 h-4" />
             Avg Cost Per Case (₹)
           </label>
-          <div className="space-y-3">
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.cost ? 'rotate-180' : ''}`} />
+        </button>
+        {expandedSections.cost && (
+          <div className="space-y-3 mt-3">
             <div className="flex items-center gap-3">
               <input
                 type="number"
@@ -261,15 +313,20 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
               ₹{filters.costRange[0].toLocaleString('en-IN')} - ₹{filters.costRange[1].toLocaleString('en-IN')}
             </p>
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Availability */}
-        <div className="mb-6">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+      {/* Availability - Collapsible */}
+      <div className="mb-4">
+        <button onClick={() => toggleSection('availability')} className="flex items-center justify-between w-full text-left">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <Clock className="w-4 h-4" />
             Availability
           </label>
-          <div className="space-y-2">
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.availability ? 'rotate-180' : ''}`} />
+        </button>
+        {expandedSections.availability && (
+          <div className="space-y-2 mt-3">
             {availabilityOptions.map(option => (
               <label key={option} className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -282,14 +339,61 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
               </label>
             ))}
           </div>
-        </div>
-
-        <div className="pt-4 border-t">
-          <p className="text-sm text-gray-600">
-            <span className="font-medium text-gray-900">{totalResults}</span> lawyers found
-          </p>
-        </div>
+        )}
       </div>
-    </aside>
+
+      <div className="pt-4 border-t">
+        <p className="text-sm text-gray-600">
+          <span className="font-medium text-gray-900">{totalResults}</span> lawyers found
+        </p>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile Filter Button */}
+      <div className="lg:hidden sticky top-0 z-20 bg-white border-b p-4">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium text-gray-700 transition-colors"
+        >
+          <Filter className="w-5 h-5" />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">{activeFilterCount}</span>
+          )}
+        </button>
+      </div>
+
+      {/* Mobile Filter Drawer */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-xl overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+              <button onClick={() => setMobileOpen(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <FilterContent />
+            <div className="sticky bottom-0 bg-white border-t p-4">
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Show {totalResults} Results
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:block w-80 bg-white border-r border-gray-200 h-screen overflow-y-auto sticky top-0">
+        <FilterContent />
+      </aside>
+    </>
   );
 }

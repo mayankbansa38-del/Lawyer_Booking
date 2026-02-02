@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { MapPin, Briefcase, Trophy, DollarSign, Star } from 'lucide-react';
 
 export function LawyerCard({ lawyer }) {
@@ -68,9 +69,12 @@ export function LawyerCard({ lawyer }) {
           </div>
         </div>
 
-        <button className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors">
-          View Profile
-        </button>
+        <Link
+          to={`/lawyers/${lawyer.id}`}
+          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors block text-center"
+        >
+          Book Consultation
+        </Link>
       </div>
     </div>
   );
