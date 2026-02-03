@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Search, Mail, Phone, Calendar, Briefcase, ChevronRight, X } from 'lucide-react';
 import { PageHeader, ClientCard, EmptyState } from '../../components/dashboard';
 import { clientAPI, appointmentAPI, caseAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LawyerClients() {
     const { user } = useAuth();

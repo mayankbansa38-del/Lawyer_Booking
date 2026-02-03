@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Clock, Save, Plus, X, Calendar } from 'lucide-react';
 import { PageHeader } from '../../components/dashboard';
 import { lawyerAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS = { monday: 'Monday', tuesday: 'Tuesday', wednesday: 'Wednesday', thursday: 'Thursday', friday: 'Friday', saturday: 'Saturday', sunday: 'Sunday' };

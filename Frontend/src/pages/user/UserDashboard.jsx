@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, Heart, Briefcase, Clock, ChevronRight, Star, MapPin } from 'lucide-react';
 import { StatCard, AppointmentCard, PageHeader } from '../../components/dashboard';
 import { appointmentAPI, favoritesAPI, caseAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function UserDashboard() {
     const { user } = useAuth();

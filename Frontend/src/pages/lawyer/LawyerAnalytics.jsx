@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Eye, TrendingUp, Calendar, Star, Clock, Users } from 'lucide-react';
 import { PageHeader, StatCard } from '../../components/dashboard';
 import { lawyerAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LawyerAnalytics() {
     const { user } = useAuth();

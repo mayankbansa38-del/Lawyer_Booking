@@ -8,7 +8,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, Clock, ChevronLeft, ChevronRight, Video, MapPin, CreditCard, CheckCircle } from 'lucide-react';
 import { lawyerAPI, appointmentAPI } from '../../services/api';
 import { generateTimeSlots } from '../../services/mockData';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 const CONSULTATION_TYPES = [
     { id: 'video', label: 'Video Consultation', icon: Video, description: 'Online video call' },

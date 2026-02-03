@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { StatCard, AppointmentCard, PageHeader } from '../../components/dashboard';
 import { appointmentAPI, paymentAPI, lawyerAPI, clientAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LawyerDashboard() {
     const { user } = useAuth();

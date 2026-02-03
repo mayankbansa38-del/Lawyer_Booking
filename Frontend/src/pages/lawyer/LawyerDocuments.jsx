@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { FileText, Upload, Search, Folder, Download, Trash2, Eye } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/dashboard';
 import { documentAPI, caseAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 const categoryColors = {
     'Legal Document': 'bg-blue-100 text-blue-700',

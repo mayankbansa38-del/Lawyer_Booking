@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, Clock, Search, Video, MapPin } from 'lucide-react';
 import { PageHeader, AppointmentCard, EmptyState } from '../../components/dashboard';
 import { appointmentAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 const tabs = [
     { id: 'upcoming', label: 'Upcoming' },

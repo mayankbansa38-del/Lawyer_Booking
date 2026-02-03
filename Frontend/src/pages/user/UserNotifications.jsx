@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { Bell, Check } from 'lucide-react';
 import { PageHeader, NotificationCard, EmptyState } from '../../components/dashboard';
 import { notificationAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function UserNotifications() {
     const { user } = useAuth();

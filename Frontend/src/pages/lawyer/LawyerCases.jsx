@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Briefcase, Search, ChevronRight, Calendar, MapPin, FileText } from 'lucide-react';
 import { PageHeader, CaseCard, EmptyState } from '../../components/dashboard';
 import { caseAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 const tabs = [
     { id: 'all', label: 'All' },

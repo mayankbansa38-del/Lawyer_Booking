@@ -10,7 +10,7 @@ import {
     Calendar, ChevronRight, Heart, Share2, CheckCircle, GraduationCap
 } from 'lucide-react';
 import { lawyerAPI, favoritesAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LawyerProfilePage() {
     const { id } = useParams();

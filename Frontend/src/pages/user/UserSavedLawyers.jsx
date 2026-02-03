@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { Heart, Star, MapPin, Briefcase, Trash2 } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/dashboard';
 import { favoritesAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function UserSavedLawyers() {
     const { user } = useAuth();

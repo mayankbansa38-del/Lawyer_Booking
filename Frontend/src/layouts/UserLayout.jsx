@@ -10,7 +10,7 @@ import {
     Bell, Settings, LogOut, Menu, X, ChevronRight, User
 } from 'lucide-react';
 import NyayBookerLogo from '../components/NyayBookerLogo';
-import { useAuth } from '../context/mockAuth';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
     { path: '/user/dashboard', icon: LayoutDashboard, label: 'Dashboard' },

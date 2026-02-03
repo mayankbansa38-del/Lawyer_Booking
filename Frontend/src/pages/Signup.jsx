@@ -1,18 +1,24 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Mail, Lock, User, Phone, Scale, ShieldCheck, Building2, ArrowRight, Eye, EyeOff, CheckCircle2, Sparkles } from 'lucide-react';
+import { Link, useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
+import { Mail, Lock, User, Phone, Scale, ShieldCheck, Building2, ArrowRight, Eye, EyeOff, CheckCircle2, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { useAuth } from "../context/AuthContext";
 
 const Signup = () => {
+  const navigate = useNavigate();
+  const { register, registerLawyer, googleLogin, error: authError } = useAuth();
+
   const [state, setState] = useState("User");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    name: "", email: "", phone: "", password: "", confirmPassword: "", barNumber: "", specialization: ""
+    firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "", barNumber: "", barState: "", specialization: ""
   });
 
   const roles = [
     { id: "User", icon: User, label: "Client", desc: "Find & book lawyers" },
     { id: "Lawyer", icon: Scale, label: "Lawyer", desc: "Grow your practice" },
-    { id: "Admin", icon: ShieldCheck, label: "Admin", desc: "Manage platform" },
   ];
 
   const benefits = [
@@ -24,6 +30,106 @@ const Signup = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
+  };
+
+  const validateForm = () => {
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      setError("Please enter your full name");
+      return false;
+    }
+    if (!formData.email.includes("@")) {
+      setError("Please enter a valid email address");
+      return false;
+    }
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return false;
+    }
+    if (state === "Lawyer" && !formData.barNumber.trim()) {
+      setError("Bar registration number is required for lawyers");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      let result;
+
+      // Sanitize phone: keep only digits and leading + 
+      // "91 98765 43210" -> "+919876543210"
+      const sanitizedPhone = formData.phone
+        ? formData.phone.replace(/[^\d+]/g, '').replace(/^(\+)?/, '+')
+        : undefined;
+
+      if (state === "Lawyer") {
+        result = await registerLawyer({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: sanitizedPhone || undefined,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          barCouncilId: formData.barNumber,
+          barCouncilState: formData.barState || "Delhi",
+          enrollmentYear: new Date().getFullYear(),
+        });
+      } else {
+        result = await register({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: sanitizedPhone || undefined,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+        });
+      }
+
+      if (result.success) {
+        // Redirect to verify email page - email verification is required
+        navigate("/verify-email");
+      } else {
+        setError(result.error || "Registration failed. Please try again.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const result = await googleLogin(credentialResponse.credential);
+      if (result.success) {
+        navigate("/user/dashboard");
+      } else {
+        setError(result.error || "Google sign-up failed");
+      }
+    } catch (err) {
+      setError("Google sign-up failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError("Google sign-up was cancelled or failed");
   };
 
   return (
@@ -74,9 +180,17 @@ const Signup = () => {
             <p className="text-gray-500 mt-1 text-sm">Start your legal journey today</p>
           </div>
 
+          {/* Error Message */}
+          {(error || authError) && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{error || authError}</p>
+            </div>
+          )}
+
           {/* Role Selector */}
           <div className="mb-5">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {roles.map((role) => {
                 const Icon = role.icon;
                 return (
@@ -84,13 +198,15 @@ const Signup = () => {
                     key={role.id}
                     type="button"
                     onClick={() => setState(role.id)}
-                    className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 ${state === role.id
+                    disabled={isLoading}
+                    className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${state === role.id
                       ? "border-blue-500 bg-blue-50 shadow-md"
                       : "border-gray-200 bg-gray-50 hover:border-gray-300"
-                      }`}
+                      } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
-                    <Icon className={`w-5 h-5 mx-auto mb-0.5 ${state === role.id ? "text-blue-600" : "text-gray-500"}`} />
-                    <p className={`text-xs font-semibold ${state === role.id ? "text-blue-700" : "text-gray-700"}`}>{role.label}</p>
+                    <Icon className={`w-5 h-5 mx-auto mb-1 ${state === role.id ? "text-blue-600" : "text-gray-500"}`} />
+                    <p className={`text-sm font-semibold ${state === role.id ? "text-blue-700" : "text-gray-700"}`}>{role.label}</p>
+                    <p className={`text-xs ${state === role.id ? "text-blue-500" : "text-gray-400"}`}>{role.desc}</p>
                     {state === role.id && (
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                         <Sparkles className="w-2.5 h-2.5 text-white" />
@@ -103,44 +219,60 @@ const Signup = () => {
           </div>
 
           {/* Form */}
-          <form className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Full Name</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">First Name</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
-                    type="text" name="name" value={formData.name} onChange={handleChange}
-                    placeholder="John Doe"
+                    type="text" name="firstName" value={formData.firstName} onChange={handleChange}
+                    placeholder="John"
                     className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Last Name</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
-                    type="email" name="email" value={formData.email} onChange={handleChange}
-                    placeholder="you@example.com"
+                    type="text" name="lastName" value={formData.lastName} onChange={handleChange}
+                    placeholder="Doe"
                     className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Phone Number</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="email" name="email" value={formData.email} onChange={handleChange}
+                  placeholder="you@example.com"
+                  className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Phone Number (Optional)</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="+91 98765 43210"
                   className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
-                  required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -153,27 +285,30 @@ const Signup = () => {
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400" />
                     <input
                       type="text" name="barNumber" value={formData.barNumber} onChange={handleChange}
-                      placeholder="BAR-XXXXX"
+                      placeholder="DEL/12345/2020"
                       className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-blue-700 mb-1">Specialization</label>
+                  <label className="block text-xs font-medium text-blue-700 mb-1">Bar Council State</label>
                   <div className="relative">
                     <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400" />
                     <select
-                      name="specialization" value={formData.specialization} onChange={handleChange}
+                      name="barState" value={formData.barState} onChange={handleChange}
                       className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none"
-                      required
+                      disabled={isLoading}
                     >
-                      <option value="">Select area</option>
-                      <option value="criminal">Criminal Law</option>
-                      <option value="family">Family Law</option>
-                      <option value="corporate">Corporate Law</option>
-                      <option value="property">Property Law</option>
-                      <option value="immigration">Immigration</option>
+                      <option value="">Select state</option>
+                      <option value="Delhi">Delhi</option>
+                      <option value="Maharashtra">Maharashtra</option>
+                      <option value="Karnataka">Karnataka</option>
+                      <option value="Tamil Nadu">Tamil Nadu</option>
+                      <option value="Gujarat">Gujarat</option>
+                      <option value="Uttar Pradesh">Uttar Pradesh</option>
+                      <option value="Other">Other</option>
                     </select>
                   </div>
                 </div>
@@ -187,9 +322,10 @@ const Signup = () => {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange}
-                    placeholder="••••••••"
+                    placeholder="Min. 8 characters"
                     className="w-full pl-9 pr-10 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
                     required
+                    disabled={isLoading}
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -203,16 +339,17 @@ const Signup = () => {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange}
-                    placeholder="••••••••"
+                    placeholder="Re-enter password"
                     className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
             </div>
 
             <div className="flex items-start gap-2 pt-1">
-              <input type="checkbox" id="terms" className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" required />
+              <input type="checkbox" id="terms" className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" required disabled={isLoading} />
               <label htmlFor="terms" className="text-xs text-gray-600">
                 I agree to the <a href="#" className="text-blue-600 hover:underline">Terms of Service</a> and <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>
               </label>
@@ -220,10 +357,20 @@ const Signup = () => {
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
             >
-              Create Account
-              <ArrowRight className="w-4 h-4" />
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                <>
+                  Create Account
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 

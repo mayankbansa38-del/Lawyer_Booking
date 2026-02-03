@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Filter, Search } from 'lucide-react';
 import { PageHeader, AppointmentCard, EmptyState } from '../../components/dashboard';
 import { appointmentAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 const tabs = [
     { id: 'all', label: 'All' },

@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, Clock, CheckCircle, Download, Filter } from 'lucide-react';
 import { PageHeader, StatCard } from '../../components/dashboard';
 import { paymentAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LawyerEarnings() {
     const { user } = useAuth();

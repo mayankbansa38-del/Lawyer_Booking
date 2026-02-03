@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { User, Mail, Phone, MapPin, Save, Bell, Shield } from 'lucide-react';
 import { PageHeader } from '../../components/dashboard';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 export default function UserSettings() {
     const { user } = useAuth();

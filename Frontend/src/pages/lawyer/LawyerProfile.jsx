@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Camera, Save, Plus, X, MapPin, Phone, Mail, Briefcase, Award, Languages, DollarSign } from 'lucide-react';
 import { PageHeader } from '../../components/dashboard';
 import { lawyerAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 const specialtyOptions = [
     'Criminal Lawyer', 'Family Lawyer', 'Corporate Lawyer', 'Property Lawyer',
