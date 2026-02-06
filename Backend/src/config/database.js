@@ -28,7 +28,7 @@ import logger from '../utils/logger.js';
 let prisma = null;
 
 /**
- * Get or create Prisma client instance
+ * Get or create Prisma client instance with Neon-optimized configuration
  * @returns {PrismaClient} Prisma client instance
  */
 export function getPrismaClient() {
@@ -42,11 +42,17 @@ export function getPrismaClient() {
                 ]
                 : [{ level: 'error', emit: 'stdout' }],
 
-            // Connection pool settings for Neon
+            // Neon-optimized datasource configuration
             datasources: {
                 db: {
                     url: env.DATABASE_URL,
                 },
+            },
+
+            // Transaction and query timeout settings for serverless
+            transactionOptions: {
+                maxWait: 10000,  // 10s max wait to acquire connection
+                timeout: 30000, // 30s max transaction duration
             },
         });
 
@@ -60,25 +66,45 @@ export function getPrismaClient() {
             });
         }
 
-
+        // Handle disconnection gracefully
+        process.on('beforeExit', async () => {
+            await prisma.$disconnect();
+        });
     }
 
     return prisma;
 }
 
 /**
- * Connect to PostgreSQL database via Prisma
+ * Connect to PostgreSQL database via Prisma with retry logic
+ * Handles Neon serverless cold starts with exponential backoff
+ * @param {number} maxRetries - Maximum connection attempts
  * @returns {Promise<void>}
  */
-export async function connectPrisma() {
-    try {
-        const client = getPrismaClient();
-        await client.$connect();
-        logger.info('✅ Connected to Neon PostgreSQL via Prisma');
-    } catch (error) {
-        logger.error('❌ Failed to connect to PostgreSQL:', error);
-        throw error;
+export async function connectPrisma(maxRetries = 3) {
+    const client = getPrismaClient();
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            await client.$connect();
+            logger.info('✅ Connected to Neon PostgreSQL via Prisma');
+            return;
+        } catch (error) {
+            lastError = error;
+            logger.warn(`PostgreSQL connection attempt ${attempt}/${maxRetries} failed: ${error.message}`);
+
+            if (attempt < maxRetries) {
+                // Exponential backoff: 1s, 2s, 4s
+                const delay = Math.pow(2, attempt - 1) * 1000;
+                logger.info(`Retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
     }
+
+    logger.error('❌ Failed to connect to PostgreSQL after all retries:', lastError);
+    throw lastError;
 }
 
 /**

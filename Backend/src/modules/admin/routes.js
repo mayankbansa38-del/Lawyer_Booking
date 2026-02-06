@@ -249,6 +249,47 @@ router.put('/users/:id/role', asyncHandler(async (req, res) => {
     });
 }));
 
+/**
+ * @route   DELETE /api/v1/admin/users/:id
+ * @desc    Delete a user atomically with transaction
+ * @access  Private/Admin
+ */
+router.delete('/users/:id', asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+    const targetId = req.params.id;
+    const actorId = req.user.id;
+
+    // Atomic operation to prevent race conditions and partial failures
+    await prisma.$transaction(async (tx) => {
+        const user = await tx.user.findUnique({
+            where: { id: targetId },
+            include: { lawyer: { select: { id: true } } },
+        });
+
+        if (!user) throw new NotFoundError('User');
+
+        // Security guards
+        if (user.id === actorId) {
+            throw new BadRequestError('Cannot delete your own account');
+        }
+        if (user.role === 'ADMIN') {
+            throw new BadRequestError('Cannot delete admin accounts');
+        }
+
+        // Delete user - Lawyer profile auto-deleted via onDelete: Cascade in schema
+        await tx.user.delete({ where: { id: targetId } });
+
+        // Audit log within transaction scope
+        logger.logBusiness('USER_DELETED', {
+            deletedUserId: targetId,
+            deletedUserEmail: user.email,
+            deletedBy: actorId,
+        });
+    });
+
+    return sendSuccess(res, { message: 'User deleted successfully' });
+}));
+
 // ═══════════════════════════════════════════════════════════════════════════
 // LAWYER VERIFICATION
 // ═══════════════════════════════════════════════════════════════════════════
