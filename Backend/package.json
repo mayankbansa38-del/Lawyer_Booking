@@ -50,7 +50,8 @@
     "razorpay": "^2.9.4",
     "uuid": "^11.0.5",
     "winston": "^3.17.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "eslint": "^9.20.0",

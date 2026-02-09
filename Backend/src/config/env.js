@@ -1,10 +1,10 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * NyayBooker Backend - Environment Configuration
+ * NyayBooker Backend - Environment Configuration (Zod-validated)
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * Centralized environment variable management with validation.
- * All environment variables should be accessed through this module.
+ * Contract-first environment validation using Zod.
+ * Process exits immediately if required variables are missing.
  * 
  * @module config/env
  */
@@ -12,6 +12,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { z } from 'zod';
 
 // ES Module dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -20,17 +21,116 @@ const __dirname = path.dirname(__filename);
 // Load environment variables from .env file
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-/**
- * Environment configuration object
- * All environment variables are validated on startup
- */
-const env = {
-    // ─────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Zod Schema for Environment Variables
+// ─────────────────────────────────────────────────────────────────────────────
+
+const envSchema = z.object({
     // Server Configuration
-    // ─────────────────────────────────────────────────────────────────────────
-    NODE_ENV: process.env.NODE_ENV || 'development',
-    PORT: parseInt(process.env.PORT, 10) || 5000,
-    API_VERSION: process.env.API_VERSION || 'v1',
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    PORT: z.coerce.number().int().min(1).max(65535).default(5000),
+    API_VERSION: z.string().default('v1'),
+
+    // Database - Neon PostgreSQL (Required in production)
+    DATABASE_URL: z.string().url().optional().or(z.literal('')),
+
+    // Database - MongoDB (Optional - for analytics)
+    MONGODB_URI: z.string().optional().default(''),
+
+    // Supabase Storage
+    SUPABASE_URL: z.string().url().optional().or(z.literal('')),
+    SUPABASE_SERVICE_KEY: z.string().optional().default(''),
+    SUPABASE_BUCKET_DOCUMENTS: z.string().default('documents'),
+    SUPABASE_BUCKET_AVATARS: z.string().default('avatars'),
+
+    // JWT Authentication (Required in production)
+    JWT_SECRET: z.string().min(16).default('default-dev-secret-change-in-production'),
+    JWT_EXPIRES_IN: z.string().default('7d'),
+    JWT_REFRESH_SECRET: z.string().min(16).default('default-refresh-secret-change-in-production'),
+    JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
+
+    // Google OAuth
+    GOOGLE_CLIENT_ID: z.string().optional().default(''),
+
+    // Email Configuration
+    SMTP_HOST: z.string().default('smtp.gmail.com'),
+    SMTP_PORT: z.coerce.number().int().default(587),
+    SMTP_USER: z.string().optional().default(''),
+    SMTP_PASS: z.string().optional().default(''),
+    EMAIL_FROM: z.string().default('NyayBooker <noreply@nyaybooker.com>'),
+
+    // Payment Gateway
+    RAZORPAY_KEY_ID: z.string().optional().default(''),
+    RAZORPAY_KEY_SECRET: z.string().optional().default(''),
+
+    // Rate Limiting
+    RATE_LIMIT_WINDOW_MS: z.coerce.number().int().default(900000), // 15 minutes
+    RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().default(100),
+
+    // Frontend URL
+    FRONTEND_URL: z.string().default('http://localhost:5173'),
+
+    // Logging
+    LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly']).default('debug'),
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Parse and Validate Environment
+// ─────────────────────────────────────────────────────────────────────────────
+
+const parseResult = envSchema.safeParse(process.env);
+
+if (!parseResult.success) {
+    console.error('═══════════════════════════════════════════════════════════════');
+    console.error('FATAL: Environment validation failed');
+    console.error('═══════════════════════════════════════════════════════════════');
+
+    for (const issue of parseResult.error.issues) {
+        console.error(`  ✗ ${issue.path.join('.')}: ${issue.message}`);
+    }
+
+    console.error('═══════════════════════════════════════════════════════════════');
+    console.error('Fix the above issues in your .env file and restart.');
+    console.error('═══════════════════════════════════════════════════════════════');
+
+    process.exit(1);
+}
+
+const parsed = parseResult.data;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Production-specific Validation
+// ─────────────────────────────────────────────────────────────────────────────
+
+if (parsed.NODE_ENV === 'production') {
+    const criticalErrors = [];
+
+    if (!parsed.DATABASE_URL) {
+        criticalErrors.push('DATABASE_URL is required in production');
+    }
+    if (parsed.JWT_SECRET.includes('default')) {
+        criticalErrors.push('JWT_SECRET must not use default value in production');
+    }
+    if (parsed.JWT_REFRESH_SECRET.includes('default')) {
+        criticalErrors.push('JWT_REFRESH_SECRET must not use default value in production');
+    }
+
+    if (criticalErrors.length > 0) {
+        console.error('═══════════════════════════════════════════════════════════════');
+        console.error('FATAL: Production environment check failed');
+        console.error('═══════════════════════════════════════════════════════════════');
+        criticalErrors.forEach(err => console.error(`  ✗ ${err}`));
+        console.error('═══════════════════════════════════════════════════════════════');
+        process.exit(1);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exported Environment Object with Computed Properties
+// ─────────────────────────────────────────────────────────────────────────────
+
+const env = {
+    ...parsed,
 
     // Computed properties
     get isDevelopment() {
@@ -42,108 +142,13 @@ const env = {
     get isTest() {
         return this.NODE_ENV === 'test';
     },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Database - Neon PostgreSQL
-    // ─────────────────────────────────────────────────────────────────────────
-    DATABASE_URL: process.env.DATABASE_URL || '',
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Database - MongoDB
-    // ─────────────────────────────────────────────────────────────────────────
-    MONGODB_URI: process.env.MONGODB_URI || '',
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Supabase Storage
-    // ─────────────────────────────────────────────────────────────────────────
-    SUPABASE_URL: process.env.SUPABASE_URL || '',
-    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY || '',
-    SUPABASE_BUCKET_DOCUMENTS: process.env.SUPABASE_BUCKET_DOCUMENTS || 'documents',
-    SUPABASE_BUCKET_AVATARS: process.env.SUPABASE_BUCKET_AVATARS || 'avatars',
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // JWT Authentication
-    // ─────────────────────────────────────────────────────────────────────────
-    JWT_SECRET: process.env.JWT_SECRET || 'default-dev-secret-change-in-production',
-    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
-    JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'default-refresh-secret-change-in-production',
-    JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Google OAuth
-    // ─────────────────────────────────────────────────────────────────────────
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Email Configuration
-    // ─────────────────────────────────────────────────────────────────────────
-    SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
-    SMTP_PORT: parseInt(process.env.SMTP_PORT, 10) || 587,
-    SMTP_USER: process.env.SMTP_USER || '',
-    SMTP_PASS: process.env.SMTP_PASS || '',
-    EMAIL_FROM: process.env.EMAIL_FROM || 'NyayBooker <noreply@nyaybooker.com>',
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Payment Gateway
-    // ─────────────────────────────────────────────────────────────────────────
-    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || '',
-    RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || '',
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Rate Limiting
-    // ─────────────────────────────────────────────────────────────────────────
-    RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 900000, // 15 minutes
-    RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 100,
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Frontend URL
-    // ─────────────────────────────────────────────────────────────────────────
-    FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Logging
-    // ─────────────────────────────────────────────────────────────────────────
-    LOG_LEVEL: process.env.LOG_LEVEL || 'debug',
 };
 
-/**
- * Required environment variables for production
- */
-const requiredInProduction = [
-    'DATABASE_URL',
-    'JWT_SECRET',
-    'JWT_REFRESH_SECRET',
-];
-
-/**
- * Validate environment variables
- * Throws an error if required variables are missing in production
- */
-function validateEnv() {
-    if (env.isProduction) {
-        const missing = requiredInProduction.filter(key => !env[key]);
-
-        if (missing.length > 0) {
-            throw new Error(
-                `Missing required environment variables in production: ${missing.join(', ')}`
-            );
-        }
-    }
-
-    // Validate PORT is a valid number
-    if (isNaN(env.PORT) || env.PORT < 1 || env.PORT > 65535) {
-        throw new Error('PORT must be a valid port number (1-65535)');
-    }
-
-    // Warn about default secrets in development
-    if (env.isDevelopment) {
-        if (env.JWT_SECRET.includes('default')) {
-            console.warn('⚠️  Using default JWT_SECRET. Set a secure secret in .env');
-        }
+// Development warnings
+if (env.isDevelopment) {
+    if (env.JWT_SECRET.includes('default')) {
+        console.warn('⚠️  Using default JWT_SECRET. Set a secure secret in .env');
     }
 }
-
-// Validate on module load
-validateEnv();
 
 export default env;

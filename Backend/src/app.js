@@ -28,6 +28,7 @@ import reviewRoutes from './modules/reviews/routes.js';
 import notificationRoutes from './modules/notifications/routes.js';
 import analyticsRoutes from './modules/analytics/routes.js';
 import adminRoutes from './modules/admin/routes.js';
+import healthRoutes from './routes/health.js';
 
 /**
  * Create and configure Express application
@@ -83,18 +84,10 @@ export function createApp() {
     app.use('/api', apiLimiter);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Health Check Endpoint
+    // Health Check Endpoints (/health, /health/live, /health/ready)
     // ─────────────────────────────────────────────────────────────────────────
 
-    app.get('/health', (req, res) => {
-        res.json({
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime(),
-            environment: env.NODE_ENV,
-            version: process.env.npm_package_version || '1.0.0',
-        });
-    });
+    app.use('/health', healthRoutes);
 
     // ─────────────────────────────────────────────────────────────────────────
     // API Routes
