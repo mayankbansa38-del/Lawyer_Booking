@@ -1,6 +1,0 @@
-{"level":"info","message":"Connecting to databases...","timestamp":"2026-02-11T10:49:03.886Z"}
-{"level":"info","message":"📡 Connecting to databases...","timestamp":"2026-02-11T10:49:03.887Z"}
-{"level":"info","message":"✅ MongoDB connected","timestamp":"2026-02-11T10:49:04.878Z"}
-{"level":"info","message":"✅ All databases connected","timestamp":"2026-02-11T10:49:07.082Z"}
-{"level":"info","message":"Express app configured successfully","timestamp":"2026-02-11T10:49:07.085Z"}
-{"level":"info","message":"\n                NyayBooker API Server\n                Environment: development\n                Port:        5000\n                Version:     v1\n                Health:      http://localhost:5000/health\n                API:         http://localhost:5000/api/v1\n            ","timestamp":"2026-02-11T10:49:07.087Z"}
