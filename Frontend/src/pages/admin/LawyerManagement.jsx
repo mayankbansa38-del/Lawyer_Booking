@@ -24,13 +24,6 @@ export default function LawyerManagement() {
             setLawyers(response.data.data.lawyers || []);
         } catch (error) {
             console.error('Failed to fetch lawyers:', error);
-            // Mock data
-            setLawyers([
-                { id: '1', user: { firstName: 'Rahul', lastName: 'Sharma', email: 'rahul@example.com' }, barCouncilId: 'DEL/123/2020', verificationStatus: 'VERIFIED', averageRating: 4.8, totalReviews: 45, isAvailable: true },
-                { id: '2', user: { firstName: 'Meera', lastName: 'Patel', email: 'meera@example.com' }, barCouncilId: 'MH/456/2019', verificationStatus: 'PENDING', averageRating: 0, totalReviews: 0, isAvailable: true },
-                { id: '3', user: { firstName: 'Arun', lastName: 'Gupta', email: 'arun@example.com' }, barCouncilId: 'KA/789/2018', verificationStatus: 'VERIFIED', averageRating: 4.5, totalReviews: 32, isAvailable: false },
-                { id: '4', user: { firstName: 'Kavita', lastName: 'Rao', email: 'kavita@example.com' }, barCouncilId: 'TN/012/2021', verificationStatus: 'REJECTED', averageRating: 0, totalReviews: 0, isAvailable: false },
-            ]);
         } finally {
             setLoading(false);
         }

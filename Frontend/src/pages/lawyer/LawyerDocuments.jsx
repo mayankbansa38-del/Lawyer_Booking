@@ -28,8 +28,8 @@ export default function LawyerDocuments() {
         async function fetchData() {
             try {
                 const [docsRes, casesRes] = await Promise.all([
-                    documentAPI.getByLawyer(user?.id || '1'),
-                    caseAPI.getAll({ lawyerId: user?.id || '1' })
+                    documentAPI.getByLawyer(user?.lawyer?.id || user?.id),
+                    caseAPI.getAll({ lawyerId: user?.lawyer?.id || user?.id })
                 ]);
                 setDocuments(docsRes.data);
                 setCases(casesRes.data);

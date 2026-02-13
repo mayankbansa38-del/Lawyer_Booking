@@ -139,6 +139,7 @@ model Lawyer {
   barCouncilId        String              @unique @map("bar_council_id")
   barCouncilState     String              @map("bar_council_state")
   enrollmentYear      Int                 @map("enrollment_year")
+  languages           String[]            @default([])
   
   // Profile
   bio                 String?             @db.Text

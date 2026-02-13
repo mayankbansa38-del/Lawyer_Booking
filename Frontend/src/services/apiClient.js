@@ -9,15 +9,27 @@
  */
 
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 // Create axios instance
 const apiClient = axios.create({
     baseURL: API_URL,
-    timeout: 30000,
+    timeout: 10000, // 10 seconds - reduced for faster failure detection
     headers: {
         'Content-Type': 'application/json',
+    },
+});
+
+// Configure automatic retries for transient failures
+axiosRetry(apiClient, {
+    retries: 2, // Retry failed requests up to 2 times
+    retryDelay: axiosRetry.exponentialDelay, // Exponential backoff (1s, 2s)
+    retryCondition: (error) => {
+        // Retry on network errors or 5xx server errors
+        return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+            (error.response?.status >= 500 && error.response?.status < 600);
     },
 });
 
@@ -40,12 +52,50 @@ export const clearTokens = () => {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
 };
 
-// Request interceptor - add auth token
+/**
+ * Check if a JWT token is expired by decoding its payload (no library needed).
+ * Returns true if the token is expired or malformed.
+ * @param {string} token - JWT token string
+ * @returns {boolean}
+ */
+export const isTokenExpired = (token) => {
+    if (!token) return true;
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        // exp is in seconds, Date.now() is in milliseconds
+        // Add 30s buffer so we don't use a token that's about to expire
+        return (payload.exp * 1000) < (Date.now() + 30000);
+    } catch {
+        // Malformed token — treat as expired
+        return true;
+    }
+};
+
+// Request interceptor - add auth token (with expiry pre-check)
 apiClient.interceptors.request.use(
-    (config) => {
+    async (config) => {
         const token = getAccessToken();
         if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+            if (isTokenExpired(token)) {
+                // Token expired — try refresh before sending the request
+                const refreshToken = getRefreshToken();
+                if (refreshToken) {
+                    try {
+                        const response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+                        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+                        setTokens(accessToken, newRefreshToken);
+                        config.headers.Authorization = `Bearer ${accessToken}`;
+                    } catch {
+                        clearTokens();
+                        return Promise.reject(new Error('Session expired'));
+                    }
+                } else {
+                    clearTokens();
+                    return Promise.reject(new Error('Session expired'));
+                }
+            } else {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
         }
         return config;
     },

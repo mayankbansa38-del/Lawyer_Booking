@@ -24,6 +24,7 @@ CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
+    "google_id" TEXT,
     "role" "Role" NOT NULL DEFAULT 'USER',
     "first_name" TEXT NOT NULL,
     "last_name" TEXT NOT NULL,
@@ -49,6 +50,7 @@ CREATE TABLE "lawyers" (
     "bar_council_id" TEXT NOT NULL,
     "bar_council_state" TEXT NOT NULL,
     "enrollment_year" INTEGER NOT NULL,
+    "languages" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "bio" TEXT,
     "headline" TEXT,
     "experience" INTEGER NOT NULL DEFAULT 0,
@@ -277,6 +279,9 @@ CREATE TABLE "email_verification_tokens" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_google_id_key" ON "users"("google_id");
 
 -- CreateIndex
 CREATE INDEX "users_email_idx" ON "users"("email");

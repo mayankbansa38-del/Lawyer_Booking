@@ -3,11 +3,16 @@
  * NyayBooker Backend - Database Configuration
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * Manages connections to:
- * - Neon PostgreSQL (via Prisma)
- * - MongoDB (via Mongoose)
+ * Pure configuration module for database clients.
  * 
- * Uses singleton pattern for efficient connection management.
+ * ARCHITECTURE:
+ * - Creates and exports database client singletons
+ * - NO lifecycle management (no process.on, no retries)
+ * - NO diagnostics (health checks live in utils/health.js)
+ * - Follows Single Responsibility Principle
+ * 
+ * Lifecycle management (connect/disconnect/signals) → server.js
+ * Health checks → utils/health.js
  * 
  * @module config/database
  */
@@ -22,75 +27,84 @@ import logger from '../utils/logger.js';
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Prisma Client singleton instance
- * Reuses the same instance across the application for connection efficiency
+ * PERFORMANCE OPTIMIZATION NOTES:
+ * 
+ * 1. CONNECTION STRING (CRITICAL):
+ *    Use Neon's POOLING connection string, NOT direct:
+ *    ❌ postgresql://user:pass@ep-xxx.us-east-1.aws.neon.tech/db
+ *    ✅ postgresql://user:pass@ep-xxx.pooler.us-east-1.aws.neon.tech/db?pgbouncer=true
+ *    
+ *    The pooler URL reduces connection overhead and prevents "DEALLOCATE ALL" spam.
+ * 
+ * 2. BATCHING (Reduce Network Round-Trips):
+ *    Instead of:
+ *      const users = await prisma.user.findMany();
+ *      const lawyers = await prisma.lawyer.findMany();
+ *      const bookings = await prisma.booking.findMany();
+ *    
+ *    Use $transaction to batch:
+ *      const [users, lawyers, bookings] = await prisma.$transaction([
+ *        prisma.user.findMany(),
+ *        prisma.lawyer.findMany(),
+ *        prisma.booking.findMany(),
+ *      ]);
+ *    
+ *    This cuts latency by 3x (one round-trip instead of three).
+ * 
+ * 3. GEOGRAPHIC LATENCY:
+ *    - If developing locally in India and DB is in us-east-1 → 500ms ping
+ *    - Solution: Use local PostgreSQL for dev (docker run postgres)
+ *    - Production: Ensure DB region matches app region
  */
-let prisma = null;
 
 /**
- * Get or create Prisma client instance
- * @returns {PrismaClient} Prisma client instance
+ * Global Prisma singleton pattern
+ * Prevents multiple instances in:
+ * - Dev environments with HMR (Hot Module Reloading)
+ * - Serverless environments (Lambda/Vercel)
+ * 
+ * This is the industry-standard pattern from Prisma docs.
  */
-export function getPrismaClient() {
-    if (!prisma) {
-        prisma = new PrismaClient({
-            log: env.isDevelopment
-                ? [
-                    { level: 'query', emit: 'event' },
-                    { level: 'error', emit: 'stdout' },
-                    { level: 'warn', emit: 'stdout' },
-                ]
-                : [{ level: 'error', emit: 'stdout' }],
+const globalForPrisma = global;
 
-            // Connection pool settings for Neon
-            datasources: {
-                db: {
-                    url: env.DATABASE_URL,
-                },
-            },
-        });
+export const prisma = globalForPrisma.prisma || new PrismaClient({
+    log: env.isDevelopment
+        ? [
+            { level: 'query', emit: 'event' },
+            { level: 'error', emit: 'stdout' },
+            { level: 'warn', emit: 'stdout' },
+        ]
+        : [{ level: 'error', emit: 'stdout' }],
 
-        // Log queries in development
-        if (env.isDevelopment) {
-            prisma.$on('query', (e) => {
-                logger.debug(`Query: ${e.query}`, {
-                    duration: `${e.duration}ms`,
-                    params: e.params,
-                });
+    datasources: {
+        db: {
+            url: env.DATABASE_URL,
+        },
+    },
+
+    // NOTE: transactionOptions CANNOT be set globally in the constructor.
+    // Set them per-transaction instead:
+    // await prisma.$transaction([...], { maxWait: 5000, timeout: 10000 })
+});
+
+// Development query logging - ONLY slow queries to reduce noise
+if (env.isDevelopment) {
+    prisma.$on('query', (e) => {
+        // Only log queries that take longer than 100ms (performance issues)
+        // Filters out noisy DEALLOCATE ALL, COMMIT, BEGIN statements
+        const SLOW_QUERY_THRESHOLD_MS = 100;
+
+        if (e.duration >= SLOW_QUERY_THRESHOLD_MS) {
+            logger.warn(`🐌 Slow Query Detected (${e.duration}ms):`, {
+                query: e.query,
+                params: e.params,
+                duration: `${e.duration}ms`,
             });
         }
+    });
 
-
-    }
-
-    return prisma;
-}
-
-/**
- * Connect to PostgreSQL database via Prisma
- * @returns {Promise<void>}
- */
-export async function connectPrisma() {
-    try {
-        const client = getPrismaClient();
-        await client.$connect();
-        logger.info('✅ Connected to Neon PostgreSQL via Prisma');
-    } catch (error) {
-        logger.error('❌ Failed to connect to PostgreSQL:', error);
-        throw error;
-    }
-}
-
-/**
- * Disconnect Prisma client
- * @returns {Promise<void>}
- */
-export async function disconnectPrisma() {
-    if (prisma) {
-        await prisma.$disconnect();
-        prisma = null;
-        logger.info('Disconnected from PostgreSQL');
-    }
+    // Store in global to prevent multiple instances during HMR
+    globalForPrisma.prisma = prisma;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -99,66 +113,109 @@ export async function disconnectPrisma() {
 
 /**
  * MongoDB connection options
+ * 
+ * REMOVED: family: 4 (IPv4 forcing)
+ * Reason: Band-aid fix. Let DNS resolution work naturally.
+ * If you have IPv6 issues in prod, fix at infrastructure level.
  */
-const mongooseOptions = {
+export const mongooseOptions = {
     maxPoolSize: 10,
     minPoolSize: 2,
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
-    family: 4, // Use IPv4
 };
 
+// Event handlers for MongoDB connection
+mongoose.connection.on('connected', () => {
+    logger.info('✅ MongoDB connected');
+});
+
+mongoose.connection.on('error', (err) => {
+    logger.error('❌ MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+    logger.warn('⚠️  MongoDB disconnected');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONNECTION HELPERS (Minimal, No Retry Logic)
+// ═══════════════════════════════════════════════════════════════════════════
+
 /**
- * Connect to MongoDB
- * @returns {Promise<typeof mongoose>}
+ * Connect to all databases
+ * 
+ * WHY NO RETRY LOGIC?
+ * - Let orchestration layer (Docker/K8s/Systemd) handle restarts
+ * - Fail fast on startup if DB is unreachable
+ * - Retry loops mask infrastructure problems
+ * 
+ * If Prisma connection fails here, let it crash.
+ * Your container orchestrator will restart it.
+ * 
+ * @returns {Promise<void>}
  */
-export async function connectMongoDB() {
-    if (!env.MONGODB_URI) {
-        logger.warn('⚠️  MONGODB_URI not set, skipping MongoDB connection');
-        return null;
+export async function connectAllDatabases() {
+    logger.info('📡 Connecting to databases...');
+
+    const connections = [];
+
+    // 1. MongoDB (optional)
+    if (env.MONGODB_URI) {
+        connections.push(
+            mongoose.connect(env.MONGODB_URI, mongooseOptions)
+        );
+    } else {
+        logger.warn('⚠️  MONGODB_URI not set, skipping MongoDB');
     }
 
-    try {
-        // Set up connection event handlers
-        mongoose.connection.on('connected', () => {
-            logger.info('✅ Connected to MongoDB');
-        });
+    // 2. Prisma (PostgreSQL)
+    // Explicit $connect() for "fail fast" on startup.
+    // Without this, Prisma connects lazily on first query,
+    // and you won't know your DB is down until a user tries to log in.
+    connections.push(prisma.$connect());
 
-        mongoose.connection.on('error', (err) => {
-            logger.error('❌ MongoDB connection error:', err);
-        });
+    // Wait for all connections
+    await Promise.all(connections);
 
-        mongoose.connection.on('disconnected', () => {
-            logger.warn('MongoDB disconnected');
-        });
-
-        // Connect to MongoDB
-        await mongoose.connect(env.MONGODB_URI, mongooseOptions);
-
-        return mongoose;
-    } catch (error) {
-        logger.error('❌ Failed to connect to MongoDB:', error);
-        throw error;
-    }
+    logger.info('✅ All databases connected');
 }
 
 /**
- * Get active MongoDB connection
- * @returns {mongoose.Connection} Mongoose connection
+ * Disconnect from all databases
+ * Called during graceful shutdown in server.js
+ * 
+ * @returns {Promise<void>}
+ */
+export async function disconnectAllDatabases() {
+    logger.info('🔌 Disconnecting from databases...');
+
+    await Promise.all([
+        prisma.$disconnect(),
+        mongoose.disconnect(),
+    ]);
+
+    logger.info('✅ All databases disconnected');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LEGACY EXPORTS (For Backward Compatibility)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * @deprecated Use `prisma` export directly instead
+ * Kept for backward compatibility with existing code
+ */
+export function getPrismaClient() {
+    return prisma;
+}
+
+/**
+ * @deprecated Use mongoose.connection directly
+ * Kept for backward compatibility
  */
 export function getMongoConnection() {
     return mongoose.connection;
-}
-
-/**
- * Disconnect from MongoDB
- * @returns {Promise<void>}
- */
-export async function disconnectMongoDB() {
-    if (mongoose.connection.readyState !== 0) {
-        await mongoose.connection.close();
-        logger.info('Disconnected from MongoDB');
-    }
 }
 
 /**
@@ -175,113 +232,11 @@ export function getMongoDBStatus() {
     return states[mongoose.connection.readyState] || 'unknown';
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// UNIFIED DATABASE MANAGEMENT
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Connect to all databases
- * @returns {Promise<void>}
- */
-export async function connectAllDatabases() {
-    logger.info('Connecting to databases...');
-
-    const connections = await Promise.allSettled([
-        connectPrisma(),
-        connectMongoDB(),
-    ]);
-
-    // Check for failures
-    const failures = connections.filter(c => c.status === 'rejected');
-
-    if (failures.length > 0) {
-        failures.forEach(f => logger.error('Database connection failed:', f.reason));
-
-        // Only throw if Prisma (primary DB) failed
-        if (connections[0].status === 'rejected') {
-            throw new Error('Primary database (PostgreSQL) connection failed');
-        }
-    }
-
-    logger.info('Database connections established');
-}
-
-/**
- * Disconnect from all databases
- * @returns {Promise<void>}
- */
-export async function disconnectAllDatabases() {
-    logger.info('Disconnecting from databases...');
-
-    await Promise.allSettled([
-        disconnectPrisma(),
-        disconnectMongoDB(),
-    ]);
-
-    logger.info('All database connections closed');
-}
-
-/**
- * Check database health
- * @returns {Promise<Object>} Health status of all databases
- */
-export async function checkDatabaseHealth() {
-    const health = {
-        postgresql: { status: 'unknown', latency: null },
-        mongodb: { status: 'unknown', latency: null },
-    };
-
-    // Check PostgreSQL
-    try {
-        const start = Date.now();
-        await getPrismaClient().$queryRaw`SELECT 1`;
-        health.postgresql = {
-            status: 'healthy',
-            latency: `${Date.now() - start}ms`,
-        };
-    } catch (error) {
-        health.postgresql = {
-            status: 'unhealthy',
-            error: error.message,
-        };
-    }
-
-    // Check MongoDB
-    if (mongoose.connection.readyState === 1) {
-        try {
-            const start = Date.now();
-            await mongoose.connection.db.admin().ping();
-            health.mongodb = {
-                status: 'healthy',
-                latency: `${Date.now() - start}ms`,
-            };
-        } catch (error) {
-            health.mongodb = {
-                status: 'unhealthy',
-                error: error.message,
-            };
-        }
-    } else {
-        health.mongodb = {
-            status: 'disconnected',
-        };
-    }
-
-    return health;
-}
-
-// Export Prisma client for direct use
-export { prisma };
-
 export default {
+    prisma,
     getPrismaClient,
-    connectPrisma,
-    disconnectPrisma,
-    connectMongoDB,
-    disconnectMongoDB,
     connectAllDatabases,
     disconnectAllDatabases,
-    checkDatabaseHealth,
     getMongoDBStatus,
     getMongoConnection,
 };

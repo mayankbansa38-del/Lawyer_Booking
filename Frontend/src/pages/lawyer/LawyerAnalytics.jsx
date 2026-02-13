@@ -17,8 +17,10 @@ export default function LawyerAnalytics() {
     useEffect(() => {
         async function fetchAnalytics() {
             try {
-                const { data } = await lawyerAPI.getAnalytics(user?.id || '1');
-                setAnalytics(data);
+                if (user?.lawyer?.id) {
+                    const { data } = await lawyerAPI.getAnalytics(user.lawyer.id);
+                    setAnalytics(data);
+                }
             } catch (error) {
                 console.error('Error fetching analytics:', error);
             } finally {

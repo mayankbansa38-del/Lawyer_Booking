@@ -13,7 +13,8 @@ const Navbar = () => {
   const profileRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout, isAdmin, isLawyer } = useAuth();
+  const { user, isAuthenticated, logout, isAdmin, isLawyer, isLoading } = useAuth();
+
 
   // Close profile dropdown when clicking outside
   useEffect(() => {
@@ -42,9 +43,7 @@ const Navbar = () => {
   };
 
   const getDashboardLink = () => {
-    if (isAdmin) return '/admin/dashboard';
-    if (isLawyer) return '/lawyer/dashboard';
-    return '/user/dashboard';
+    return '/dashboard';
   };
 
   const getUserInitials = () => {
@@ -117,12 +116,18 @@ const Navbar = () => {
 
           {/* Desktop Auth Section */}
           <div className="hidden md:flex items-center gap-3">
-            {isAuthenticated ? (
+            {isLoading ? (
+              /* Loading Skeleton */
+              <div className="flex items-center gap-3">
+                <div className="w-32 h-10 bg-gray-100 rounded-xl animate-pulse" />
+                <div className="w-10 h-10 bg-gray-100 rounded-xl animate-pulse" />
+              </div>
+            ) : isAuthenticated ? (
               /* Profile Dropdown */
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition-all duration-200 border border-transparent hover:border-gray-200"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-all duration-200 border border-transparent hover:border-gray-200 group"
                 >
                   {/* Avatar */}
                   <div className="relative">
@@ -130,10 +135,10 @@ const Navbar = () => {
                       <img
                         src={user.avatar}
                         alt={user.firstName}
-                        className="w-10 h-10 rounded-xl object-cover ring-2 ring-gray-100"
+                        className="w-10 h-10 rounded-xl object-cover ring-2 ring-gray-100 group-hover:ring-blue-100 transition-all"
                       />
                     ) : (
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${roleConfig.color} flex items-center justify-center text-white font-bold text-sm shadow-lg`}>
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${roleConfig.color} flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:shadow-lg transition-all`}>
                         {getUserInitials()}
                       </div>
                     )}
@@ -143,15 +148,15 @@ const Navbar = () => {
 
                   {/* Name & Role */}
                   <div className="hidden lg:flex flex-col items-start">
-                    <span className="text-sm font-semibold text-gray-900 leading-tight">
+                    <span className="text-sm font-bold text-gray-800 leading-tight group-hover:text-blue-700 transition-colors">
                       {user?.firstName} {user?.lastName?.charAt(0)}.
                     </span>
-                    <span className={`text-xs font-medium ${roleConfig.textColor} leading-tight`}>
+                    <span className={`text-[10px] uppercase tracking-wider font-semibold ${roleConfig.textColor} leading-tight`}>
                       {roleConfig.text}
                     </span>
                   </div>
 
-                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 group-hover:text-blue-500 ${isProfileOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Premium Dropdown Menu */}
@@ -184,15 +189,15 @@ const Navbar = () => {
 
                     {/* Quick Stats */}
                     <div className="grid grid-cols-3 gap-px bg-gray-100 border-b border-gray-100">
-                      <div className="bg-white p-3 text-center">
+                      <div className="bg-white p-3 text-center hover:bg-gray-50 transition-colors">
                         <p className="text-lg font-bold text-gray-900">0</p>
                         <p className="text-[10px] text-gray-500 uppercase tracking-wide">Bookings</p>
                       </div>
-                      <div className="bg-white p-3 text-center">
+                      <div className="bg-white p-3 text-center hover:bg-gray-50 transition-colors">
                         <p className="text-lg font-bold text-gray-900">0</p>
                         <p className="text-[10px] text-gray-500 uppercase tracking-wide">Reviews</p>
                       </div>
-                      <div className="bg-white p-3 text-center">
+                      <div className="bg-white p-3 text-center hover:bg-gray-50 transition-colors">
                         <p className="text-lg font-bold text-gray-900">
                           {user?.isEmailVerified ? '✓' : '−'}
                         </p>
@@ -201,17 +206,17 @@ const Navbar = () => {
                     </div>
 
                     {/* Menu Items */}
-                    <div className="p-2">
+                    <div className="p-2 space-y-1">
                       <Link
                         to={getDashboardLink()}
                         onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors group"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-blue-50 transition-colors group"
                       >
                         <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
                           <LayoutDashboard className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold">Dashboard</p>
+                          <p className="text-sm font-semibold group-hover:text-blue-700 transition-colors">Dashboard</p>
                           <p className="text-xs text-gray-500">View your overview</p>
                         </div>
                       </Link>
@@ -225,7 +230,7 @@ const Navbar = () => {
                           <Settings className="w-5 h-5 text-gray-600" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold">Settings</p>
+                          <p className="text-sm font-semibold group-hover:text-gray-900 transition-colors">Settings</p>
                           <p className="text-xs text-gray-500">Manage your account</p>
                         </div>
                       </Link>
@@ -233,13 +238,13 @@ const Navbar = () => {
                       <Link
                         to="/user/notifications"
                         onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors group"
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-amber-50 transition-colors group"
                       >
                         <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
                           <Bell className="w-5 h-5 text-amber-600" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold">Notifications</p>
+                          <p className="text-sm font-semibold group-hover:text-amber-700 transition-colors">Notifications</p>
                           <p className="text-xs text-gray-500">View updates</p>
                         </div>
                       </Link>
@@ -255,7 +260,7 @@ const Navbar = () => {
                           <LogOut className="w-5 h-5" />
                         </div>
                         <div className="text-left">
-                          <p className="text-sm font-semibold">Sign Out</p>
+                          <p className="text-sm font-semibold group-hover:text-red-700 transition-colors">Sign Out</p>
                           <p className="text-xs text-red-400">End your session</p>
                         </div>
                       </button>
@@ -268,14 +273,14 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200"
                 >
                   <LogIn className="w-4 h-4" />
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all duration-200"
+                  className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all duration-200"
                 >
                   <User className="w-4 h-4" />
                   Sign Up
@@ -364,7 +369,7 @@ const Navbar = () => {
                 <Link
                   to="/signup"
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center justify-center gap-2 mx-2 px-4 py-3 text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-colors"
+                  className="flex items-center justify-center gap-2 mx-2 px-4 py-3 text-base font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors"
                 >
                   <User className="w-5 h-5" />
                   Create Free Account

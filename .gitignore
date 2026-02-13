@@ -1,0 +1,21 @@
+# Project ignore patterns
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent reports and analysis (contains detailed session info)
+.agent/

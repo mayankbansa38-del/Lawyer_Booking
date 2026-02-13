@@ -24,7 +24,7 @@ export default function LawyerAvailability() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const { data } = await lawyerAPI.getById(user?.id || '1');
+                const { data } = await lawyerAPI.getById(user?.lawyer?.id || user?.id);
                 setWorkingHours(data.workingHours || {});
             } catch (error) {
                 console.error('Error fetching availability:', error);
@@ -58,7 +58,7 @@ export default function LawyerAvailability() {
         setSaving(true);
         setMessage({ type: '', text: '' });
         try {
-            await lawyerAPI.updateProfile(user?.id || '1', { workingHours });
+            await lawyerAPI.updateProfile(user?.lawyer?.id || user?.id, { workingHours });
             setMessage({ type: 'success', text: 'Availability updated successfully!' });
         } catch (error) {
             setMessage({ type: 'error', text: 'Failed to update. Please try again.' });

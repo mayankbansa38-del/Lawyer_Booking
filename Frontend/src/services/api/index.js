@@ -8,24 +8,70 @@ import {
     mockPayments, mockNotifications, mockReviews, mockDocuments,
     mockAnalytics, mockFavorites, generateTimeSlots
 } from '../mockData';
+import apiClient from '../apiClient';
 
 const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const lawyerAPI = {
     async getAll(filters = {}) {
-        await delay();
-        let lawyers = [...mockLawyers];
-        if (filters.specialty) lawyers = lawyers.filter(l => l.specialty.includes(filters.specialty));
-        if (filters.location) lawyers = lawyers.filter(l => l.location === filters.location);
-        if (filters.availability) lawyers = lawyers.filter(l => l.availability === filters.availability);
-        return { data: lawyers, total: lawyers.length };
+        const params = {};
+        if (filters.search) params.search = filters.search;
+        if (filters.locations && filters.locations.length) params.city = filters.locations[0]; // Simple filter for now
+        if (filters.specialties && filters.specialties.length) params.specialization = filters.specialties[0];
+        if (filters.costRange) {
+            params.minRate = filters.costRange[0];
+            params.maxRate = filters.costRange[1];
+        }
+        if (filters.experienceRange) {
+            params.minExperience = filters.experienceRange[0];
+            params.maxExperience = filters.experienceRange[1];
+        }
+        if (filters.casesWonRange) {
+            params.minCases = filters.casesWonRange[0];
+            params.maxCases = filters.casesWonRange[1];
+        }
+        if (filters.availability && filters.availability.length) {
+            params.available = filters.availability.includes('Available');
+        }
+
+        const response = await apiClient.get('/lawyers', { params });
+
+        // Transform backend data to frontend model
+        const lawyers = response.data.data.map(lawyer => ({
+            id: lawyer.id,
+            name: lawyer.name,
+            image: lawyer.avatar || 'https://images.unsplash.com/photo-1556157382-97eda2d62296?w=400&h=400&fit=crop', // Fallback
+            location: `${lawyer.city || ''}, ${lawyer.state || ''}`.replace(/^, /, '').replace(/, $/, '') || 'India',
+            experience: lawyer.experience,
+            casesWon: lawyer.completedBookings || 0,
+            specialty: lawyer.specializations ? lawyer.specializations.map(s => s.name) : [],
+            avgCostPerCase: parseFloat(lawyer.hourlyRate),
+            availability: lawyer.isAvailable ? 'Available' : 'Busy',
+            rating: lawyer.averageRating || 0,
+            description: lawyer.headline || lawyer.bio || 'Experienced Lawyer'
+        }));
+
+        return { data: lawyers, total: response.data.total };
     },
 
     async getById(id) {
-        await delay();
-        const lawyer = mockLawyers.find(l => l.id === id);
-        if (!lawyer) throw new Error('Lawyer not found');
-        return { data: lawyer };
+        try {
+            const { data } = await apiClient.get(`/lawyers/${id}`);
+            const lawyer = data.data;
+
+            return {
+                data: {
+                    ...lawyer,
+                    image: lawyer.avatar,
+                    specialty: lawyer.specializations?.map(s => s.name) || [],
+                    casesWon: lawyer.completedConsultations,
+                    location: lawyer.city && lawyer.state ? `${lawyer.city}, ${lawyer.state}` : lawyer.city || lawyer.state || 'Location not available',
+                }
+            };
+        } catch (error) {
+            console.error('Error fetching lawyer details:', error);
+            throw error;
+        }
     },
 
     async getReviews(lawyerId) {
@@ -40,16 +86,30 @@ export const lawyerAPI = {
     },
 
     async updateProfile(lawyerId, data) {
-        await delay();
-        const idx = mockLawyers.findIndex(l => l.id === lawyerId);
-        if (idx === -1) throw new Error('Lawyer not found');
-        mockLawyers[idx] = { ...mockLawyers[idx], ...data };
-        return { data: mockLawyers[idx] };
+        // data contains frontend fields: specialty, languages, etc.
+        // We need to map them to backend expected fields.
+        // Backend expects: bio, headline, hourlyRate, city, state, address, availability, languages.
+        // Frontend sends 'profile' object which has specific structure.
+
+        const payload = {
+            bio: data.description, // 'description' mapped to 'bio'
+            headline: data.headline, // if exists
+            hourlyRate: data.avgCostPerCase, // mapped
+            city: data.location?.split(',')[0]?.trim(), // simple parsing if location is string
+            state: data.location?.split(',')[1]?.trim(),
+            languages: data.languages,
+            // specializations: handled separately or ignored for now?
+        };
+
+        const response = await apiClient.put('/lawyers/profile', payload);
+        return { data: response.data.data };
     },
 
     async getAnalytics(lawyerId) {
-        await delay();
-        return { data: { ...mockAnalytics, lawyerId } };
+        const response = await apiClient.get('/analytics/hybrid-dashboard', {
+            params: { lawyerId }
+        });
+        return response.data;
     }
 };
 

@@ -25,7 +25,8 @@ export default function UserCases() {
     useEffect(() => {
         async function fetchCases() {
             try {
-                const { data } = await caseAPI.getAll({ clientId: user?.id || 'u1' });
+                if (!user?.id) return;
+                const { data } = await caseAPI.getAll({ clientId: user.id });
                 setCases(data);
             } catch (error) {
                 console.error('Error fetching cases:', error);

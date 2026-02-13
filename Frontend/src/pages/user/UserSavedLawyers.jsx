@@ -17,8 +17,9 @@ export default function UserSavedLawyers() {
 
     useEffect(() => {
         async function fetchFavorites() {
+            if (!user?.id) return;
             try {
-                const { data } = await favoritesAPI.getByUser(user?.id || 'u1');
+                const { data } = await favoritesAPI.getByUser(user.id);
                 setLawyers(data);
             } catch (error) {
                 console.error('Error fetching favorites:', error);
@@ -30,8 +31,9 @@ export default function UserSavedLawyers() {
     }, [user]);
 
     const handleRemove = async (lawyerId) => {
+        if (!user?.id) return;
         try {
-            await favoritesAPI.remove(user?.id || 'u1', lawyerId);
+            await favoritesAPI.remove(user.id, lawyerId);
             setLawyers(prev => prev.filter(l => l.id !== lawyerId));
         } catch (error) {
             console.error('Error removing favorite:', error);

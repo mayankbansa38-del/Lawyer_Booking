@@ -11,7 +11,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as authApi from '../services/authApi';
-import { getAccessToken, clearTokens } from '../services/apiClient';
+import { getAccessToken, clearTokens, isTokenExpired } from '../services/apiClient';
 
 const AuthContext = createContext(null);
 
@@ -27,22 +27,40 @@ export function AuthProvider({ children }) {
 
     // Check for existing token on mount
     useEffect(() => {
+        const controller = new AbortController();
+
         const initAuth = async () => {
             const token = getAccessToken();
+
             if (token) {
-                try {
-                    const userData = await authApi.getCurrentUser();
-                    setUser(userData);
-                    setIsAuthenticated(true);
-                } catch (err) {
-                    console.error('Failed to restore session:', err);
+                // Skip API call if token is already expired — avoids wasted round-trip
+                if (isTokenExpired(token)) {
                     clearTokens();
+                    setIsLoading(false);
+                    return;
+                }
+
+                try {
+                    const userData = await authApi.getCurrentUser({ signal: controller.signal });
+                    if (!controller.signal.aborted) {
+                        setUser(userData);
+                        setIsAuthenticated(true);
+                    }
+                } catch (err) {
+                    if (controller.signal.aborted) return; // Unmounted — skip state updates
+                    clearTokens();
+                    setUser(null);
+                    setIsAuthenticated(false);
                 }
             }
-            setIsLoading(false);
+            if (!controller.signal.aborted) {
+                setIsLoading(false);
+            }
         };
 
         initAuth();
+
+        return () => controller.abort(); // Cleanup on unmount
     }, []);
 
     /**

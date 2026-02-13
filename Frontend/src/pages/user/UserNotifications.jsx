@@ -16,7 +16,8 @@ export default function UserNotifications() {
     useEffect(() => {
         async function fetchNotifications() {
             try {
-                const { data } = await notificationAPI.getAll(user?.id || 'u1', 'client');
+                if (!user?.id) return;
+                const { data } = await notificationAPI.getAll(user.id, 'client');
                 setNotifications(data);
             } catch (error) {
                 console.error('Error fetching notifications:', error);

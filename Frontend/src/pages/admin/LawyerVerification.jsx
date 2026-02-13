@@ -23,42 +23,6 @@ export default function LawyerVerification() {
             setPendingLawyers(response.data.data.lawyers || []);
         } catch (error) {
             console.error('Failed to fetch pending lawyers:', error);
-            // Mock data
-            setPendingLawyers([
-                {
-                    id: '1',
-                    user: { firstName: 'Vikram', lastName: 'Malhotra', email: 'vikram.m@example.com', phone: '+91 98111 22333' },
-                    barCouncilId: 'DEL/567/2022',
-                    barCouncilState: 'Delhi',
-                    enrollmentYear: 2022,
-                    city: 'New Delhi',
-                    state: 'Delhi',
-                    bio: 'Experienced in corporate law with 2 years of practice.',
-                    createdAt: '2024-01-15T10:30:00Z',
-                },
-                {
-                    id: '2',
-                    user: { firstName: 'Anjali', lastName: 'Desai', email: 'anjali.d@example.com', phone: '+91 98222 33444' },
-                    barCouncilId: 'MH/890/2021',
-                    barCouncilState: 'Maharashtra',
-                    enrollmentYear: 2021,
-                    city: 'Mumbai',
-                    state: 'Maharashtra',
-                    bio: 'Specializing in family law and matrimonial disputes.',
-                    createdAt: '2024-01-14T14:45:00Z',
-                },
-                {
-                    id: '3',
-                    user: { firstName: 'Rajan', lastName: 'Krishnan', email: 'rajan.k@example.com', phone: '+91 98333 44555' },
-                    barCouncilId: 'KER/234/2020',
-                    barCouncilState: 'Kerala',
-                    enrollmentYear: 2020,
-                    city: 'Kochi',
-                    state: 'Kerala',
-                    bio: 'Criminal defense attorney with strong courtroom presence.',
-                    createdAt: '2024-01-13T09:15:00Z',
-                },
-            ]);
         } finally {
             setLoading(false);
         }

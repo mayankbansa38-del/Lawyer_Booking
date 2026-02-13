@@ -19,8 +19,9 @@ export default function UserDashboard() {
 
     useEffect(() => {
         async function fetchData() {
+            if (!user?.id) return;
             try {
-                const userId = user?.id || 'u1';
+                const userId = user.id;
                 const [aptsRes, favsRes, casesRes] = await Promise.all([
                     appointmentAPI.getAll({ userId }),
                     favoritesAPI.getByUser(userId),

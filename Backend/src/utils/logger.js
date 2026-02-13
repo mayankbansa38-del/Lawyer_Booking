@@ -63,8 +63,8 @@ const transports = [
     }),
 ];
 
-// Add file transports in production
-if (NODE_ENV === 'production') {
+// Add file transports ONLY in development (Avoids Read-Only FS errors on Vercel)
+if (NODE_ENV !== 'production') {
     transports.push(
         // Error log file
         new winston.transports.File({
@@ -96,21 +96,7 @@ const logger = winston.createLogger({
     // Don't exit on handled exceptions
     exitOnError: false,
 
-    // Handle uncaught exceptions
-    exceptionHandlers: NODE_ENV === 'production' ? [
-        new winston.transports.File({
-            filename: path.join(logsDir, 'exceptions.log'),
-            format: fileFormat,
-        }),
-    ] : undefined,
-
-    // Handle unhandled promise rejections
-    rejectionHandlers: NODE_ENV === 'production' ? [
-        new winston.transports.File({
-            filename: path.join(logsDir, 'rejections.log'),
-            format: fileFormat,
-        }),
-    ] : undefined,
+    // Exception handlers (disabled in production to avoid file writes)
 });
 
 /**

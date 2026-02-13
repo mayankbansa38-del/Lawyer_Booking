@@ -64,9 +64,10 @@ export async function registerLawyer(lawyerData) {
 
 /**
  * Get current user profile
+ * @param {Object} [options] - Axios request options (e.g. { signal })
  */
-export async function getCurrentUser() {
-    const response = await apiClient.get('/auth/me');
+export async function getCurrentUser(options = {}) {
+    const response = await apiClient.get('/auth/me', options);
     return response.data.data.user;
 }
 

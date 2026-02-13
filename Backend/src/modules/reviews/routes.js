@@ -54,7 +54,7 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
         throw new ConflictError('You have already reviewed this booking');
     }
 
-    // Create review
+    // Create review (set isPublished: true so it's included in avg calculation)
     const review = await prisma.review.create({
         data: {
             bookingId,
@@ -64,10 +64,11 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
             title,
             content,
             isVerified: true, // Verified because it's tied to a completed booking
+            isPublished: true, // Published immediately — included in avg rating
         },
     });
 
-    // Update lawyer average rating
+    // Update lawyer average rating (include all published reviews)
     const aggregation = await prisma.review.aggregate({
         where: { lawyerId: booking.lawyerId, isPublished: true },
         _avg: { rating: true },

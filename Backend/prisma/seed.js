@@ -51,7 +51,14 @@ const TEST_USERS = [
 
 const TEST_LAWYERS = [
     {
-        user: { email: 'advocate.singh@example.com', password: 'Lawyer@123456', firstName: 'Vikram', lastName: 'Singh', phone: '+919876543220' },
+        user: {
+            email: 'advocate.singh@example.com',
+            password: 'Lawyer@123456',
+            firstName: 'Vikram',
+            lastName: 'Singh',
+            phone: '+919876543220',
+            avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop'
+        },
         lawyer: {
             barCouncilId: 'DL/1234/2015',
             barCouncilState: 'Delhi',
@@ -68,7 +75,14 @@ const TEST_LAWYERS = [
         },
     },
     {
-        user: { email: 'advocate.mehra@example.com', password: 'Lawyer@123456', firstName: 'Anjali', lastName: 'Mehra', phone: '+919876543221' },
+        user: {
+            email: 'advocate.mehra@example.com',
+            password: 'Lawyer@123456',
+            firstName: 'Anjali',
+            lastName: 'Mehra',
+            phone: '+919876543221',
+            avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop'
+        },
         lawyer: {
             barCouncilId: 'MH/5678/2018',
             barCouncilState: 'Maharashtra',
@@ -85,7 +99,14 @@ const TEST_LAWYERS = [
         },
     },
     {
-        user: { email: 'advocate.reddy@example.com', password: 'Lawyer@123456', firstName: 'Suresh', lastName: 'Reddy', phone: '+919876543222' },
+        user: {
+            email: 'advocate.reddy@example.com',
+            password: 'Lawyer@123456',
+            firstName: 'Suresh',
+            lastName: 'Reddy',
+            phone: '+919876543222',
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop'
+        },
         lawyer: {
             barCouncilId: 'KA/9012/2012',
             barCouncilState: 'Karnataka',
@@ -104,7 +125,14 @@ const TEST_LAWYERS = [
         },
     },
     {
-        user: { email: 'advocate.gupta@example.com', password: 'Lawyer@123456', firstName: 'Neha', lastName: 'Gupta', phone: '+919876543223' },
+        user: {
+            email: 'advocate.gupta@example.com',
+            password: 'Lawyer@123456',
+            firstName: 'Neha',
+            lastName: 'Gupta',
+            phone: '+919876543223',
+            avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop'
+        },
         lawyer: {
             barCouncilId: 'TN/3456/2016',
             barCouncilState: 'Tamil Nadu',
@@ -121,7 +149,14 @@ const TEST_LAWYERS = [
         },
     },
     {
-        user: { email: 'advocate.khan@example.com', password: 'Lawyer@123456', firstName: 'Imran', lastName: 'Khan', phone: '+919876543224' },
+        user: {
+            email: 'advocate.khan@example.com',
+            password: 'Lawyer@123456',
+            firstName: 'Imran',
+            lastName: 'Khan',
+            phone: '+919876543224',
+            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop'
+        },
         lawyer: {
             barCouncilId: 'UP/7890/2019',
             barCouncilState: 'Uttar Pradesh',
@@ -138,7 +173,14 @@ const TEST_LAWYERS = [
         },
     },
     {
-        user: { email: 'advocate.rao@example.com', password: 'Lawyer@123456', firstName: 'Lakshmi', lastName: 'Rao', phone: '+919876543225' },
+        user: {
+            email: 'advocate.rao@example.com',
+            password: 'Lawyer@123456',
+            firstName: 'Lakshmi',
+            lastName: 'Rao',
+            phone: '+919876543225',
+            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop'
+        },
         lawyer: {
             barCouncilId: 'AP/2345/2010',
             barCouncilState: 'Andhra Pradesh',
@@ -231,7 +273,9 @@ async function seedTestLawyers() {
         // Create or update user
         const user = await prisma.user.upsert({
             where: { email: data.user.email },
-            update: {},
+            update: {
+                avatar: data.user.avatar
+            },
             create: {
                 ...data.user,
                 password: hashedPassword,

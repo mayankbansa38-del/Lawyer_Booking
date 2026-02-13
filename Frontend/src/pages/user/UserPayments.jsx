@@ -18,7 +18,8 @@ export default function UserPayments() {
     useEffect(() => {
         async function fetchPayments() {
             try {
-                const { data } = await paymentAPI.getAll({ clientId: user?.id || 'u1' });
+                if (!user?.id) return;
+                const { data } = await paymentAPI.getAll({ clientId: user.id });
                 setPayments(data);
             } catch (error) {
                 console.error('Error fetching payments:', error);

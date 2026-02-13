@@ -88,6 +88,35 @@ router.post('/search', optionalAuth, asyncHandler(async (req, res) => {
     return sendSuccess(res, { message: 'Search tracked' });
 }));
 
+/**
+ * @route   GET /api/v1/analytics/hybrid-dashboard
+ * @desc    Get hybrid dashboard metrics (Postgres + MongoDB)
+ * @access  Private/Lawyer
+ */
+router.get('/hybrid-dashboard', authenticate, authorize('LAWYER', 'ADMIN'), asyncHandler(async (req, res) => {
+    const lawyerId = req.user.lawyerId;
+    const targetLawyerId = req.query.lawyerId || lawyerId;
+
+    // Only Admin can view other lawyers' data
+    if (req.user.role !== 'ADMIN' && targetLawyerId !== lawyerId) {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. You can only view your own analytics.'
+        });
+    }
+
+    if (!targetLawyerId) {
+        return res.status(400).json({
+            success: false,
+            message: 'Lawyer ID is required'
+        });
+    }
+
+    const metrics = await analyticsService.getHybridDashboardMetrics(targetLawyerId);
+
+    return sendSuccess(res, { data: metrics });
+}));
+
 // ═══════════════════════════════════════════════════════════════════════════
 // REPORTING ENDPOINTS (Admin only)
 // ═══════════════════════════════════════════════════════════════════════════

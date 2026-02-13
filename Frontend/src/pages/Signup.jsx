@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import { Mail, Lock, User, Phone, Scale, ShieldCheck, Building2, ArrowRight, Eye, EyeOff, CheckCircle2, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Phone, Building2, ArrowRight, Eye, EyeOff, CheckCircle2, Sparkles, Loader2, AlertCircle, Scale, User } from 'lucide-react';
+import { SIGNUP_ROLES } from '../constants/roles';
 import { useAuth } from "../context/AuthContext";
 
 const Signup = () => {
@@ -16,10 +17,7 @@ const Signup = () => {
     firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "", barNumber: "", barState: "", specialization: ""
   });
 
-  const roles = [
-    { id: "User", icon: User, label: "Client", desc: "Find & book lawyers" },
-    { id: "Lawyer", icon: Scale, label: "Lawyer", desc: "Grow your practice" },
-  ];
+  const roles = SIGNUP_ROLES;
 
   const benefits = [
     "Access to verified legal experts",

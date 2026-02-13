@@ -3,6 +3,7 @@ import { ArrowRight, Users, Scale, Clock, Shield, Star, CheckCircle2, Briefcase,
 import lawyer_booking from "../assets/lawyer_booking.png";
 import Speciality from "./Speciality";
 import Cards from "./Cards";
+import TrustBentoGrid from "../components/TrustBentoGrid";
 
 const Home = () => {
   const stats = [
@@ -12,56 +13,7 @@ const Home = () => {
     { value: "24/7", label: "Support", icon: Clock },
   ];
 
-  const bentoItems = [
-    {
-      title: "Expert Legal Counsel",
-      description: "Access top-rated lawyers with proven track records in various practice areas.",
-      icon: Scale,
-      className: "md:col-span-2 md:row-span-2",
-      gradient: "from-blue-500 to-indigo-600",
-      size: "large"
-    },
-    {
-      title: "Verified Profiles",
-      description: "All lawyers are Bar Council verified.",
-      icon: Shield,
-      className: "md:col-span-1",
-      gradient: "from-emerald-500 to-teal-600",
-      size: "small"
-    },
-    {
-      title: "5-Star Reviews",
-      description: "Transparent ratings & feedback.",
-      icon: Star,
-      className: "md:col-span-1",
-      gradient: "from-amber-500 to-orange-600",
-      size: "small"
-    },
-    {
-      title: "Instant Booking",
-      description: "Schedule consultations in minutes, not days.",
-      icon: Clock,
-      className: "md:col-span-1",
-      gradient: "from-purple-500 to-pink-600",
-      size: "small"
-    },
-    {
-      title: "Confidential & Secure",
-      description: "End-to-end encryption for all communications.",
-      icon: Shield,
-      className: "md:col-span-1",
-      gradient: "from-rose-500 to-red-600",
-      size: "small"
-    },
-    {
-      title: "Affordable Plans",
-      description: "Transparent pricing with no hidden fees. Compare rates and choose what works for your budget.",
-      icon: Briefcase,
-      className: "md:col-span-2",
-      gradient: "from-cyan-500 to-blue-600",
-      size: "medium"
-    },
-  ];
+
 
   return (
     <>
@@ -141,45 +93,7 @@ const Home = () => {
       </section>
 
       {/* Bento Grid Section */}
-      <section className="px-4 sm:px-6 lg:px-12 py-12 sm:py-16 lg:py-20">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Why Choose Nyay Booker?</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto text-sm sm:text-base">Everything you need to find, connect, and work with the perfect legal professional.</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[140px] sm:auto-rows-[160px]">
-            {bentoItems.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={idx}
-                  className={`group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-6 bg-gradient-to-br ${item.gradient} text-white cursor-pointer hover:scale-[1.02] transition-all duration-300 shadow-lg hover:shadow-xl ${item.className}`}
-                >
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                  <div className="relative z-10 h-full flex flex-col">
-                    <div className={`w-10 h-10 sm:w-12 sm:h-12 ${item.size === 'large' ? 'md:w-14 md:h-14' : ''} rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3 sm:mb-4`}>
-                      <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${item.size === 'large' ? 'md:w-7 md:h-7' : ''}`} />
-                    </div>
-                    <h3 className={`font-bold mb-1 sm:mb-2 ${item.size === 'large' ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg'}`}>{item.title}</h3>
-                    <p className={`text-white/80 ${item.size === 'large' ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'} line-clamp-3`}>{item.description}</p>
-
-                    {item.size === 'large' && (
-                      <Link to="/lawyers" className="mt-auto pt-4 inline-flex items-center gap-2 text-sm font-semibold text-white/90 hover:text-white group/link">
-                        Browse Lawyers
-                        <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
-                      </Link>
-                    )}
-                  </div>
-
-                  {/* Decorative circle */}
-                  <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/10 rounded-full" />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      <TrustBentoGrid />
 
       {/* Trust Banner */}
       <section className="px-4 sm:px-6 lg:px-12 py-8 sm:py-12">

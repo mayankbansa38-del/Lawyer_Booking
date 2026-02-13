@@ -26,7 +26,7 @@ export default function LawyerProfile() {
     useEffect(() => {
         async function fetchProfile() {
             try {
-                const { data } = await lawyerAPI.getById(user?.id || '1');
+                const { data } = await lawyerAPI.getById(user?.lawyer?.id || user?.id);
                 setProfile(data);
             } catch (error) {
                 console.error('Error fetching profile:', error);

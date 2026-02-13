@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { MapPin, Briefcase, Trophy, DollarSign, Star } from 'lucide-react';
 
+const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=3b82f6&color=fff&bold=true&size=160';
+
 export function LawyerCard({ lawyer }) {
   const availabilityColor = {
     'Available': 'bg-green-100 text-green-800',
@@ -13,9 +15,13 @@ export function LawyerCard({ lawyer }) {
       <div className="p-6">
         <div className="flex items-start gap-4 mb-4">
           <img
-            src={lawyer.image}
+            src={lawyer.image || `${DEFAULT_AVATAR}&name=${encodeURIComponent(lawyer.name || 'Lawyer')}`}
             alt={lawyer.name}
             className="w-20 h-20 rounded-full object-cover"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = `${DEFAULT_AVATAR}&name=${encodeURIComponent(lawyer.name || 'L')}`;
+            }}
           />
           <div className="flex-1">
             <h3 className="text-xl font-semibold text-gray-900 mb-1">{lawyer.name}</h3>

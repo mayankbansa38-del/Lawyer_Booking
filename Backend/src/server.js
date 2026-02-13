@@ -84,19 +84,13 @@ async function startServer() {
         // Start HTTP server
         const server = app.listen(env.PORT, () => {
             logger.info(`
-╔══════════════════════════════════════════════════════════════════╗
-║                                                                  ║
-║   🚀  NyayBooker API Server                                      ║
-║                                                                  ║
-║   Environment: ${env.NODE_ENV.padEnd(45)}║
-║   Port: ${String(env.PORT).padEnd(55)}║
-║   API Version: ${env.API_VERSION.padEnd(48)}║
-║                                                                  ║
-║   Health: http://localhost:${env.PORT}/health                        ║
-║   API: http://localhost:${env.PORT}/api/${env.API_VERSION}                          ║
-║                                                                  ║
-╚══════════════════════════════════════════════════════════════════╝
-      `);
+                NyayBooker API Server
+                Environment: ${env.NODE_ENV}
+                Port:        ${env.PORT}
+                Version:     ${env.API_VERSION}
+                Health:      http://localhost:${env.PORT}/health
+                API:         http://localhost:${env.PORT}/api/${env.API_VERSION}
+            `);
         });
 
         // Configure server

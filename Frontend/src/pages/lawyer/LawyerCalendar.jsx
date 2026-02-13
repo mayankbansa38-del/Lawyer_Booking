@@ -22,7 +22,7 @@ export default function LawyerCalendar() {
     useEffect(() => {
         async function fetchAppointments() {
             try {
-                const { data } = await appointmentAPI.getAll({ lawyerId: user?.id || '1' });
+                const { data } = await appointmentAPI.getAll({ lawyerId: user?.lawyer?.id || user?.id });
                 setAppointments(data);
             } catch (error) {
                 console.error('Error fetching appointments:', error);
@@ -121,8 +121,8 @@ export default function LawyerCalendar() {
                                             <div className="mt-1 space-y-1">
                                                 {item.appointments.slice(0, 2).map((apt, i) => (
                                                     <div key={i} className={`text-xs px-1.5 py-0.5 rounded truncate ${apt.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                                                            apt.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                                'bg-blue-100 text-blue-700'
+                                                        apt.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                                            'bg-blue-100 text-blue-700'
                                                         }`}>
                                                         {apt.time}
                                                     </div>
@@ -163,8 +163,8 @@ export default function LawyerCalendar() {
                                         <div className="flex items-center gap-4 text-sm text-gray-600">
                                             <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{apt.time}</span>
                                             <span className={`px-2 py-0.5 rounded text-xs font-medium ${apt.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                                                    apt.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                        'bg-blue-100 text-blue-700'
+                                                apt.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                                    'bg-blue-100 text-blue-700'
                                                 }`}>
                                                 {apt.status}
                                             </span>

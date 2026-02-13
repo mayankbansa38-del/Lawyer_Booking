@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Users, Scale, Calendar, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Users, Scale, Calendar, CheckCircle, Clock } from 'lucide-react';
 import apiClient from '../../services/apiClient';
 
 export default function AdminDashboard() {
@@ -28,21 +28,6 @@ export default function AdminDashboard() {
             setStats(response.data.data);
         } catch (error) {
             console.error('Failed to fetch dashboard stats:', error);
-            // Use mock data for demo
-            setStats({
-                totalUsers: 156,
-                totalLawyers: 42,
-                pendingVerifications: 8,
-                totalBookings: 324,
-                recentUsers: [
-                    { id: 1, name: 'Rajesh Kumar', email: 'rajesh@example.com', createdAt: '2024-01-15' },
-                    { id: 2, name: 'Priya Sharma', email: 'priya@example.com', createdAt: '2024-01-14' },
-                ],
-                recentLawyers: [
-                    { id: 1, name: 'Adv. Rahul Sharma', specialization: 'Criminal Law', status: 'VERIFIED' },
-                    { id: 2, name: 'Adv. Meera Patel', specialization: 'Family Law', status: 'PENDING' },
-                ],
-            });
         } finally {
             setLoading(false);
         }

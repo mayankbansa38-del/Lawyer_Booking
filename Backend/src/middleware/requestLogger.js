@@ -3,11 +3,12 @@
  * NyayBooker Backend - Request Logger Middleware
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * HTTP request logging middleware.
+ * HTTP request logging middleware with distributed tracing support.
  * 
  * @module middleware/requestLogger
  */
 
+import { randomUUID } from 'crypto';
 import logger from '../utils/logger.js';
 
 /**
@@ -21,9 +22,9 @@ import logger from '../utils/logger.js';
 export function requestLogger(req, res, next) {
     const startTime = Date.now();
 
-    // Log request start
-    const requestId = Math.random().toString(36).substring(7);
-    req.requestId = requestId;
+    // Use the UUID set by requestId middleware (runs before this)
+    // Do NOT generate a second ID — it breaks distributed tracing
+    const requestId = req.id;
 
     // Store original end function
     const originalEnd = res.end;
@@ -51,7 +52,8 @@ export function requestLogger(req, res, next) {
  * @param {import('express').NextFunction} next
  */
 export function requestId(req, res, next) {
-    const id = req.headers['x-request-id'] || `req-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    // Use existing header (for distributed tracing) or generate new UUID v4
+    const id = req.headers['x-request-id'] || randomUUID();
     req.id = id;
     res.setHeader('X-Request-ID', id);
     next();

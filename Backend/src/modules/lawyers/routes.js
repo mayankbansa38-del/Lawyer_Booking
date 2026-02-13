@@ -62,6 +62,21 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
         if (maxRate) where.hourlyRate.lte = parseFloat(maxRate);
     }
 
+    // Experience filters
+    const { minExperience, maxExperience, minCases, maxCases } = req.query;
+    if (minExperience || maxExperience) {
+        where.experience = {};
+        if (minExperience) where.experience.gte = parseInt(minExperience);
+        if (maxExperience) where.experience.lte = parseInt(maxExperience);
+    }
+
+    // Completed Bookings (Cases Won) filters
+    if (minCases || maxCases) {
+        where.completedBookings = {};
+        if (minCases) where.completedBookings.gte = parseInt(minCases);
+        if (maxCases) where.completedBookings.lte = parseInt(maxCases);
+    }
+
     // Specialization filter
     if (specialization) {
         where.specializations = {
@@ -98,7 +113,6 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
         'desc'
     );
 
-    // Execute query
     const [lawyers, total] = await Promise.all([
         prisma.lawyer.findMany({
             where,
@@ -119,6 +133,7 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
                 totalReviews: true,
                 isAvailable: true,
                 featured: true,
+                completedBookings: true,
                 user: {
                     select: {
                         id: true,
@@ -150,17 +165,26 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
         id: lawyer.id,
         slug: lawyer.slug,
         name: `${lawyer.user.firstName} ${lawyer.user.lastName}`,
+        image: lawyer.user.avatar,
         avatar: lawyer.user.avatar,
         headline: lawyer.headline,
+        description: lawyer.headline,
         experience: lawyer.experience,
         hourlyRate: lawyer.hourlyRate,
+        avgCostPerCase: lawyer.hourlyRate,
         currency: lawyer.currency,
+        location: lawyer.city && lawyer.state ? `${lawyer.city}, ${lawyer.state}` : lawyer.city || lawyer.state,
         city: lawyer.city,
         state: lawyer.state,
+        rating: lawyer.averageRating ? Math.round(lawyer.averageRating * 10) / 10 : 0,
         averageRating: lawyer.averageRating,
         totalReviews: lawyer.totalReviews,
         isAvailable: lawyer.isAvailable,
+        availability: lawyer.isAvailable ? 'Available' : 'Busy',
         featured: lawyer.featured,
+        casesWon: lawyer.completedBookings || 0,
+        completedBookings: lawyer.completedBookings,
+        specialty: lawyer.specializations.map(s => s.practiceArea.name),
         specializations: lawyer.specializations.map(s => s.practiceArea),
     }));
 
@@ -211,6 +235,7 @@ router.get('/featured', asyncHandler(async (req, res) => {
                     avatar: true,
                 },
             },
+            completedBookings: true,
             specializations: {
                 where: { isPrimary: true },
                 take: 1,
@@ -227,15 +252,23 @@ router.get('/featured', asyncHandler(async (req, res) => {
         id: lawyer.id,
         slug: lawyer.slug,
         name: `${lawyer.user.firstName} ${lawyer.user.lastName}`,
+        image: lawyer.user.avatar,
         avatar: lawyer.user.avatar,
         headline: lawyer.headline,
+        description: lawyer.headline,
         experience: lawyer.experience,
         hourlyRate: lawyer.hourlyRate,
+        avgCostPerCase: lawyer.hourlyRate,
         currency: lawyer.currency,
         location: lawyer.city && lawyer.state ? `${lawyer.city}, ${lawyer.state}` : lawyer.city || lawyer.state,
+        rating: lawyer.averageRating ? Math.round(lawyer.averageRating * 10) / 10 : 0,
         averageRating: lawyer.averageRating,
         totalReviews: lawyer.totalReviews,
+        casesWon: lawyer.completedBookings || 0,
+        completedBookings: lawyer.completedBookings,
+        specialty: lawyer.specializations[0]?.practiceArea?.name ? [lawyer.specializations[0].practiceArea.name] : [],
         primarySpecialization: lawyer.specializations[0]?.practiceArea?.name || null,
+        availability: 'Available', // Featured are usually available
     }));
 
     return sendSuccess(res, { data: transformed });
@@ -315,6 +348,7 @@ router.get('/:slugOrId', optionalAuth, asyncHandler(async (req, res) => {
             barCouncilId: true,
             barCouncilState: true,
             enrollmentYear: true,
+            languages: true,
             averageRating: true,
             totalReviews: true,
             totalBookings: true,
@@ -389,22 +423,30 @@ router.get('/:slugOrId', optionalAuth, asyncHandler(async (req, res) => {
         name: `${lawyer.user.firstName} ${lawyer.user.lastName}`,
         firstName: lawyer.user.firstName,
         lastName: lawyer.user.lastName,
+        image: lawyer.user.avatar,
         avatar: lawyer.user.avatar,
         bio: lawyer.bio,
         headline: lawyer.headline,
+        description: lawyer.headline,
         experience: lawyer.experience,
         hourlyRate: lawyer.hourlyRate,
+        avgCostPerCase: lawyer.hourlyRate,
         currency: lawyer.currency,
+        location: lawyer.city && lawyer.state ? `${lawyer.city}, ${lawyer.state}` : lawyer.city || lawyer.state,
         city: lawyer.city,
         state: lawyer.state,
         barCouncilId: lawyer.barCouncilId,
         barCouncilState: lawyer.barCouncilState,
         enrollmentYear: lawyer.enrollmentYear,
+        languages: lawyer.languages,
+        rating: lawyer.averageRating ? Math.round(lawyer.averageRating * 10) / 10 : 0,
         averageRating: lawyer.averageRating,
         totalReviews: lawyer.totalReviews,
+        casesWon: lawyer.completedBookings || 0,
         completedConsultations: lawyer.completedBookings,
         isAvailable: lawyer.isAvailable,
-        availability: lawyer.availability,
+        availability: lawyer.isAvailable ? 'Available' : 'Busy',
+        specialty: lawyer.specializations.map(s => s.practiceArea.name),
         specializations: lawyer.specializations.map(s => ({
             ...s.practiceArea,
             isPrimary: s.isPrimary,
@@ -502,7 +544,7 @@ router.get('/:id/availability', asyncHandler(async (req, res) => {
  */
 router.put('/profile', authenticate, requireVerifiedLawyer, asyncHandler(async (req, res) => {
     const prisma = getPrismaClient();
-    const { bio, headline, hourlyRate, city, state, address, availability } = req.body;
+    const { bio, headline, hourlyRate, city, state, address, availability, languages } = req.body;
 
     const lawyer = await prisma.lawyer.update({
         where: { userId: req.user.id },
@@ -514,6 +556,7 @@ router.put('/profile', authenticate, requireVerifiedLawyer, asyncHandler(async (
             state: state !== undefined ? state : undefined,
             address: address !== undefined ? address : undefined,
             availability: availability !== undefined ? availability : undefined,
+            languages: languages !== undefined ? languages : undefined,
         },
         select: {
             id: true,

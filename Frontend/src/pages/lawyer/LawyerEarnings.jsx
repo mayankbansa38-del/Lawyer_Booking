@@ -20,8 +20,8 @@ export default function LawyerEarnings() {
         async function fetchData() {
             try {
                 const [paymentsRes, summaryRes] = await Promise.all([
-                    paymentAPI.getAll({ lawyerId: user?.id || '1' }),
-                    paymentAPI.getEarningsSummary(user?.id || '1')
+                    paymentAPI.getAll({ lawyerId: user?.lawyer?.id || user?.id }),
+                    paymentAPI.getEarningsSummary(user?.lawyer?.id || user?.id)
                 ]);
                 setPayments(paymentsRes.data);
                 setSummary(summaryRes.data);

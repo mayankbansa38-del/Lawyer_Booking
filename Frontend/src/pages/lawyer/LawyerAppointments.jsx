@@ -26,7 +26,7 @@ export default function LawyerAppointments() {
     const fetchAppointments = async () => {
         setLoading(true);
         try {
-            const params = { lawyerId: user?.id || '1' };
+            const params = { lawyerId: user?.lawyer?.id || user?.id };
             if (activeTab !== 'all') params.status = activeTab;
             const { data } = await appointmentAPI.getAll(params);
             setAppointments(data);
@@ -74,8 +74,8 @@ export default function LawyerAppointments() {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.id
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                             }`}
                     >
                         {tab.label}

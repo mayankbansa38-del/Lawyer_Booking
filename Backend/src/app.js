@@ -22,12 +22,13 @@ import authRoutes from './modules/auth/routes.js';
 import userRoutes from './modules/users/routes.js';
 import lawyerRoutes from './modules/lawyers/routes.js';
 import bookingRoutes from './modules/bookings/routes.js';
+import adminRoutes from './modules/admin/routes.js';
 import paymentRoutes from './modules/payments/routes.js';
 import documentRoutes from './modules/documents/routes.js';
 import reviewRoutes from './modules/reviews/routes.js';
 import notificationRoutes from './modules/notifications/routes.js';
 import analyticsRoutes from './modules/analytics/routes.js';
-import adminRoutes from './modules/admin/routes.js';
+import healthRoutes from './routes/health.js';
 
 /**
  * Create and configure Express application
@@ -53,7 +54,9 @@ export function createApp() {
 
     // CORS
     app.use(cors({
-        origin: env.FRONTEND_URL,
+        origin: env.FRONTEND_URL.includes(',')
+            ? env.FRONTEND_URL.split(',').map(url => url.trim())
+            : env.FRONTEND_URL,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
@@ -69,8 +72,16 @@ export function createApp() {
     // Request logging
     app.use(requestLogger);
 
-    // Body parsing
-    app.use(express.json({ limit: '10mb' }));
+    // Body parsing — preserve raw body for webhook signature verification
+    app.use(express.json({
+        limit: '10mb',
+        verify: (req, _res, buf) => {
+            // Save raw body buffer for routes that need HMAC verification
+            if (req.originalUrl?.includes('/payments/webhook')) {
+                req.rawBody = buf;
+            }
+        },
+    }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -81,18 +92,10 @@ export function createApp() {
     app.use('/api', apiLimiter);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Health Check Endpoint
+    // Health Check Endpoints (/health, /health/live, /health/ready)
     // ─────────────────────────────────────────────────────────────────────────
 
-    app.get('/health', (req, res) => {
-        res.json({
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime(),
-            environment: env.NODE_ENV,
-            version: process.env.npm_package_version || '1.0.0',
-        });
-    });
+    app.use('/health', healthRoutes);
 
     // ─────────────────────────────────────────────────────────────────────────
     // API Routes

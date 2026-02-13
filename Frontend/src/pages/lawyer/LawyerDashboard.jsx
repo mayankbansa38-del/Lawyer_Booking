@@ -29,13 +29,26 @@ export default function LawyerDashboard() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const lawyerId = user?.id || '1';
+                const lawyerId = user?.lawyer?.id || user?.id;
+
+                // Guard: do not fetch with an unknown ID
+                if (!lawyerId) {
+                    console.warn('LawyerDashboard: no lawyerId available yet');
+                    setLoading(false);
+                    return;
+                }
 
                 // Fetch appointments
                 const { data: appointments } = await appointmentAPI.getAll({ lawyerId });
+                // Normalize dates to YYYY-MM-DD for reliable comparison
                 const today = new Date().toISOString().split('T')[0];
                 const pending = appointments.filter(a => a.status === 'pending').length;
-                const todayApts = appointments.filter(a => a.date === today).length;
+                const todayApts = appointments.filter(a => {
+                    const aptDate = typeof a.date === 'string'
+                        ? a.date.split('T')[0]
+                        : new Date(a.date).toISOString().split('T')[0];
+                    return aptDate === today;
+                }).length;
 
                 // Fetch earnings
                 const { data: earnings } = await paymentAPI.getEarningsSummary(lawyerId);
@@ -70,7 +83,9 @@ export default function LawyerDashboard() {
             const status = action === 'confirm' ? 'confirmed' : 'cancelled';
             await appointmentAPI.updateStatus(appointmentId, status);
             // Refresh appointments
-            const { data } = await appointmentAPI.getAll({ lawyerId: user?.id || '1' });
+            const lawyerId = user?.lawyer?.id || user?.id;
+            if (!lawyerId) return;
+            const { data } = await appointmentAPI.getAll({ lawyerId });
             setRecentAppointments(data.slice(0, 5));
         } catch (error) {
             console.error('Error updating appointment:', error);

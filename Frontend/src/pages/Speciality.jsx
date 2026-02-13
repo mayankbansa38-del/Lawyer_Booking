@@ -28,7 +28,7 @@ const Speciality = () => {
             const IconComponent = item.icon;
             return (
               <Link
-                to="/All_lawyer"
+                to="/lawyers"
                 state={{ specialty: item.name }}
                 key={index}
                 className="group flex flex-col items-center p-6 bg-gray-50 rounded-xl hover:bg-blue-50 hover:shadow-md transition-all duration-300 cursor-pointer"

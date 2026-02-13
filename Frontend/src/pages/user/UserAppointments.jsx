@@ -24,7 +24,8 @@ export default function UserAppointments() {
     useEffect(() => {
         async function fetchAppointments() {
             try {
-                const { data } = await appointmentAPI.getAll({ userId: user?.id || 'u1' });
+                if (!user?.id) return;
+                const { data } = await appointmentAPI.getAll({ userId: user.id });
                 setAppointments(data);
             } catch (error) {
                 console.error('Error fetching appointments:', error);
@@ -93,8 +94,8 @@ export default function UserAppointments() {
                                         </button>
                                     )}
                                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${apt.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                                            apt.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                apt.status === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                                        apt.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                            apt.status === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
                                         }`}>
                                         {apt.status}
                                     </span>

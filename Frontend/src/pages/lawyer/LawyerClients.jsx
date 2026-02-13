@@ -20,7 +20,7 @@ export default function LawyerClients() {
     useEffect(() => {
         async function fetchClients() {
             try {
-                const { data } = await clientAPI.getByLawyer(user?.id || '1');
+                const { data } = await clientAPI.getByLawyer(user?.lawyer?.id || user?.id);
                 setClients(data);
             } catch (error) {
                 console.error('Error fetching clients:', error);
@@ -35,8 +35,8 @@ export default function LawyerClients() {
         setSelectedClient(client);
         try {
             const [aptsRes, casesRes] = await Promise.all([
-                appointmentAPI.getAll({ userId: client.id, lawyerId: user?.id || '1' }),
-                caseAPI.getAll({ clientId: client.id, lawyerId: user?.id || '1' })
+                appointmentAPI.getAll({ userId: client.id, lawyerId: user?.lawyer?.id || user?.id }),
+                caseAPI.getAll({ clientId: client.id, lawyerId: user?.lawyer?.id || user?.id })
             ]);
             setClientDetails({ appointments: aptsRes.data, cases: casesRes.data });
         } catch (error) {
@@ -146,7 +146,7 @@ export default function LawyerClients() {
                                                     <div key={apt.id} className="p-2 bg-gray-50 rounded-lg text-sm flex items-center justify-between">
                                                         <span>{new Date(apt.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                                                         <span className={`px-2 py-0.5 rounded text-xs ${apt.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                                                                apt.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                                            apt.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                                                             }`}>{apt.status}</span>
                                                     </div>
                                                 ))}

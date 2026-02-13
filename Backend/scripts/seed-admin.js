@@ -47,7 +47,7 @@ async function seedAdmin() {
                     isActive: true,
                 },
             });
-            console.log('✅ Admin user password updated:');
+            console.log('Admin user password updated:');
             console.log(`   Email: ${ADMIN_EMAIL}`);
             console.log(`   Password: ${ADMIN_PASSWORD}`);
             return;
@@ -69,7 +69,7 @@ async function seedAdmin() {
             },
         });
 
-        console.log('✅ Admin user created successfully!\n');
+        console.log(' Admin user created successfully!\n');
         console.log('   ┌─────────────────────────────────────┐');
         console.log('   │  Admin Login Credentials            │');
         console.log('   ├─────────────────────────────────────┤');
@@ -80,7 +80,7 @@ async function seedAdmin() {
         console.log('   You can login with username "admin" or email.');
 
     } catch (error) {
-        console.error('❌ Failed to seed admin user:', error);
+        console.error('Failed to seed admin user:', error);
         process.exit(1);
     } finally {
         await prisma.$disconnect();

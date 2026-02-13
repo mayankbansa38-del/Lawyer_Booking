@@ -27,7 +27,7 @@ export default function LawyerCases() {
     useEffect(() => {
         async function fetchCases() {
             try {
-                const params = { lawyerId: user?.id || '1' };
+                const params = { lawyerId: user?.lawyer?.id || user?.id };
                 if (activeTab !== 'all') params.status = activeTab;
                 const { data } = await caseAPI.getAll(params);
                 setCases(data);

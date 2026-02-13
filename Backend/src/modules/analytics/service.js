@@ -9,8 +9,9 @@
  */
 
 import mongoose from 'mongoose';
-import { getMongoConnection } from '../../config/database.js';
+import { getMongoConnection, getPrismaClient } from '../../config/database.js';
 import logger from '../../utils/logger.js';
+import { BOOKING_STATUS } from '../../config/constants.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MONGODB SCHEMAS
@@ -239,6 +240,8 @@ export async function getDashboardMetrics(startDate, endDate) {
             uniqueVisitorsAgg,
             eventsAgg,
             apiErrorsAgg,
+            topPages,
+            deviceBreakdown,
         ] = await Promise.all([
             // Total page views
             models.PageView.countDocuments({
@@ -272,39 +275,39 @@ export async function getDashboardMetrics(startDate, endDate) {
                 timestamp: { $gte: startDate, $lte: endDate },
                 statusCode: { $gte: 500 },
             }),
-        ]);
 
-        // Top pages
-        const topPages = await models.PageView.aggregate([
-            {
-                $match: {
-                    timestamp: { $gte: startDate, $lte: endDate },
+            // Top pages (moved into Promise.all)
+            models.PageView.aggregate([
+                {
+                    $match: {
+                        timestamp: { $gte: startDate, $lte: endDate },
+                    },
                 },
-            },
-            {
-                $group: {
-                    _id: '$path',
-                    views: { $sum: 1 },
+                {
+                    $group: {
+                        _id: '$path',
+                        views: { $sum: 1 },
+                    },
                 },
-            },
-            { $sort: { views: -1 } },
-            { $limit: 10 },
-        ]);
+                { $sort: { views: -1 } },
+                { $limit: 10 },
+            ]),
 
-        // Device breakdown
-        const deviceBreakdown = await models.PageView.aggregate([
-            {
-                $match: {
-                    timestamp: { $gte: startDate, $lte: endDate },
-                    device: { $exists: true },
+            // Device breakdown (moved into Promise.all)
+            models.PageView.aggregate([
+                {
+                    $match: {
+                        timestamp: { $gte: startDate, $lte: endDate },
+                        device: { $exists: true },
+                    },
                 },
-            },
-            {
-                $group: {
-                    _id: '$device',
-                    count: { $sum: 1 },
+                {
+                    $group: {
+                        _id: '$device',
+                        count: { $sum: 1 },
+                    },
                 },
-            },
+            ]),
         ]);
 
         return {
@@ -560,6 +563,171 @@ export async function cleanupOldData(daysToKeep = 90) {
     }
 }
 
+/**
+ * Get hybrid dashboard metrics (Postgres + MongoDB)
+ * 
+ * @param {string} lawyerId - Lawyer ID
+ * @returns {Promise<Object>} Hybrid metrics matching mock data structure
+ */
+export async function getHybridDashboardMetrics(lawyerId) {
+    try {
+        // 1. Setup Dates (Last 6 months)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 6);
+
+        // 2. Fetch Postgres + MongoDB data in parallel
+        const models = getModels();
+
+        const [bookings, pageViewsCount, previousPageViewsCount] = await Promise.all([
+            // Postgres: bookings
+            getPrismaClient().booking.findMany({
+                where: {
+                    lawyerId: lawyerId,
+                    date: { gte: startDate, lte: endDate }
+                },
+                include: { payment: true }
+            }),
+
+            // MongoDB: current period page views
+            models
+                ? models.PageView.countDocuments({
+                    path: { $regex: lawyerId },
+                    timestamp: { $gte: startDate, $lte: endDate }
+                })
+                : Promise.resolve(0),
+
+            // MongoDB: previous period page views (for trend)
+            models
+                ? models.PageView.countDocuments({
+                    path: { $regex: lawyerId },
+                    timestamp: {
+                        $gte: (() => { const d = new Date(startDate); d.setMonth(d.getMonth() - 6); return d; })(),
+                        $lt: startDate
+                    }
+                })
+                : Promise.resolve(0),
+        ]);
+
+        // 4. Calculate Metrics
+
+        // Earnings
+        const currentEarnings = bookings
+            .filter(b => b.status === BOOKING_STATUS.COMPLETED && b.payment?.status === 'COMPLETED')
+            .reduce((sum, b) => sum + (b.payment?.amount || 0), 0);
+
+        // Booking Rate (Bookings / Page Views)
+        const bookingRate = pageViewsCount > 0 ? ((bookings.length / pageViewsCount) * 100) : 0;
+
+        // Group by Month for Chart
+        const monthlyDataMap = new Map();
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // Initialize last 6 months
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date();
+            d.setMonth(d.getMonth() - i);
+            const key = `${months[d.getMonth()]} ${d.getFullYear()}`;
+            monthlyDataMap.set(key, { month: months[d.getMonth()], views: 0, bookings: 0, earnings: 0 });
+        }
+
+        // Fill Bookings & Earnings
+        bookings.forEach(b => {
+            const d = new Date(b.date);
+            const key = `${months[d.getMonth()]} ${d.getFullYear()}`;
+            if (monthlyDataMap.has(key)) {
+                const data = monthlyDataMap.get(key);
+                data.bookings++;
+                if (b.status === BOOKING_STATUS.COMPLETED && b.payment?.status === 'COMPLETED') {
+                    data.earnings += (b.payment?.amount || 0);
+                }
+            }
+        });
+
+        // Fill Page Views (if Mongo connected)
+        if (models) {
+            const viewsTimeSeries = await models.PageView.aggregate([
+                {
+                    $match: {
+                        path: { $regex: lawyerId },
+                        timestamp: { $gte: startDate, $lte: endDate }
+                    }
+                },
+                {
+                    $group: {
+                        _id: { month: { $month: '$timestamp' }, year: { $year: '$timestamp' } },
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+
+            viewsTimeSeries.forEach(v => {
+                const monthName = months[v._id.month - 1];
+                const key = `${monthName} ${v._id.year}`;
+                if (monthlyDataMap.has(key)) {
+                    monthlyDataMap.get(key).views = v.count;
+                }
+            });
+        }
+
+        // 5. Construct Final Response
+        return {
+            lawyerId,
+            profileViews: (() => {
+                const now = new Date();
+                const curMonth = now.getMonth();
+                const curYear = now.getFullYear();
+                const thisMonthKey = `${months[curMonth]} ${curYear}`;
+                // Safe wrap: January (0) -> previous is December (11) of prior year
+                const prevMonth = (curMonth + 11) % 12;
+                const prevYear = curMonth === 0 ? curYear - 1 : curYear;
+                const lastMonthKey = `${months[prevMonth]} ${prevYear}`;
+                return {
+                    total: pageViewsCount,
+                    thisMonth: monthlyDataMap.get(thisMonthKey)?.views || 0,
+                    lastMonth: monthlyDataMap.get(lastMonthKey)?.views || 0,
+                    trend: pageViewsCount >= previousPageViewsCount ? 'up' : 'down',
+                    trendPercentage: previousPageViewsCount > 0 ? Math.round(((pageViewsCount - previousPageViewsCount) / previousPageViewsCount) * 100) : 100
+                };
+            })(),
+            bookingRate: {
+                total: bookings.length,
+                percentage: Math.round(bookingRate),
+                // TODO: Calculate actual trend from previous period data
+                trend: 'up',
+                trendPercentage: 5
+            },
+            responseRate: {
+                // TODO: Implement actual response time tracking
+                percentage: 98,
+                avgResponseTime: '2 hours'
+            },
+            earnings: (() => {
+                const now = new Date();
+                const curMonth = now.getMonth();
+                const curYear = now.getFullYear();
+                const thisMonthKey = `${months[curMonth]} ${curYear}`;
+                const prevMonth = (curMonth + 11) % 12;
+                const prevYear = curMonth === 0 ? curYear - 1 : curYear;
+                const lastMonthKey = `${months[prevMonth]} ${prevYear}`;
+                const thisMonthEarnings = monthlyDataMap.get(thisMonthKey)?.earnings || 0;
+                const lastMonthEarnings = monthlyDataMap.get(lastMonthKey)?.earnings || 0;
+                return {
+                    thisMonth: thisMonthEarnings,
+                    lastMonth: lastMonthEarnings,
+                    trend: thisMonthEarnings >= lastMonthEarnings ? 'up' : 'down',
+                    trendPercentage: lastMonthEarnings > 0 ? Math.round(((thisMonthEarnings - lastMonthEarnings) / lastMonthEarnings) * 100) : 100
+                };
+            })(),
+            monthlyData: Array.from(monthlyDataMap.values())
+        };
+
+    } catch (error) {
+        logger.error('Failed to get hybrid dashboard metrics:', error);
+        throw error;
+    }
+}
+
 export default {
     trackPageView,
     trackEvent,
@@ -570,4 +738,5 @@ export default {
     getSearchAnalytics,
     getApiMetrics,
     cleanupOldData,
+    getHybridDashboardMetrics,
 };

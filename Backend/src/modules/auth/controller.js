@@ -43,13 +43,7 @@ export const registerLawyer = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res) => {
     const { email, password, rememberMe } = req.body;
 
-    // Support admin login with username "admin"
-    let loginEmail = email;
-    if (email.toLowerCase() === 'admin') {
-        loginEmail = 'admin@nyaybooker.com'; // Admin email
-    }
-
-    const { user, tokens } = await authService.loginUser({ email: loginEmail, password, rememberMe });
+    const { user, tokens } = await authService.loginUser({ email, password, rememberMe });
 
     return sendSuccess(res, {
         data: { user, ...tokens },

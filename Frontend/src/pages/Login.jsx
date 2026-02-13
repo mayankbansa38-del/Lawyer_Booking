@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import { Mail, Lock, User, Scale, ShieldCheck, ArrowRight, Eye, EyeOff, Sparkles, AlertCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, Sparkles, AlertCircle, Scale, ShieldCheck } from 'lucide-react';
+import { LOGIN_ROLES } from '../constants/roles';
 import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, googleLogin, error: authError, isLoading } = useAuth();
+  const { login, googleLogin, error: authError } = useAuth();
 
   const [state, setState] = useState("User");
   const [showPassword, setShowPassword] = useState(false);
@@ -15,11 +16,7 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const roles = [
-    { id: "User", icon: User, label: "Client", desc: "Book consultations" },
-    { id: "Lawyer", icon: Scale, label: "Lawyer", desc: "Manage appointments" },
-    { id: "Admin", icon: ShieldCheck, label: "Admin", desc: "Full access" },
-  ];
+  const roles = LOGIN_ROLES;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,7 +42,7 @@ const Login = () => {
       } else {
         setError(result.error || "Login failed. Please check your credentials.");
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -69,7 +66,7 @@ const Login = () => {
       } else {
         setError(result.error || "Google login failed.");
       }
-    } catch (err) {
+    } catch {
       setError("Google login failed. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -118,7 +115,7 @@ const Login = () => {
                   <button
                     key={role.id}
                     type="button"
-                    onClick={() => setState(role.id)}
+                    onClick={() => setState(role.id)} aria-pressed={state === role.id}
                     className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${state === role.id
                       ? "border-blue-500 bg-blue-50 shadow-md"
                       : "border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100"
@@ -144,13 +141,13 @@ const Login = () => {
           {/* Form */}
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
                 {state === "Admin" ? "Username or Email" : "Email Address"}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type={state === "Admin" ? "text" : "email"}
+                  id="email" type={state === "Admin" ? "text" : "email"}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={state === "Admin" ? "admin" : "you@example.com"}
@@ -161,11 +158,11 @@ const Login = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type={showPassword ? "text" : "password"}
+                  id="password" type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -174,7 +171,7 @@ const Login = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

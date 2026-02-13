@@ -18,6 +18,7 @@ import { verifyRazorpaySignature, createHmac } from '../../utils/crypto.js';
 import env from '../../config/env.js';
 import logger from '../../utils/logger.js';
 import Razorpay from 'razorpay';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -176,12 +177,19 @@ router.post('/verify', authenticate, asyncHandler(async (req, res) => {
 router.post('/webhook', asyncHandler(async (req, res) => {
     const prisma = getPrismaClient();
 
-    // Verify webhook signature
+    // Verify webhook signature using raw body bytes (not re-serialized JSON)
     const signature = req.headers['x-razorpay-signature'];
-    const body = JSON.stringify(req.body);
-    const expectedSignature = createHmac(body, env.RAZORPAY_KEY_SECRET);
+    if (!signature || !req.rawBody) {
+        logger.logSecurity('WEBHOOK_MISSING_SIG_OR_BODY', { ip: req.ip });
+        return res.status(400).json({ error: 'Invalid request' });
+    }
 
-    if (signature !== expectedSignature) {
+    const expectedSignature = createHmac(req.rawBody.toString('utf8'), env.RAZORPAY_KEY_SECRET);
+
+    // Timing-safe comparison to prevent side-channel attacks
+    const sigBuf = Buffer.from(signature, 'utf8');
+    const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+    if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
         logger.logSecurity('INVALID_WEBHOOK_SIGNATURE', { ip: req.ip });
         return res.status(400).json({ error: 'Invalid signature' });
     }
