@@ -67,11 +67,13 @@ export default function AdminLayout() {
                 {/* Logo */}
                 <div className="h-16 flex items-center justify-between px-4 border-b border-slate-700">
                     <Link to="/" className="flex items-center gap-2">
-                        <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                            <Shield className="w-5 h-5 text-white" />
-                        </div>
+                        <NyayBookerLogo
+                            size={36}
+                            primaryColor="#ffffff"
+                            accentColor="#60a5fa"
+                        />
                         <span className="text-lg font-bold text-white">
-                            Admin<span className="text-blue-400">Panel</span>
+                            Nyay<span className="text-blue-400">Booker</span>
                         </span>
                     </Link>
                     <button

@@ -6,6 +6,154 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, MoreVertical, Trash2, Ban, CheckCircle, Eye, Mail } from 'lucide-react';
 import apiClient from '../../services/apiClient';
+import { useSmartPosition } from '../../hooks/useSmartPosition';
+
+// ══════════════════════════════════════════════════════════════════════════
+// MOBILE CARD COMPONENT
+// ══════════════════════════════════════════════════════════════════════════
+
+function UserCard({ user, onToggleStatus, onDelete, deletingId }) {
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            {/* Header: Avatar + Name + Email */}
+            <div className="flex items-start gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                    {user.firstName?.[0]}{user.lastName?.[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate">
+                        {user.firstName} {user.lastName}
+                    </h3>
+                    <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                </div>
+            </div>
+
+            {/* Info Grid */}
+            <div className="space-y-3 mb-4">
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Contact</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-900">{user.phone || 'N/A'}</span>
+                        {user.isEmailVerified && (
+                            <CheckCircle className="w-4 h-4 text-green-500" title="Email Verified" />
+                        )}
+                    </div>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Status</span>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {user.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Joined</span>
+                    <span className="text-sm text-gray-900">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                    </span>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-3 border-t border-gray-100">
+                <button
+                    onClick={() => onToggleStatus(user.id)}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                    {user.isActive ? (
+                        <>
+                            <Ban className="w-4 h-4 text-orange-500" />
+                            Deactivate
+                        </>
+                    ) : (
+                        <>
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            Activate
+                        </>
+                    )}
+                </button>
+                <button
+                    onClick={() => onDelete(user.id)}
+                    disabled={deletingId === user.id}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {deletingId === user.id ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                            Deleting...
+                        </>
+                    ) : (
+                        <>
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                        </>
+                    )}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ACTION DROPDOWN WITH SMART POSITIONING
+// ══════════════════════════════════════════════════════════════════════════
+
+function ActionDropdown({ user, isOpen, onToggle, onToggleStatus, onDelete, deletingId }) {
+    const { ref, positionClass } = useSmartPosition(isOpen, 150);
+
+    return (
+        <div className="relative flex justify-end">
+            <button
+                ref={ref}
+                onClick={onToggle}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+                <MoreVertical className="w-5 h-5 text-gray-400" />
+            </button>
+
+            {isOpen && (
+                <div className={`absolute right-0 ${positionClass} w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10`}>
+                    <button
+                        onClick={() => onToggleStatus(user.id)}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left hover:bg-gray-50"
+                    >
+                        {user.isActive ? (
+                            <>
+                                <Ban className="w-4 h-4 text-orange-500" />
+                                Deactivate
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                Activate
+                            </>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => onDelete(user.id)}
+                        disabled={deletingId === user.id}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {deletingId === user.id ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                Deleting...
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="w-4 h-4" />
+                                Delete User
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ══════════════════════════════════════════════════════════════════════════
 
 export default function UserManagement() {
     const [users, setUsers] = useState([]);
@@ -14,6 +162,7 @@ export default function UserManagement() {
     const [filter, setFilter] = useState('all'); // all, active, inactive
     const [selectedUser, setSelectedUser] = useState(null);
     const [showActionMenu, setShowActionMenu] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
 
     useEffect(() => {
         fetchUsers();
@@ -29,7 +178,7 @@ export default function UserManagement() {
             setUsers(users);
         } catch (error) {
             console.error('Failed to fetch users:', error);
-            setUsers([]); 
+            setUsers([]);
         } finally {
             setLoading(false);
         }
@@ -47,8 +196,6 @@ export default function UserManagement() {
         }
         setShowActionMenu(null);
     };
-
-    const [deletingId, setDeletingId] = useState(null);
 
     const handleDeleteUser = async (userId) => {
         // Close menu first
@@ -137,8 +284,8 @@ export default function UserManagement() {
                 </select>
             </div>
 
-            {/* Users Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Desktop Table - Hidden on Mobile */}
+            <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-100">
@@ -184,52 +331,14 @@ export default function UserManagement() {
                                         {new Date(user.createdAt).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="relative flex justify-end">
-                                            <button
-                                                onClick={() => setShowActionMenu(showActionMenu === user.id ? null : user.id)}
-                                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                            >
-                                                <MoreVertical className="w-5 h-5 text-gray-400" />
-                                            </button>
-
-                                            {showActionMenu === user.id && (
-                                                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10">
-                                                    <button
-                                                        onClick={() => handleToggleStatus(user.id)}
-                                                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left hover:bg-gray-50"
-                                                    >
-                                                        {user.isActive ? (
-                                                            <>
-                                                                <Ban className="w-4 h-4 text-orange-500" />
-                                                                Deactivate
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <CheckCircle className="w-4 h-4 text-green-500" />
-                                                                Activate
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteUser(user.id)}
-                                                        disabled={deletingId === user.id}
-                                                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    >
-                                                        {deletingId === user.id ? (
-                                                            <>
-                                                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                                                                Deleting...
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Trash2 className="w-4 h-4" />
-                                                                Delete User
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                        <ActionDropdown
+                                            user={user}
+                                            isOpen={showActionMenu === user.id}
+                                            onToggle={() => setShowActionMenu(showActionMenu === user.id ? null : user.id)}
+                                            onToggleStatus={handleToggleStatus}
+                                            onDelete={handleDeleteUser}
+                                            deletingId={deletingId}
+                                        />
                                     </td>
                                 </tr>
                             ))}
@@ -239,6 +348,24 @@ export default function UserManagement() {
 
                 {filteredUsers.length === 0 && (
                     <div className="py-12 text-center">
+                        <p className="text-gray-500">No users found matching your criteria.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Mobile Card Grid - Hidden on Desktop */}
+            <div className="md:hidden space-y-4">
+                {filteredUsers.map((user) => (
+                    <UserCard
+                        key={user.id}
+                        user={user}
+                        onToggleStatus={handleToggleStatus}
+                        onDelete={handleDeleteUser}
+                        deletingId={deletingId}
+                    />
+                ))}
+                {filteredUsers.length === 0 && (
+                    <div className="py-12 text-center bg-white rounded-2xl border border-gray-100">
                         <p className="text-gray-500">No users found matching your criteria.</p>
                     </div>
                 )}

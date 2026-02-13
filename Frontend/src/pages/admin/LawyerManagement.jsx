@@ -6,6 +6,150 @@
 import { useState, useEffect } from 'react';
 import { Search, MoreVertical, Trash2, Ban, CheckCircle, Star, Scale } from 'lucide-react';
 import apiClient from '../../services/apiClient';
+import { useSmartPosition } from '../../hooks/useSmartPosition';
+
+// ══════════════════════════════════════════════════════════════════════════
+// MOBILE CARD COMPONENT
+// ══════════════════════════════════════════════════════════════════════════
+
+function LawyerCard({ lawyer, onToggleAvailability, onDelete }) {
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'VERIFIED': return 'bg-green-100 text-green-700';
+            case 'PENDING': return 'bg-amber-100 text-amber-700';
+            case 'REJECTED': return 'bg-red-100 text-red-700';
+            default: return 'bg-gray-100 text-gray-700';
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            {/* Header: Avatar + Name + Email */}
+            <div className="flex items-start gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Scale className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate">
+                        Adv. {lawyer.user?.firstName} {lawyer.user?.lastName}
+                    </h3>
+                    <p className="text-sm text-gray-500 truncate">{lawyer.user?.email}</p>
+                </div>
+            </div>
+
+            {/* Info Grid */}
+            <div className="space-y-3 mb-4">
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Bar Council ID</span>
+                    <span className="text-sm font-mono text-gray-900">{lawyer.barCouncilId}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Status</span>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(lawyer.verificationStatus)}`}>
+                        {lawyer.verificationStatus}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Rating</span>
+                    {lawyer.averageRating > 0 ? (
+                        <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4 text-amber-500 fill-current" />
+                            <span className="font-medium text-sm">{lawyer.averageRating}</span>
+                            <span className="text-xs text-gray-400">({lawyer.totalReviews})</span>
+                        </div>
+                    ) : (
+                        <span className="text-sm text-gray-400">No reviews</span>
+                    )}
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Availability</span>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${lawyer.isAvailable ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {lawyer.isAvailable ? 'Available' : 'Unavailable'}
+                    </span>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-3 border-t border-gray-100">
+                <button
+                    onClick={() => onToggleAvailability(lawyer.id)}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                    {lawyer.isAvailable ? (
+                        <>
+                            <Ban className="w-4 h-4 text-orange-500" />
+                            Mark Unavailable
+                        </>
+                    ) : (
+                        <>
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            Mark Available
+                        </>
+                    )}
+                </button>
+                <button
+                    onClick={() => onDelete(lawyer.id)}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ACTION DROPDOWN WITH SMART POSITIONING
+// ══════════════════════════════════════════════════════════════════════════
+
+function ActionDropdown({ lawyer, isOpen, onToggle, onToggleAvailability, onDelete }) {
+    const { ref, positionClass } = useSmartPosition(isOpen, 150);
+
+    return (
+        <div className="relative flex justify-end">
+            <button
+                ref={ref}
+                onClick={onToggle}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+                <MoreVertical className="w-5 h-5 text-gray-400" />
+            </button>
+
+            {isOpen && (
+                <div className={`absolute right-0 ${positionClass} w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10`}>
+                    <button
+                        onClick={() => onToggleAvailability(lawyer.id)}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left hover:bg-gray-50"
+                    >
+                        {lawyer.isAvailable ? (
+                            <>
+                                <Ban className="w-4 h-4 text-orange-500" />
+                                Mark Unavailable
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                Mark Available
+                            </>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => onDelete(lawyer.id)}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Lawyer
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ══════════════════════════════════════════════════════════════════════════
 
 export default function LawyerManagement() {
     const [lawyers, setLawyers] = useState([]);
@@ -126,8 +270,8 @@ export default function LawyerManagement() {
                 </select>
             </div>
 
-            {/* Lawyers Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Desktop Table - Hidden on Mobile */}
+            <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-100">
@@ -177,49 +321,20 @@ export default function LawyerManagement() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${lawyer.isAvailable
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-gray-100 text-gray-600'
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-gray-100 text-gray-600'
                                             }`}>
                                             {lawyer.isAvailable ? 'Available' : 'Unavailable'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="relative flex justify-end">
-                                            <button
-                                                onClick={() => setShowActionMenu(showActionMenu === lawyer.id ? null : lawyer.id)}
-                                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                            >
-                                                <MoreVertical className="w-5 h-5 text-gray-400" />
-                                            </button>
-
-                                            {showActionMenu === lawyer.id && (
-                                                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10">
-                                                    <button
-                                                        onClick={() => handleToggleAvailability(lawyer.id)}
-                                                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left hover:bg-gray-50"
-                                                    >
-                                                        {lawyer.isAvailable ? (
-                                                            <>
-                                                                <Ban className="w-4 h-4 text-orange-500" />
-                                                                Mark Unavailable
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <CheckCircle className="w-4 h-4 text-green-500" />
-                                                                Mark Available
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteLawyer(lawyer.id)}
-                                                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                        Delete Lawyer
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                        <ActionDropdown
+                                            lawyer={lawyer}
+                                            isOpen={showActionMenu === lawyer.id}
+                                            onToggle={() => setShowActionMenu(showActionMenu === lawyer.id ? null : lawyer.id)}
+                                            onToggleAvailability={handleToggleAvailability}
+                                            onDelete={handleDeleteLawyer}
+                                        />
                                     </td>
                                 </tr>
                             ))}
@@ -229,6 +344,23 @@ export default function LawyerManagement() {
 
                 {filteredLawyers.length === 0 && (
                     <div className="py-12 text-center">
+                        <p className="text-gray-500">No lawyers found matching your criteria.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Mobile Card Grid - Hidden on Desktop */}
+            <div className="md:hidden space-y-4">
+                {filteredLawyers.map((lawyer) => (
+                    <LawyerCard
+                        key={lawyer.id}
+                        lawyer={lawyer}
+                        onToggleAvailability={handleToggleAvailability}
+                        onDelete={handleDeleteLawyer}
+                    />
+                ))}
+                {filteredLawyers.length === 0 && (
+                    <div className="py-12 text-center bg-white rounded-2xl border border-gray-100">
                         <p className="text-gray-500">No lawyers found matching your criteria.</p>
                     </div>
                 )}
