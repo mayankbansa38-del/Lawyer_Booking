@@ -6,9 +6,7 @@ import {
 } from 'lucide-react';
 import NyayBookerLogo from "./NyayBookerLogo";
 import { useAuth } from "../context/AuthContext";
-
 import ProfileDropdown from "./ProfileDropdown";
-import LogoHover from "./LogoHover";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -77,10 +75,14 @@ const Navbar = () => {
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex-shrink-0">
-            <LogoHover />
-          </div>
+          <Link to="/" className="flex items-center gap-2 group">
+            <NyayBookerLogo size={40} />
+            <div className="flex flex-col">
+              <span className="text-xl font-bold text-[#0c1f3f] leading-tight">
+                Nyay<span className="text-[#cfa052]">Booker</span>
+              </span>
+            </div>
+          </Link>
 
           {/* Desktop Navigation */}
           <ul className="hidden md:flex items-center gap-1">

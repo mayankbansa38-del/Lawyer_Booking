@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import NyayBookerLogo from './NyayBookerLogo';
 import ProfileDropdown from './ProfileDropdown';
-import LogoHover from './LogoHover';
+
 import NotificationDropdown from './NotificationDropdown';
 
 /**
@@ -96,10 +96,18 @@ export default function DashboardNavbar({
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
-                    {/* Logo */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <LogoHover theme={config.theme} />
-                    </div>
+                    <Link to="/" className="flex items-center gap-2 group">
+                        <NyayBookerLogo
+                            size={40}
+                            primaryColor={config.theme === 'dark' ? '#ffffff' : undefined}
+                            accentColor={config.theme === 'dark' ? '#60a5fa' : undefined}
+                        />
+                        <div className="flex flex-col">
+                            <span className={`text-xl font-bold leading-tight ${config.theme === 'dark' ? 'text-white' : 'text-[#0c1f3f]'}`}>
+                                Nyay<span className={config.theme === 'dark' ? 'text-blue-400' : 'text-[#cfa052]'}>Booker</span>
+                            </span>
+                        </div>
+                    </Link>
 
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center gap-1">
