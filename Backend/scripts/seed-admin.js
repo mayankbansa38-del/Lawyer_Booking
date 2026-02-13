@@ -23,8 +23,8 @@ const prisma = new PrismaClient({
     },
 });
 
-const ADMIN_EMAIL = 'admin@nyaybooker.com';
-const ADMIN_PASSWORD = 'Admin@123';
+const ADMIN_EMAIL = 'mayank@nyaybooker.com';
+const ADMIN_PASSWORD = 'Mayank@123456';
 
 async function seedAdmin() {
     console.log('🌱 Seeding admin user...\n');

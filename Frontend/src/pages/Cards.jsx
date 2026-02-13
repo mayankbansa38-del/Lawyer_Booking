@@ -1,7 +1,9 @@
 import { MapPin, Phone, Trophy, Clock, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const lawyers = [
   {
+    id: '1',
     name: "Adv. Rahul Sharma",
     type: "Criminal Lawyer",
     image: "https://images.unsplash.com/photo-1556157382-97eda2d62296?w=400&h=400&fit=crop&q=80",
@@ -17,6 +19,7 @@ const lawyers = [
     specializations: ["Criminal Defense", "White Collar Crime", "Appeals"],
   },
   {
+    id: '2',
     name: "Adv. Neha Verma",
     type: "Family Lawyer",
     image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop&q=80",
@@ -32,6 +35,7 @@ const lawyers = [
     specializations: ["Divorce", "Child Custody", "Adoption"],
   },
   {
+    id: '3',
     name: "Adv. Aman Gupta",
     type: "Corporate Lawyer",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&q=80",
@@ -47,6 +51,7 @@ const lawyers = [
     specializations: ["M&A", "Corporate Compliance", "Contract Law"],
   },
   {
+    id: '4',
     name: "Adv. Riya Malhotra",
     type: "Property Lawyer",
     image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop&q=80",
@@ -64,6 +69,8 @@ const lawyers = [
 ];
 
 const LawyerCard = ({ lawyer }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300">
       {/* Header with cover image */}
@@ -136,7 +143,10 @@ const LawyerCard = ({ lawyer }) => {
           </div>
         </div>
 
-        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors">
+        <button
+          onClick={() => navigate(`/lawyers/${lawyer.id}`)}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
+        >
           Book Consultation
         </button>
       </div>
