@@ -23,7 +23,9 @@ import {
     Scale, CheckCircle, Shield
 } from 'lucide-react';
 import NyayBookerLogo from '../components/NyayBookerLogo';
+import DashboardNavbar from '../components/DashboardNavbar';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../hooks/useNotifications';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ROLE CONFIGURATION
@@ -132,6 +134,12 @@ export default function DashboardLayout({ role = 'user' }) {
     const theme = THEME_STYLES[config.theme];
     const isAdminRole = role === 'admin';
 
+    // Notification hook for navbar badge
+    const { unreadCount } = useNotifications(
+        user?.id,
+        isAdminRole ? 'admin' : role === 'lawyer' ? 'lawyer' : 'client'
+    );
+
     // ─────────────────────────────────────────────────────────────────────────
     // Auth Guard
     // ─────────────────────────────────────────────────────────────────────────
@@ -181,11 +189,13 @@ export default function DashboardLayout({ role = 'user' }) {
         if (isAdminRole) {
             return (
                 <Link to="/" className="flex items-center gap-2">
-                    <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                        <Shield className="w-5 h-5 text-white" />
-                    </div>
+                    <NyayBookerLogo
+                        size={36}
+                        primaryColor="#ffffff"
+                        accentColor="#60a5fa"
+                    />
                     <span className="text-lg font-bold text-white">
-                        Admin<span className="text-blue-400">Panel</span>
+                        Nyay<span className="text-blue-400">Booker</span>
                     </span>
                 </Link>
             );
@@ -227,6 +237,25 @@ export default function DashboardLayout({ role = 'user' }) {
     // Main Render
     // ─────────────────────────────────────────────────────────────────────────
 
+    // Admin uses horizontal navbar, others use sidebar
+    if (isAdminRole) {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <DashboardNavbar
+                    navItems={config.navItems}
+                    role="admin"
+                    user={user}
+                    unreadCount={unreadCount}
+                    onLogout={handleLogout}
+                />
+                <main className="w-full">
+                    <Outlet />
+                </main>
+            </div>
+        );
+    }
+
+    // Lawyer and User use sidebar layout
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Mobile sidebar overlay */}

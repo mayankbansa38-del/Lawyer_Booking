@@ -32,12 +32,24 @@ function PageLoader() {
   );
 }
 
-// Helper to wrap lazy components with Suspense
-const withSuspense = (Component) => (
-  <Suspense fallback={<PageLoader />}>
-    <Component />
-  </Suspense>
-);
+// Single fallback element instance (avoids re-creating the same element many times)
+const pageLoaderEl = <PageLoader />;
+
+// Memoized Suspense wrapper to produce stable elements for routes.
+// Using a Map keyed by the lazy component prevents recreating identical
+// Suspense elements repeatedly (small perf + stable identity for router).
+const suspenseCache = new Map();
+const withSuspense = (Component) => {
+  if (!suspenseCache.has(Component)) {
+    suspenseCache.set(
+      Component,
+      <Suspense fallback={pageLoaderEl}>
+        <Component />
+      </Suspense>
+    );
+  }
+  return suspenseCache.get(Component);
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PUBLIC PAGES - Lazy loaded for code splitting
@@ -130,7 +142,6 @@ const router = createBrowserRouter([
           { path: "Contact", element: withSuspense(Contact) },
         ],
       },
-
 
       // ─────────────────────────────────────────────────────────────────
       // Unified Dashboard Redirect

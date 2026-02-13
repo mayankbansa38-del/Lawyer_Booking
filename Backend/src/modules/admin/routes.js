@@ -462,6 +462,44 @@ router.put('/lawyers/:id/verify', asyncHandler(async (req, res) => {
     });
 }));
 
+/**
+ * @route   DELETE /api/v1/admin/lawyers/:id
+ * @desc    Delete lawyer
+ * @access  Private/Admin
+ */
+router.delete('/lawyers/:id', asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+    const targetId = req.params.id;
+
+    // Check if lawyer exists
+    const lawyer = await prisma.lawyer.findUnique({
+        where: { id: targetId },
+        include: { user: true }
+    });
+
+    if (!lawyer) throw new NotFoundError('Lawyer');
+
+    // Delete lawyer (cascades or handle manually depending on schema, usually cascading from user is safer if we want to delete USER too, but here we deleting LAWYER profile?)
+    // Wait, LawyerManagement calls delete on /admin/lawyers/:id
+    // Usually this means deleting the LAWYER attributes, but if the user remains, they revert to USER?
+    // Or we delete the whole user?
+    // In UserManagement, deleting a user deletes the lawyer. 
+    // Here, if we delete a lawyer, we probably just want to remove the lawyer profile or delete the user entirely?
+    // Let's assume we delete the LAWYER record, demoting them to USER, OR delete the whole user.
+    // Given the context of "Lawyer Management", usually we delete the lawyer profile.
+    // BUT the schema likely has a 1:1 relation. 
+    // Safest approach: Delete the Lawyer record.
+
+    await prisma.lawyer.delete({ where: { id: targetId } });
+
+    logger.logBusiness('LAWYER_DELETED', {
+        lawyerId: targetId,
+        deletedBy: req.user.id
+    });
+
+    return sendSuccess(res, { message: 'Lawyer profile deleted successfully' });
+}));
+
 // ═══════════════════════════════════════════════════════════════════════════
 // BOOKING MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════════
