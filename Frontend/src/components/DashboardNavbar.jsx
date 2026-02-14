@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import NyayBookerLogo from './NyayBookerLogo';
 import ProfileDropdown from './ProfileDropdown';
-
 import NotificationDropdown from './NotificationDropdown';
 
 /**
@@ -54,11 +53,11 @@ export default function DashboardNavbar({
             theme: 'light'
         },
         user: {
-            color: 'from-green-600 to-emerald-600',
-            textColor: 'text-green-600',
-            bgColor: 'bg-gradient-to-r from-green-600 to-emerald-600',
+            color: 'from-blue-600 to-indigo-600',
+            textColor: 'text-blue-600',
+            bgColor: 'bg-gradient-to-r from-blue-600 to-indigo-600',
             icon: UserIcon,
-            text: 'User',
+            text: 'Client',
             theme: 'light'
         }
     };
@@ -170,6 +169,10 @@ export default function DashboardNavbar({
                             role={role}
                             onLogout={onLogout}
                             theme={config.theme}
+                            onOpenNotifications={() => {
+                                setIsNotificationOpen(true);
+                                // Optional: scroll to top or focus notification dropdown
+                            }}
                         />
                     </div>
 
