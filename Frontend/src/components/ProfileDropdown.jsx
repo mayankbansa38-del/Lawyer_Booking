@@ -13,7 +13,8 @@ export default function ProfileDropdown({
     user,
     role = 'user', // 'admin', 'lawyer', 'user'
     onLogout,
-    theme = 'light' // 'light' or 'dark' (for trigger button styling)
+    theme = 'light', // 'light' or 'dark' (for trigger button styling)
+    onOpenNotifications
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -201,7 +202,10 @@ export default function ProfileDropdown({
                         </Link>
 
                         <button
-                            onClick={() => setIsOpen(false)}
+                            onClick={() => {
+                                setIsOpen(false);
+                                if (onOpenNotifications) onOpenNotifications();
+                            }}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-amber-50/50 hover:text-amber-700 transition-all group text-left"
                         >
                             <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-amber-100 group-hover:text-amber-600 transition-colors">

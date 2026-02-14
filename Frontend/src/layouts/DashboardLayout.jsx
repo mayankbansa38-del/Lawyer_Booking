@@ -9,7 +9,7 @@
  * @module layouts/DashboardLayout
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
     // Shared icons
@@ -24,8 +24,13 @@ import {
 } from 'lucide-react';
 import NyayBookerLogo from '../components/NyayBookerLogo';
 import DashboardNavbar from '../components/DashboardNavbar';
+import NotificationDropdown from '../components/NotificationDropdown';
+import ProfileDropdown from '../components/ProfileDropdown';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
+
+
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ROLE CONFIGURATION
@@ -56,10 +61,8 @@ const ROLE_CONFIG = {
         navItems: [
             { path: '/user/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
             { path: '/user/appointments', icon: Calendar, label: 'Appointments' },
-            { path: '/user/saved-lawyers', icon: Heart, label: 'Saved Lawyers' },
             { path: '/user/cases', icon: Briefcase, label: 'My Cases' },
             { path: '/user/payments', icon: CreditCard, label: 'Payments' },
-            { path: '/user/notifications', icon: Bell, label: 'Notifications' },
             { path: '/user/settings', icon: Settings, label: 'Settings' },
         ],
         roleLabel: 'Client',
@@ -135,10 +138,24 @@ export default function DashboardLayout({ role = 'user' }) {
     const isAdminRole = role === 'admin';
 
     // Notification hook for navbar badge
-    const { unreadCount } = useNotifications(
+    const { unreadCount, notifications, markAllAsRead } = useNotifications(
         user?.id,
         isAdminRole ? 'admin' : role === 'lawyer' ? 'lawyer' : 'client'
     );
+
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+    const notificationRef = useRef(null);
+
+    // Close notifications on outside click
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setIsNotificationOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Auth Guard
@@ -237,18 +254,18 @@ export default function DashboardLayout({ role = 'user' }) {
     // Main Render
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Admin uses horizontal navbar, others use sidebar
+    // Admin uses horizontal navbar, others (Lawyer, User) use sidebar
     if (isAdminRole) {
         return (
             <div className="min-h-screen bg-gray-50">
                 <DashboardNavbar
                     navItems={config.navItems}
-                    role="admin"
+                    role={role}
                     user={user}
                     unreadCount={unreadCount}
                     onLogout={handleLogout}
                 />
-                <main className="w-full">
+                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     <Outlet />
                 </main>
             </div>
@@ -290,7 +307,7 @@ export default function DashboardLayout({ role = 'user' }) {
                 </div>
 
                 {/* Navigation */}
-                <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100%-8rem)]" aria-label="Main navigation">
+                <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100%-4rem)]" aria-label="Main navigation">
                     {config.navItems.map((item) => {
                         const Icon = item.icon;
                         const active = isActive(item.path);
@@ -313,16 +330,7 @@ export default function DashboardLayout({ role = 'user' }) {
                     })}
                 </nav>
 
-                {/* Logout Section */}
-                <div className={`absolute bottom-0 left-0 right-0 p-4 border-t ${theme.logoutSection}`}>
-                    <button
-                        onClick={handleLogout}
-                        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${theme.logoutButton}`}
-                    >
-                        <LogOut className="w-5 h-5" />
-                        Sign Out
-                    </button>
-                </div>
+
             </aside>
 
             {/* Main content area */}
@@ -337,29 +345,43 @@ export default function DashboardLayout({ role = 'user' }) {
                         <Menu className="w-6 h-6" />
                     </button>
 
-                    <div className="hidden lg:block">
-                        <h2 className="text-lg font-semibold text-gray-900">
-                            {currentPageLabel}
-                        </h2>
-                    </div>
 
-                    <div className="flex items-center gap-3">
+
+                    <div className="flex items-center gap-3 ml-auto">
                         {/* Notification Bell */}
-                        <button
-                            className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
-                            aria-label="View notifications"
-                        >
-                            <Bell className="w-5 h-5" />
-                            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />
-                        </button>
+                        <div className="relative" ref={notificationRef}>
+                            <button
+                                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                                className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                aria-label="View notifications"
+                            >
+                                <Bell className="w-5 h-5" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />
+                                )}
+                            </button>
 
-                        {/* User Info */}
-                        <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
-                            {renderAvatar()}
-                            <div className="hidden sm:block">
-                                <p className="text-sm font-medium text-gray-900">{displayName}</p>
-                                <p className="text-xs text-gray-500">{config.roleLabel}</p>
-                            </div>
+                            {/* Notification Dropdown */}
+                            <NotificationDropdown
+                                isOpen={isNotificationOpen}
+                                onClose={() => setIsNotificationOpen(false)}
+                                notifications={notifications}
+                                onMarkAllRead={markAllAsRead}
+                                onNotificationClick={() => {
+                                    navigate(role === 'lawyer' ? '/lawyer/notifications' : '/user/notifications');
+                                    setIsNotificationOpen(false);
+                                }}
+                            />
+                        </div>
+
+                        {/* User Profile Dropdown */}
+                        <div className="pl-3 border-l border-gray-200">
+                            <ProfileDropdown
+                                user={user}
+                                role={role}
+                                onLogout={handleLogout}
+                                onOpenNotifications={() => setIsNotificationOpen(true)}
+                            />
                         </div>
                     </div>
                 </header>
