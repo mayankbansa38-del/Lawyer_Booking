@@ -1,222 +1,374 @@
-/**
- * Public Lawyer Profile Page
- * Detailed lawyer view with booking CTA
- */
-
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-    Star, MapPin, Briefcase, Clock, Phone, Mail, Award, Languages,
-    Calendar, ChevronRight, Heart, Share2, CheckCircle, GraduationCap
+    Phone, Mail, MapPin, Clock, Languages, GraduationCap, Award, Star,
+    ChevronRight, Video, Calendar, CreditCard, ArrowLeft, CheckCircle,
+    Heart, Share2
 } from 'lucide-react';
 import { lawyerAPI, favoritesAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 export default function LawyerProfilePage() {
     const { id } = useParams();
-    const { user, isAuthenticated } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
+    const { user, isAuthenticated } = useAuth();
+
     const [lawyer, setLawyer] = useState(null);
-    const [isFavorite, setIsFavorite] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('about');
-    const [shareMsg, setShareMsg] = useState('');
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [favoriteLoading, setFavoriteLoading] = useState(false);
+
+    // Calendar state
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [availableSlots, setAvailableSlots] = useState([]);
+    const [selectedTime, setSelectedTime] = useState(null);
+    const [loadingSlots, setLoadingSlots] = useState(false);
+
+    // Generate next 7 days for the calendar
+    const [calendarDays, setCalendarDays] = useState([]);
 
     useEffect(() => {
-        async function fetchLawyer() {
+        const days = [];
+        const today = new Date();
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            days.push(date);
+        }
+        setCalendarDays(days);
+    }, []);
+
+    useEffect(() => {
+        const fetchLawyer = async () => {
             try {
-                const { data } = await lawyerAPI.getById(id);
-                setLawyer(data);
+                // Use lawyerAPI service
+                const response = await lawyerAPI.getById(id);
+                setLawyer(response.data);
+
+                // Check if favorite
                 if (isAuthenticated && user) {
-                    const { data: favs } = await favoritesAPI.getByUser(user.id);
-                    setIsFavorite(favs.some(f => f.id === id));
+                   try {
+                       const favRes = await favoritesAPI.getByUser();
+                       const isFav = favRes.data.some(fav => fav.id === id || fav.lawyerId === id);
+                       setIsFavorite(isFav);
+                   } catch (e) {
+                       console.error("Error checking favorites", e);
+                   }
                 }
-            } catch (error) {
-                console.error('Error fetching lawyer:', error);
+            } catch (err) {
+                console.error(err);
+                setError(err.message || 'Failed to load lawyer profile');
             } finally {
                 setLoading(false);
             }
-        }
+        };
         fetchLawyer();
-    }, [id, user, isAuthenticated]);
+    }, [id, isAuthenticated, user]);
+
+    useEffect(() => {
+        const fetchAvailability = async () => {
+            if (!selectedDate || !lawyer) return;
+            setLoadingSlots(true);
+            try {
+                // Format date as YYYY-MM-DD
+                const dateStr = selectedDate.toISOString().split('T')[0];
+                // Use lawyerAPI service if available, else direct call matches pattern
+                // lawyerAPI.getAvailability(id, date) is available in index.js
+                const response = await lawyerAPI.getAvailability(id, dateStr);
+                setAvailableSlots(response.data.slots || []);
+            } catch (err) {
+                console.error("Error fetching availability:", err);
+                setAvailableSlots([]);
+            } finally {
+                setLoadingSlots(false);
+            }
+        };
+        fetchAvailability();
+    }, [id, selectedDate, lawyer]);
+
+    const handleBookNow = () => {
+        if (selectedDate && selectedTime) {
+            navigate(`/lawyers/${id}/book`, {
+                state: {
+                    date: selectedDate.toISOString(),
+                    time: selectedTime
+                }
+            });
+        }
+    };
 
     const toggleFavorite = async () => {
         if (!isAuthenticated) {
-            navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`);
+            navigate('/login', { state: { from: `/lawyers/${id}` } });
             return;
         }
+
+        setFavoriteLoading(true);
         try {
             if (isFavorite) {
                 await favoritesAPI.remove(user.id, id);
+                setIsFavorite(false);
             } else {
                 await favoritesAPI.add(user.id, id);
+                setIsFavorite(true);
             }
-            setIsFavorite(!isFavorite);
-        } catch (error) {
-            console.error('Error toggling favorite:', error);
+        } catch (err) {
+            console.error('Error toggling favorite:', err);
+        } finally {
+            setFavoriteLoading(false);
         }
     };
 
-    const handleShare = async () => {
-        const url = window.location.href;
-        try {
-            await navigator.clipboard.writeText(url);
-            setShareMsg('Link copied!');
-            setTimeout(() => setShareMsg(''), 2000);
-        } catch {
-            // Fallback
-            const input = document.createElement('input');
-            input.value = url;
-            document.body.appendChild(input);
-            input.select();
-            document.execCommand('copy');
-            document.body.removeChild(input);
-            setShareMsg('Link copied!');
-            setTimeout(() => setShareMsg(''), 2000);
+    const handleShare = () => {
+        if (navigator.share) {
+            navigator.share({
+                title: `${lawyer.name} - Lawyer Profile`,
+                text: `Check out ${lawyer.name}, a ${lawyer.specialty?.[0] || 'lawyer'} on NyayBooker.`,
+                url: window.location.href,
+            }).catch((error) => console.log('Error sharing', error));
+        } else {
+             // Fallback to clipboard
+             navigator.clipboard.writeText(window.location.href);
+             alert('Link copied to clipboard!');
         }
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            </div>
-        );
-    }
+    if (loading) return (
+        <div className="flex items-center justify-center min-h-screen">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+    );
 
-    if (!lawyer) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <p className="text-gray-500">Lawyer not found</p>
-            </div>
-        );
-    }
+    if (error || !lawyer) return (
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+            <p className="text-red-500">{error || 'Lawyer not found'}</p>
+            <Link to="/lawyers" className="text-blue-600 hover:underline">Back to Lawyers</Link>
+        </div>
+    );
+
+    // Helper to format date
+    const formatDate = (date) => {
+        return {
+            day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+            date: date.getDate(),
+        };
+    };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Hero Section */}
-            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 text-white">
-                <div className="max-w-6xl mx-auto px-4 py-12">
+        <div className="min-h-screen bg-gray-50/50">
+            {/* Header / Hero Section */}
+            <div className="bg-white border-b border-gray-100">
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    {/* Back Link */}
+                    <div className="mb-6">
+                        <Link to="/lawyers" className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 transition-colors">
+                            <ArrowLeft className="w-4 h-4 mr-1" /> Back to Lawyers
+                        </Link>
+                    </div>
+
                     <div className="flex flex-col md:flex-row gap-8 items-start">
-                        <img
-                            src={lawyer.image}
-                            alt={lawyer.name}
-                            className="w-40 h-40 rounded-2xl object-cover border-4 border-white/20 shadow-xl"
-                        />
-                        <div className="flex-1">
-                            <div className="flex items-start justify-between gap-4 flex-wrap">
+                        {/* Profile Image */}
+                        <div className="relative">
+                            <img
+                                src={lawyer.image || `https://ui-avatars.com/api/?name=${lawyer.name}&background=random`}
+                                alt={lawyer.name}
+                                className="w-32 h-32 md:w-40 md:h-40 rounded-2xl object-cover shadow-lg ring-4 ring-white"
+                            />
+                            {lawyer.isAvailable && (
+                                <div className="absolute -bottom-2 -right-2 bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full border border-white shadow-sm flex items-center gap-1">
+                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                    Available
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 space-y-4">
+                            <div className="flex justify-between items-start">
                                 <div>
-                                    <h1 className="text-3xl font-bold">{lawyer.name}</h1>
-                                    <p className="text-blue-200 mt-1">{lawyer.specialty?.join(' • ') || 'Legal Professional'}</p>
+                                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{lawyer.name}</h1>
+                                    <p className="text-lg text-gray-500 font-medium mt-1">{lawyer.headline || 'Legal Professional'}</p>
+                                </div>
+
+                                {/* Action Buttons (Favorites & Share) */}
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={toggleFavorite}
+                                        disabled={favoriteLoading}
+                                        className="p-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200"
+                                        title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+                                    >
+                                        <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
+                                    </button>
+                                    <button
+                                        onClick={handleShare}
+                                        className="p-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200"
+                                        title="Share Profile"
+                                    >
+                                        <Share2 className="w-5 h-5 text-gray-500" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Stats */}
+                            <div className="flex flex-wrap gap-4 md:gap-8">
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-yellow-50 p-2 rounded-lg">
+                                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 font-medium">Rating</p>
+                                        <p className="text-base font-bold text-gray-900">{lawyer.rating} <span className="text-xs text-gray-400 font-normal">({lawyer.totalReviews})</span></p>
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button onClick={toggleFavorite} className={`p-3 rounded-full transition-colors ${isFavorite ? 'bg-red-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}>
-                                        <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
-                                    </button>
-                                    <button onClick={handleShare} className="p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors relative">
-                                        <Share2 className="w-5 h-5" />
-                                        {shareMsg && (
-                                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                                                {shareMsg}
-                                            </span>
-                                        )}
-                                    </button>
+                                    <div className="bg-blue-50 p-2 rounded-lg">
+                                        <Award className="w-5 h-5 text-blue-500" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 font-medium">Experience</p>
+                                        <p className="text-base font-bold text-gray-900">{lawyer.experience || 0} Years</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-green-50 p-2 rounded-lg">
+                                        <CheckCircle className="w-5 h-5 text-green-500" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 font-medium">Cases Won</p>
+                                        <p className="text-base font-bold text-gray-900">{lawyer.casesWon || 'N/A'}</p>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="flex flex-wrap items-center gap-4 mt-4 text-sm">
-                                <span className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-full">
-                                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /> {lawyer.rating} Rating
-                                </span>
-                                <span className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-full">
-                                    <Briefcase className="w-4 h-4" /> {lawyer.experience} Years
-                                </span>
-                                <span className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-full">
-                                    <CheckCircle className="w-4 h-4" /> {lawyer.casesWon}+ Cases Won
-                                </span>
-                                <span className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-full">
-                                    <MapPin className="w-4 h-4" /> {lawyer.location}
-                                </span>
-                            </div>
-
-                            <div className="flex flex-wrap gap-3 mt-6">
-                                <Link
-                                    to={`/lawyers/${id}/book`}
-                                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
-                                >
-                                    <Calendar className="w-5 h-5" /> Book Consultation
-                                </Link>
-                                <a href={`tel:${lawyer.phone}`} className="px-6 py-3 bg-white/10 hover:bg-white/20 font-medium rounded-lg transition-colors flex items-center gap-2">
-                                    <Phone className="w-5 h-5" /> Call Now
-                                </a>
-                            </div>
+                         {/* Quick Actions (Desktop) */}
+                        <div className="hidden md:block">
+                            <button
+                                onClick={() => document.getElementById('booking-calendar').scrollIntoView({ behavior: 'smooth' })}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-blue-200 transition-all active:scale-95"
+                            >
+                                Book Appointment
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Content */}
             <div className="max-w-6xl mx-auto px-4 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-8">
+
                         {/* Tabs */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div className="flex border-b">
-                                {['about', 'education', 'reviews'].map(tab => (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="flex border-b border-gray-100">
+                                {['about', 'experience', 'education', 'reviews'].map(tab => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
-                                        className={`flex-1 py-4 text-sm font-medium transition-colors ${activeTab === tab ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-gray-600 hover:text-gray-900'}`}
+                                        className={`flex-1 py-4 text-sm font-semibold transition-all relative ${
+                                            activeTab === tab
+                                            ? 'text-blue-600 bg-blue-50/30'
+                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                        }`}
                                     >
                                         {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                        {activeTab === tab && (
+                                            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />
+                                        )}
                                     </button>
                                 ))}
                             </div>
 
-                            <div className="p-6">
+                            <div className="p-6 md:p-8">
                                 {activeTab === 'about' && (
-                                    <div className="space-y-6">
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                         <div>
-                                            <h3 className="font-semibold text-gray-900 mb-3">About</h3>
-                                            <p className="text-gray-600 leading-relaxed">{lawyer.description}</p>
+                                            <h3 className="text-lg font-bold text-gray-900 mb-3">About {lawyer.firstName}</h3>
+                                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{lawyer.bio || lawyer.description || 'No description available.'}</p>
                                         </div>
+
                                         <div>
-                                            <h3 className="font-semibold text-gray-900 mb-3">Practice Areas</h3>
+                                            <h3 className="text-lg font-bold text-gray-900 mb-3">Practice Areas</h3>
                                             <div className="flex flex-wrap gap-2">
-                                                {lawyer.specialty?.map(s => (
-                                                    <span key={s} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">{s}</span>
+                                                {lawyer.specialty?.map((s, i) => (
+                                                    <span key={i} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-100">
+                                                        {s}
+                                                    </span>
                                                 ))}
                                             </div>
                                         </div>
+
                                         {lawyer.languages && (
                                             <div>
-                                                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Languages className="w-5 h-5 text-gray-400" /> Languages</h3>
-                                                <p className="text-gray-600">{lawyer.languages.join(', ')}</p>
+                                                <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                                    <Languages className="w-5 h-5 text-gray-400" /> Languages
+                                                </h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {lawyer.languages.map((lang, i) => (
+                                                        <span key={i} className="text-gray-600 bg-gray-100 px-3 py-1 rounded-full text-sm">
+                                                            {lang}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
                                 )}
 
-                                {activeTab === 'education' && (
-                                    <div className="space-y-4">
-                                        {lawyer.education?.map((edu, idx) => (
-                                            <div key={idx} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
-                                                <GraduationCap className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
-                                                <div>
-                                                    <h4 className="font-medium text-gray-900">{edu.degree}</h4>
-                                                    <p className="text-gray-600">{edu.institution}</p>
-                                                    <p className="text-sm text-gray-500">{edu.year}</p>
+                                {activeTab === 'experience' && (
+                                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                         {/* Assuming we might have experience data later, for now show placeholder or parse form bio if possible */}
+                                         <div className="flex gap-4">
+                                            <div className="mt-1">
+                                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                                                    <Award className="w-5 h-5" />
                                                 </div>
                                             </div>
-                                        ))}
-                                        {lawyer.barNumber && (
-                                            <div className="p-4 bg-green-50 rounded-lg flex items-center gap-3">
-                                                <Award className="w-6 h-6 text-green-600" />
+                                            <div>
+                                                <h4 className="font-bold text-gray-900">Legal Practice</h4>
+                                                <p className="text-gray-600">{lawyer.experience} Years of Experience</p>
+                                                <p className="text-sm text-gray-500 mt-1">Specializing in {lawyer.specialty?.join(', ')}</p>
+                                            </div>
+                                         </div>
+                                     </div>
+                                )}
+
+                                {activeTab === 'education' && (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                        {(lawyer.qualifications || lawyer.education)?.length > 0 ? (
+                                            (lawyer.qualifications || lawyer.education).map((edu, idx) => (
+                                                <div key={idx} className="flex gap-4 group">
+                                                    <div className="mt-1 relative">
+                                                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                                            <GraduationCap className="w-5 h-5" />
+                                                        </div>
+                                                        {idx !== (lawyer.qualifications || lawyer.education).length - 1 && (
+                                                            <div className="absolute top-10 left-1/2 w-px h-full bg-gray-200 -translate-x-1/2" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-900">{edu.degree}</h4>
+                                                        <p className="text-gray-600 font-medium">{edu.institution}</p>
+                                                        <p className="text-sm text-gray-500">{edu.year}</p>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-gray-500 italic">Education details not listed.</p>
+                                        )}
+
+                                        {lawyer.barCouncilId && (
+                                            <div className="mt-6 p-4 bg-green-50 border border-green-100 rounded-xl flex items-center gap-4">
+                                                <div className="p-2 bg-green-100 rounded-lg text-green-700">
+                                                    <Award className="w-6 h-6" />
+                                                </div>
                                                 <div>
-                                                    <p className="font-medium text-green-800">Bar Council Registration</p>
-                                                    <p className="text-green-700">{lawyer.barNumber}</p>
+                                                    <p className="font-bold text-green-800">Bar Council Verified</p>
+                                                    <p className="text-sm text-green-700">ID: {lawyer.barCouncilId}</p>
                                                 </div>
                                             </div>
                                         )}
@@ -224,75 +376,203 @@ export default function LawyerProfilePage() {
                                 )}
 
                                 {activeTab === 'reviews' && (
-                                    <div className="space-y-4">
-                                        {[1, 2, 3].map(i => (
-                                            <div key={i} className="p-4 border border-gray-100 rounded-lg">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=user${i}`} alt="" className="w-10 h-10 rounded-full" />
-                                                    <div>
-                                                        <p className="font-medium text-gray-900">Client {i}</p>
-                                                        <div className="flex items-center gap-1">{[...Array(5)].map((_, j) => <Star key={j} className={`w-3 h-3 ${j < 4 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />)}</div>
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                        {lawyer.recentReviews?.length > 0 ? (
+                                            lawyer.recentReviews.map((review) => (
+                                                <div key={review.id} className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <img
+                                                                src={review.author.avatar || `https://ui-avatars.com/api/?name=${review.author.name}`}
+                                                                alt={review.author.name}
+                                                                className="w-10 h-10 rounded-full"
+                                                            />
+                                                            <div>
+                                                                <p className="font-bold text-gray-900">{review.author.name}</p>
+                                                                <p className="text-xs text-gray-500">{new Date(review.createdAt).toLocaleDateString()}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-0.5">
+                                                            {[...Array(5)].map((_, i) => (
+                                                                <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                                            ))}
+                                                        </div>
                                                     </div>
+                                                    <h4 className="font-semibold text-gray-900 mb-2">{review.title}</h4>
+                                                    <p className="text-gray-600 text-sm leading-relaxed">{review.content}</p>
                                                 </div>
-                                                <p className="text-gray-600 text-sm">Excellent lawyer. Very professional and understanding. Handled my case with great care.</p>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8">
+                                                <p className="text-gray-500">No reviews yet.</p>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 )}
                             </div>
                         </div>
+
+                        {/* Booking Calendar Section */}
+                        <div id="booking-calendar" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                <Calendar className="w-6 h-6 text-blue-600" />
+                                Book Appointment
+                            </h3>
+
+                            {/* Date Selector */}
+                            <div className="mb-8">
+                                <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+                                    {calendarDays.map((date, index) => {
+                                        const isSelected = selectedDate.toDateString() === date.toDateString();
+                                        const { day, date: dateNum } = formatDate(date);
+                                        return (
+                                            <button
+                                                key={index}
+                                                onClick={() => {
+                                                    setSelectedDate(date);
+                                                    setSelectedTime(null);
+                                                }}
+                                                className={`flex-shrink-0 w-20 p-4 rounded-2xl border transition-all duration-200 group flex flex-col items-center justify-center ${
+                                                    isSelected
+                                                    ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 scale-105'
+                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:shadow-md'
+                                                }`}
+                                            >
+                                                <span className={`text-xs font-medium mb-1 ${isSelected ? 'text-blue-100' : 'text-gray-400 group-hover:text-blue-500'}`}>{day}</span>
+                                                <span className="text-2xl font-bold">{dateNum}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Time Slots */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Available Slots</h4>
+                                {loadingSlots ? (
+                                    <div className="flex justify-center py-8">
+                                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                ) : availableSlots.length > 0 ? (
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                                        {availableSlots.map((slot, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setSelectedTime(slot.time)}
+                                                className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                                                    selectedTime === slot.time
+                                                    ? 'bg-blue-600 text-white shadow-md scale-105 ring-2 ring-blue-200'
+                                                    : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-500 hover:text-blue-600'
+                                                }`}
+                                            >
+                                                {slot.time}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                        <p className="text-gray-500">No slots available for this date.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Book Button */}
+                            <div className="mt-8 pt-6 border-t border-gray-100">
+                                <button
+                                    onClick={handleBookNow}
+                                    disabled={!selectedTime}
+                                    className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3 ${
+                                        selectedTime
+                                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200 hover:shadow-blue-300 active:scale-99'
+                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                                    }`}
+                                >
+                                    <span>Confirm Booking</span>
+                                    {selectedTime && (
+                                        <>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-white/50" />
+                                            <span>₹{lawyer.consultationFee}</span>
+                                        </>
+                                    )}
+                                </button>
+                                <p className="text-center text-xs text-gray-400 mt-3">
+                                    Instant confirmation • Free cancellation 24h before
+                                </p>
+                            </div>
+                        </div>
+
                     </div>
 
                     {/* Sidebar */}
-                    <div className="space-y-6">
-                        {/* Consultation Fee */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4">Consultation Details</h3>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-gray-600">Consultation Fee</span>
-                                    <span className="font-semibold text-gray-900">₹{lawyer.consultationFee?.toLocaleString('en-IN')}</span>
+                    <div className="lg:col-span-1 space-y-6">
+                        {/* Fee Card */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
+                            <div className="flex justify-between items-start mb-6">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500">Consultation Fee</p>
+                                    <div className="flex items-baseline gap-1 mt-1">
+                                        <span className="text-3xl font-bold text-gray-900">₹{lawyer.consultationFee?.toLocaleString('en-IN')}</span>
+                                        <span className="text-gray-500 font-medium">/ session</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-gray-600">Avg Case Cost</span>
-                                    <span className="font-medium text-gray-700">₹{lawyer.avgCostPerCase?.toLocaleString('en-IN')}</span>
+                                <div className="bg-green-100 text-green-700 text-xs font-bold px-2.5 py-1.5 rounded-lg">
+                                    Available Now
                                 </div>
                             </div>
-                            <Link to={`/lawyers/${id}/book`} className="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
-                                Book Now <ChevronRight className="w-4 h-4" />
-                            </Link>
+
+                            <div className="space-y-4 mb-6">
+                                <div className="flex items-center gap-3 text-sm text-gray-600">
+                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                        <Video className="w-4 h-4" />
+                                    </div>
+                                    <span>Video Consultation</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-sm text-gray-600">
+                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                        <Clock className="w-4 h-4" />
+                                    </div>
+                                    <span>60 Minutes Duration</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-sm text-gray-600">
+                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                        <Languages className="w-4 h-4" />
+                                    </div>
+                                    <span>{lawyer.languages?.join(', ')}</span>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => document.getElementById('booking-calendar').scrollIntoView({ behavior: 'smooth' })}
+                                className="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold hover:bg-black transition-colors"
+                            >
+                                Check Availability
+                            </button>
                         </div>
 
-                        {/* Contact */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4">Contact Information</h3>
-                            <div className="space-y-3 text-sm">
-                                <a href={`tel:${lawyer.phone}`} className="flex items-center gap-3 text-gray-600 hover:text-blue-600">
-                                    <Phone className="w-5 h-5 text-gray-400" /> {lawyer.phone}
+                        {/* Contact Info */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 className="font-bold text-gray-900 mb-4">Contact Information</h3>
+                            <div className="space-y-4 text-sm">
+                                <a href={`tel:${lawyer.phone}`} className="flex items-center gap-3 text-gray-600 hover:text-blue-600 group transition-colors">
+                                    <div className="w-8 h-8 rounded-lg bg-gray-50 group-hover:bg-blue-50 flex items-center justify-center text-gray-400 group-hover:text-blue-600 transition-colors">
+                                        <Phone className="w-4 h-4" />
+                                    </div>
+                                    {lawyer.phone}
                                 </a>
-                                <a href={`mailto:${lawyer.email}`} className="flex items-center gap-3 text-gray-600 hover:text-blue-600">
-                                    <Mail className="w-5 h-5 text-gray-400" /> {lawyer.email}
+                                <a href={`mailto:${lawyer.email}`} className="flex items-center gap-3 text-gray-600 hover:text-blue-600 group transition-colors">
+                                    <div className="w-8 h-8 rounded-lg bg-gray-50 group-hover:bg-blue-50 flex items-center justify-center text-gray-400 group-hover:text-blue-600 transition-colors">
+                                        <Mail className="w-4 h-4" />
+                                    </div>
+                                    {lawyer.email}
                                 </a>
-                                <div className="flex items-center gap-3 text-gray-600">
-                                    <MapPin className="w-5 h-5 text-gray-400" /> {lawyer.location}
+                                <div className="flex items-center gap-3 text-gray-600 group">
+                                    <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+                                        <MapPin className="w-4 h-4" />
+                                    </div>
+                                    {lawyer.location}
                                 </div>
                             </div>
                         </div>
-
-                        {/* Working Hours */}
-                        {lawyer.workingHours && (
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-5 h-5 text-gray-400" /> Working Hours</h3>
-                                <div className="space-y-2 text-sm">
-                                    {Object.entries(lawyer.workingHours).map(([day, hours]) => (
-                                        <div key={day} className="flex items-center justify-between">
-                                            <span className="text-gray-600 capitalize">{day}</span>
-                                            <span className="text-gray-900">{hours ? `${hours.start} - ${hours.end}` : 'Closed'}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
