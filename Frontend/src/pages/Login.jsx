@@ -86,22 +86,23 @@ const Login = () => {
   return (
     <div className="flex min-h-screen bg-white font-sans">
       {/* Left Side - Abstract Visuals (Desktop Only) */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-slate-900 overflow-hidden items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-slate-900 to-black opacity-90"></div>
+      {/* Left Side - Professional Visuals (Desktop Only) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gray-900">
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1505664194779-8beaceb93744?q=80&w=2070&auto=format&fit=crop"
+            alt="Modern Law Office"
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent"></div>
+        </div>
 
-        {/* Abstract Glowing Orb */}
-        <div className="absolute w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px] animate-pulse"></div>
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-indigo-500/10 rounded-full blur-[60px]"></div>
-
-        <div className="relative z-10 p-12 text-white/90 max-w-lg">
+        <div className="relative z-10 p-12 flex flex-col justify-center h-full text-white">
           <h2 className="text-4xl font-bold mb-6 leading-tight">Your Legal Gateway to Justice</h2>
-          <p className="text-lg text-white/60 leading-relaxed">
+          <p className="text-lg text-white/80 leading-relaxed max-w-md">
             Connect with top-tier legal professionals, manage your cases, and access justice seamlessly with Nyay Booker.
           </p>
         </div>
-
-        {/* Bottom pattern */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent"></div>
       </div>
 
       {/* Right Side - Login Form */}
