@@ -9,10 +9,6 @@ import { PageHeader } from '../../components/dashboard';
 import { lawyerAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
-const specialtyOptions = [
-    'Criminal Lawyer', 'Family Lawyer', 'Corporate Lawyer', 'Property Lawyer',
-    'Cyber Lawyer', 'Civil Lawyer', 'Immigration Law', 'Human Rights', 'Real Estate Law', 'Tax Law'
-];
 
 const languageOptions = ['Hindi', 'English', 'Punjabi', 'Gujarati', 'Marathi', 'Tamil', 'Telugu', 'Bengali'];
 
@@ -30,24 +26,41 @@ export default function LawyerProfile() {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
     const [availability, setAvailability] = useState(DEFAULT_AVAILABILITY);
+    const [practiceAreas, setPracticeAreas] = useState([]);
 
     useEffect(() => {
-        async function fetchProfile() {
+        async function fetchData() {
             try {
                 const lawyerId = user?.lawyer?.id || user?.lawyerId;
                 if (!lawyerId) return;
-                const { data } = await lawyerAPI.getById(lawyerId);
-                setProfile(data);
-                if (data.availability && typeof data.availability === 'object') {
-                    setAvailability(prev => ({ ...prev, ...data.availability }));
+
+                const [{ data: profileData }, { data: areasData }] = await Promise.all([
+                    lawyerAPI.getById(lawyerId),
+                    lawyerAPI.getPracticeAreas()
+                ]);
+
+                // If city or state are missing but we have a location string, try to parse it
+                if (profileData.location && profileData.location !== 'Location not available') {
+                    if (!profileData.city && !profileData.state) {
+                        const parts = profileData.location.split(',');
+                        if (parts.length > 0) profileData.city = parts[0].trim();
+                        if (parts.length > 1) profileData.state = parts[1].trim();
+                    }
+                }
+
+                setProfile(profileData);
+                setPracticeAreas(areasData);
+
+                if (profileData.availability && typeof profileData.availability === 'object') {
+                    setAvailability(prev => ({ ...prev, ...profileData.availability }));
                 }
             } catch (error) {
-                console.error('Error fetching profile:', error);
+                console.error('Error fetching data:', error);
             } finally {
                 setLoading(false);
             }
         }
-        fetchProfile();
+        fetchData();
     }, [user]);
 
     const handleChange = (field, value) => {
@@ -177,13 +190,20 @@ export default function LawyerProfile() {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
                         <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input type="text" value={profile.location || ''} onChange={(e) => handleChange('location', e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                            <input type="text" value={profile.city || ''} onChange={(e) => handleChange('city', e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="City" />
                         </div>
                     </div>
                     <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                        <div className="relative">
+                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input type="text" value={profile.state || ''} onChange={(e) => handleChange('state', e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="State" />
+                        </div>
+                    </div>
+                    <div className="col-span-1 sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Years of Experience</label>
                         <input type="number" value={profile.experience || 0} onChange={(e) => handleChange('experience', parseInt(e.target.value) || 0)} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
                     </div>
@@ -200,9 +220,9 @@ export default function LawyerProfile() {
                     <Award className="w-5 h-5 text-gray-400" />Specialties
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                    {specialtyOptions.map(specialty => (
-                        <button key={specialty} onClick={() => handleSpecialtyToggle(specialty)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${profile.specialty?.includes(specialty) ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                            {specialty}
+                    {practiceAreas.map(area => (
+                        <button key={area.id} onClick={() => handleSpecialtyToggle(area.name)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${profile.specialty?.includes(area.name) ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                            {area.name}
                         </button>
                     ))}
                 </div>

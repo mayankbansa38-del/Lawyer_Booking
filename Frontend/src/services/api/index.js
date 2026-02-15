@@ -80,17 +80,23 @@ export const lawyerAPI = {
             phone: data.phone,
             bio: data.description, // 'description' mapped to 'bio'
             headline: data.headline,
-            hourlyRate: data.avgCostPerCase, // hourlyRate as avg cost per case
+            hourlyRate: data.hourlyRate || data.avgCostPerCase, // hourlyRate as avg cost per case
             consultationFee: data.consultationFee, // Explicit consultation fee
-            city: data.location?.split(',')[0]?.trim(),
-            state: data.location?.split(',')[1]?.trim(),
+            city: data.city || data.location?.split(',')[0]?.trim(),
+            state: data.state || data.location?.split(',')[1]?.trim(),
             languages: data.languages,
             experience: data.experience,
             specializations: data.specialty, // Array of specialty names
+            availability: data.availability,
         };
 
         const response = await apiClient.put('/lawyers/profile', payload);
         return { data: response.data.data };
+    },
+
+    async getPracticeAreas() {
+        const response = await apiClient.get('/lawyers/practice-areas');
+        return response.data;
     },
 
     async getAnalytics(lawyerId) {
