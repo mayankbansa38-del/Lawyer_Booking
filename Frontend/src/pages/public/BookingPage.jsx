@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link , useLocation} from 'react-router-dom';
 import { Calendar, Clock, ChevronLeft, ChevronRight, Video, MapPin, CreditCard, CheckCircle } from 'lucide-react';
 import { lawyerAPI, appointmentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -16,21 +16,22 @@ const CONSULTATION_TYPES = [
 
 export default function BookingPage() {
     const { id } = useParams();
+    const location = useLocation();
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
 
     const [lawyer, setLawyer] = useState(null);
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
     const [booking, setBooking] = useState({
         type: 'video',
-        date: '',
-        time: '',
+        date: location.state?.date || '',
+        time: location.state?.time || '',
         notes: ''
     });
     const [timeSlots, setTimeSlots] = useState([]);
     const [submitting, setSubmitting] = useState(false);
-    const [success, setSuccess] = useState(false);
+    const [success] = useState(false);
 
     // Generate dates for next 14 days
     const availableDates = Array.from({ length: 14 }, (_, i) => {

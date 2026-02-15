@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import CalendarView from '../../components/CalendarView';
 import {
     Phone, Mail, MapPin, Clock, Languages, GraduationCap, Award, Star,
     ChevronRight, Video, Calendar, CreditCard, ArrowLeft, CheckCircle,
@@ -27,18 +28,9 @@ export default function LawyerProfilePage() {
     const [loadingSlots, setLoadingSlots] = useState(false);
 
     // Generate next 7 days for the calendar
-    const [calendarDays, setCalendarDays] = useState([]);
 
-    useEffect(() => {
-        const days = [];
-        const today = new Date();
-        for (let i = 0; i < 7; i++) {
-            const date = new Date(today);
-            date.setDate(today.getDate() + i);
-            days.push(date);
-        }
-        setCalendarDays(days);
-    }, []);
+
+
 
     useEffect(() => {
         const fetchLawyer = async () => {
@@ -88,16 +80,7 @@ export default function LawyerProfilePage() {
         fetchAvailability();
     }, [id, selectedDate, lawyer]);
 
-    const handleBookNow = () => {
-        if (selectedDate && selectedTime) {
-            navigate(`/lawyers/${id}/book`, {
-                state: {
-                    date: selectedDate.toISOString(),
-                    time: selectedTime
-                }
-            });
-        }
-    };
+
 
     const toggleFavorite = async () => {
         if (!isAuthenticated) {
@@ -120,6 +103,9 @@ export default function LawyerProfilePage() {
             setFavoriteLoading(false);
         }
     };
+
+
+
 
     const handleShare = () => {
         if (navigator.share) {
@@ -147,14 +133,6 @@ export default function LawyerProfilePage() {
             <Link to="/lawyers" className="text-blue-600 hover:underline">Back to Lawyers</Link>
         </div>
     );
-
-    // Helper to format date
-    const formatDate = (date) => {
-        return {
-            day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-            date: date.getDate(),
-        };
-    };
 
     return (
         <div className="min-h-screen bg-gray-50/50">
@@ -419,86 +397,68 @@ export default function LawyerProfilePage() {
                                 Book Appointment
                             </h3>
 
-                            {/* Date Selector */}
+                            {/* Availability Calendar */}
                             <div className="mb-8">
-                                <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
-                                    {calendarDays.map((date, index) => {
-                                        const isSelected = selectedDate.toDateString() === date.toDateString();
-                                        const { day, date: dateNum } = formatDate(date);
-                                        return (
-                                            <button
-                                                key={index}
-                                                onClick={() => {
-                                                    setSelectedDate(date);
-                                                    setSelectedTime(null);
-                                                }}
-                                                className={`flex-shrink-0 w-20 p-4 rounded-2xl border transition-all duration-200 group flex flex-col items-center justify-center ${
-                                                    isSelected
-                                                    ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 scale-105'
-                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:shadow-md'
-                                                }`}
-                                            >
-                                                <span className={`text-xs font-medium mb-1 ${isSelected ? 'text-blue-100' : 'text-gray-400 group-hover:text-blue-500'}`}>{day}</span>
-                                                <span className="text-2xl font-bold">{dateNum}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-6">Check Availability</h3>
+                                <CalendarView
+                                    selectedDate={selectedDate}
+                                    onDateChange={(date) => {
+                                        setSelectedDate(date);
+                                        setSelectedTime(null);
+                                    }}
+                                />
                             </div>
 
                             {/* Time Slots */}
-                            <div>
-                                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Available Slots</h4>
-                                {loadingSlots ? (
-                                    <div className="flex justify-center py-8">
-                                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                                    </div>
-                                ) : availableSlots.length > 0 ? (
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                                        {availableSlots.map((slot, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => setSelectedTime(slot.time)}
-                                                className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                                                    selectedTime === slot.time
-                                                    ? 'bg-blue-600 text-white shadow-md scale-105 ring-2 ring-blue-200'
-                                                    : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-500 hover:text-blue-600'
-                                                }`}
-                                            >
-                                                {slot.time}
-                                            </button>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                        <p className="text-gray-500">No slots available for this date.</p>
-                                    </div>
-                                )}
-                            </div>
+                            {selectedDate && (
+                                <div className="mb-6">
+                                    <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                                        Available Slots for {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </h4>
+                                    {loadingSlots ? (
+                                        <div className="flex justify-center py-4">
+                                            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                        </div>
+                                    ) : availableSlots.length > 0 ? (
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                            {availableSlots.map((slot, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setSelectedTime(slot.time)}
+                                                    className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors border
+                                                        ${selectedTime === slot.time
+                                                            ? 'bg-blue-600 text-white border-blue-600'
+                                                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-500 hover:text-blue-600'
+                                                        }`}
+                                                >
+                                                    {slot.time}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-gray-500 text-sm italic border border-dashed border-gray-200 rounded-lg p-4 text-center">
+                                            No slots available for this date.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Book Button */}
                             <div className="mt-8 pt-6 border-t border-gray-100">
                                 <button
-                                    onClick={handleBookNow}
-                                    disabled={!selectedTime}
-                                    className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3 ${
-                                        selectedTime
-                                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200 hover:shadow-blue-300 active:scale-99'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
-                                    }`}
+                                    onClick={() => navigate(`/lawyers/${id}/book`, {
+                                        state: {
+                                            date: selectedDate ? selectedDate.toISOString().split('T')[0] : null,
+                                            time: selectedTime
+                                        }
+                                    })}
+                                    className="w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200 hover:shadow-blue-300 active:scale-99"
                                 >
-                                    <span>Confirm Booking</span>
-                                    {selectedTime && (
-                                        <>
-                                            <span className="w-1.5 h-1.5 rounded-full bg-white/50" />
-                                            <span>₹{lawyer.consultationFee}</span>
-                                        </>
-                                    )}
+                                    <span>Book Appointment</span>
                                 </button>
                                 <p className="text-center text-xs text-gray-400 mt-3">
                                     Instant confirmation • Free cancellation 24h before
-                                </p>
-                            </div>
+                                </p></div>
                         </div>
 
                     </div>
