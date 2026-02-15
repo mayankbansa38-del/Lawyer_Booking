@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import { Mail, Lock, Phone, Building2, ArrowRight, Eye, EyeOff, CheckCircle2, Sparkles, Loader2, AlertCircle, Scale, User } from 'lucide-react';
+import { Mail, Lock, Phone, Building2, ArrowRight, Eye, EyeOff, CheckCircle2, AlertCircle, User, Scale, Loader2 } from 'lucide-react';
 import { SIGNUP_ROLES } from '../constants/roles';
 import { useAuth } from "../context/AuthContext";
+import NyayBookerLogo from "../components/NyayBookerLogo";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -16,15 +17,6 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "", barNumber: "", barState: "", specialization: ""
   });
-
-  const roles = SIGNUP_ROLES;
-
-  const benefits = [
-    "Access to verified legal experts",
-    "Secure & confidential consultations",
-    "Easy appointment scheduling",
-    "24/7 customer support"
-  ];
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -57,27 +49,18 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) return;
-
     setIsLoading(true);
     setError("");
 
     try {
       let result;
-
-      // Sanitize phone: keep only digits and leading + 
-      // "91 98765 43210" -> "+919876543210"
-      const sanitizedPhone = formData.phone
-        ? formData.phone.replace(/[^\d+]/g, '').replace(/^(\+)?/, '+')
-        : undefined;
-
       if (state === "Lawyer") {
         result = await registerLawyer({
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          phone: sanitizedPhone || undefined,
+          phone: formData.phone,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
           barCouncilId: formData.barNumber,
@@ -89,313 +72,315 @@ const Signup = () => {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          phone: sanitizedPhone || undefined,
+          phone: formData.phone,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
         });
       }
 
       if (result.success) {
-        // Redirect to verify email page - email verification is required
-        navigate("/verify-email");
+        navigate("/login");
       } else {
-        setError(result.error || "Registration failed. Please try again.");
+        setError(result.error || "Registration failed");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "An error occurred. Please try again.");
+      setError("An unexpected error occurred.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const result = await googleLogin(credentialResponse.credential);
-      if (result.success) {
-        navigate("/user/dashboard");
-      } else {
-        setError(result.error || "Google sign-up failed");
+      setIsLoading(true);
+      try {
+        const result = await googleLogin(credentialResponse.credential);
+        if (result.success) {
+           const userRole = result.user.role;
+           if (userRole === "LAWYER") navigate("/lawyer");
+           else navigate("/user");
+        } else {
+            setError(result.error || "Google signup failed");
+        }
+      } catch (err) {
+          setError("Google signup failed");
+      } finally {
+          setIsLoading(false);
       }
-    } catch (err) {
-      setError("Google sign-up failed. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleGoogleError = () => {
-    setError("Google sign-up was cancelled or failed");
+    setError("Google sign-in was cancelled or failed.");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-      {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-[radial-gradient(circle,rgba(59,130,246,0.1)_0%,transparent_50%)]" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-[radial-gradient(circle,rgba(99,102,241,0.1)_0%,transparent_50%)]" />
+    <div className="flex min-h-screen bg-white font-sans">
+      {/* Left Side - Abstract Visuals (Desktop Only) */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-slate-900 overflow-hidden items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-slate-900 to-black opacity-90"></div>
+
+        {/* Abstract Glowing Orb */}
+        <div className="absolute w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-[80px]"></div>
+
+        <div className="relative z-10 p-12 text-white/90 max-w-lg">
+            <h2 className="text-4xl font-bold mb-6 leading-tight">Join the Future of Legal Practice</h2>
+            <p className="text-lg text-white/60 leading-relaxed mb-8">
+                Create an account to access a world of legal opportunities, streamlined case management, and secure consultations.
+            </p>
+
+            <div className="space-y-4">
+                {[
+                    "Access to verified legal experts",
+                    "Secure & confidential consultations",
+                    "Easy appointment scheduling",
+                    "24/7 customer support"
+                ].map((item, index) => (
+                    <div key={index} className="flex items-center gap-3 text-white/80">
+                        <CheckCircle2 className="w-5 h-5 text-blue-400" />
+                        <span>{item}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
       </div>
 
-      <div className="relative w-full max-w-5xl grid lg:grid-cols-2 gap-8 items-center">
-        {/* Left - Benefits (hidden on mobile) */}
-        <div className="hidden lg:block text-white p-8">
-          <h2 className="text-4xl font-bold mb-4">Join Nyay Booker Today</h2>
-          <p className="text-slate-300 text-lg mb-8">Connect with experienced lawyers and get the legal help you deserve.</p>
-
-          <div className="space-y-4">
-            {benefits.map((benefit, idx) => (
-              <div key={idx} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-4 h-4 text-green-400" />
-                </div>
-                <span className="text-slate-200">{benefit}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-12 p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10">
-            <div className="flex items-center gap-4 mb-4">
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=lawyer1" alt="User" className="w-12 h-12 rounded-full border-2 border-white/20" />
-              <div>
-                <p className="font-semibold text-white">Nyay Booker</p>
-                <p className="text-sm text-slate-400">Legal Platform</p>
-              </div>
+      {/* Right Side - Signup Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-gray-50/50 overflow-y-auto">
+        <div className="w-full max-w-[500px] space-y-6">
+            {/* Header */}
+            <div className="flex flex-col items-center text-center space-y-2">
+                <NyayBookerLogo size={50} />
+                <h1 className="text-2xl font-bold text-gray-900 mt-2">Create Account</h1>
+                <p className="text-sm text-gray-500">Join Nyay Booker today</p>
             </div>
-            <p className="text-slate-300 italic">"Nyay Booker made finding the right lawyer so easy. The whole process was seamless and professional."</p>
-          </div>
-        </div>
 
-        {/* Right - Form */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/20">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 mb-3 shadow-lg shadow-blue-500/30">
-              <Scale className="w-7 h-7 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
-            <p className="text-gray-500 mt-1 text-sm">Start your legal journey today</p>
-          </div>
-
-          {/* Error Message */}
-          {(error || authError) && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700">{error || authError}</p>
-            </div>
-          )}
-
-          {/* Role Selector */}
-          <div className="mb-5">
-            <div className="grid grid-cols-2 gap-2">
-              {roles.map((role) => {
-                const Icon = role.icon;
-                return (
+            {/* Role Selector */}
+             <div className="p-1 bg-gray-100/80 rounded-xl grid grid-cols-2 gap-1 mb-4">
+                {SIGNUP_ROLES.map((role) => (
                   <button
                     key={role.id}
-                    type="button"
                     onClick={() => setState(role.id)}
-                    disabled={isLoading}
-                    className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${state === role.id
-                      ? "border-blue-500 bg-blue-50 shadow-md"
-                      : "border-gray-200 bg-gray-50 hover:border-gray-300"
-                      } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`
+                      relative py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out flex items-center justify-center gap-2
+                      ${state === role.id
+                        ? "bg-white text-blue-700 shadow-sm ring-1 ring-black/5"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}
+                    `}
                   >
-                    <Icon className={`w-5 h-5 mx-auto mb-1 ${state === role.id ? "text-blue-600" : "text-gray-500"}`} />
-                    <p className={`text-sm font-semibold ${state === role.id ? "text-blue-700" : "text-gray-700"}`}>{role.label}</p>
-                    <p className={`text-xs ${state === role.id ? "text-blue-500" : "text-gray-400"}`}>{role.desc}</p>
-                    {state === role.id && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                        <Sparkles className="w-2.5 h-2.5 text-white" />
-                      </div>
-                    )}
+                    <span>{role.label}</span>
                   </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">First Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text" name="firstName" value={formData.firstName} onChange={handleChange}
-                    placeholder="John"
-                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Last Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text" name="lastName" value={formData.lastName} onChange={handleChange}
-                    placeholder="Doe"
-                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
+                ))}
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="email" name="email" value={formData.email} onChange={handleChange}
-                  placeholder="you@example.com"
-                  className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Phone Number (Optional)</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                  placeholder="+91 98765 43210"
-                  className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {state === "Lawyer" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                <div>
-                  <label className="block text-xs font-medium text-blue-700 mb-1">Bar Registration No.</label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400" />
-                    <input
-                      type="text" name="barNumber" value={formData.barNumber} onChange={handleChange}
-                      placeholder="DEL/12345/2020"
-                      className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                      required
-                      disabled={isLoading}
-                    />
-                  </div>
+            {/* Error Display */}
+            {(error || authError) && (
+                <div className="p-4 bg-red-50/50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 text-sm">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <span>{error || authError}</span>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-blue-700 mb-1">Bar Council State</label>
-                  <div className="relative">
-                    <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400" />
-                    <select
-                      name="barState" value={formData.barState} onChange={handleChange}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none"
-                      disabled={isLoading}
-                    >
-                      <option value="">Select state</option>
-                      <option value="Delhi">Delhi</option>
-                      <option value="Maharashtra">Maharashtra</option>
-                      <option value="Karnataka">Karnataka</option>
-                      <option value="Tamil Nadu">Tamil Nadu</option>
-                      <option value="Gujarat">Gujarat</option>
-                      <option value="Uttar Pradesh">Uttar Pradesh</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange}
-                    placeholder="Min. 8 characters"
-                    className="w-full pl-9 pr-10 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
-                    required
-                    disabled={isLoading}
-                  />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-700 ml-1">First Name</label>
+                        <div className="relative group">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                            <input
+                                type="text"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                                placeholder="John"
+                                required
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-700 ml-1">Last Name</label>
+                        <div className="relative group">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                            <input
+                                type="text"
+                                name="lastName"
+                                value={formData.lastName}
+                                onChange={handleChange}
+                                className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                                placeholder="Doe"
+                                required
+                            />
+                        </div>
+                    </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange}
-                    placeholder="Re-enter password"
-                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
-                    required
-                    disabled={isLoading}
-                  />
+                <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-700 ml-1">Email</label>
+                    <div className="relative group">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                            placeholder="you@example.com"
+                            required
+                        />
+                    </div>
                 </div>
-              </div>
+
+                <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-700 ml-1">Phone Number</label>
+                    <div className="relative group">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                            type="tel"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                            placeholder="+91 98765 43210"
+                        />
+                    </div>
+                </div>
+
+                {state === "Lawyer" && (
+                    <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-blue-800 ml-1">Bar Registration No.</label>
+                            <div className="relative group">
+                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 group-focus-within:text-blue-600 transition-colors" />
+                                <input
+                                    type="text"
+                                    name="barNumber"
+                                    value={formData.barNumber}
+                                    onChange={handleChange}
+                                    className="w-full pl-9 pr-3 py-2.5 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                                    placeholder="DEL/12345/2020"
+                                    required
+                                />
+                            </div>
+                        </div>
+                         <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-blue-800 ml-1">Bar Council State</label>
+                            <div className="relative group">
+                                <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 group-focus-within:text-blue-600 transition-colors" />
+                                <select
+                                    name="barState"
+                                    value={formData.barState}
+                                    onChange={handleChange}
+                                    className="w-full pl-9 pr-3 py-2.5 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm text-gray-900 appearance-none"
+                                >
+                                    <option value="">Select State</option>
+                                    <option value="Delhi">Delhi</option>
+                                    <option value="Maharashtra">Maharashtra</option>
+                                    <option value="Karnataka">Karnataka</option>
+                                    <option value="Tamil Nadu">Tamil Nadu</option>
+                                    <option value="Gujarat">Gujarat</option>
+                                    <option value="Uttar Pradesh">Uttar Pradesh</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-700 ml-1">Password</label>
+                        <div className="relative group">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                className="w-full pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                                placeholder="Min. 8 chars"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-md transition-colors"
+                            >
+                                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                        </div>
+                    </div>
+                     <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-700 ml-1">Confirm Password</label>
+                        <div className="relative group">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                                placeholder="Re-enter password"
+                                required
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-start gap-2 pt-2">
+                    <input type="checkbox" id="terms" className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" required />
+                    <label htmlFor="terms" className="text-xs text-gray-500">
+                        I agree to the <Link to="#" className="text-blue-600 hover:underline">Terms of Service</Link> and <Link to="#" className="text-blue-600 hover:underline">Privacy Policy</Link>
+                    </label>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+                >
+                    {isLoading ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Creating Account...</span>
+                        </>
+                    ) : (
+                        <>
+                            <span>Create Account</span>
+                            <ArrowRight className="w-4 h-4" />
+                        </>
+                    )}
+                </button>
+            </form>
+
+            {/* Divider */}
+            <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-gray-50 px-2 text-gray-500">Or continue with</span>
+                </div>
             </div>
 
-            <div className="flex items-start gap-2 pt-1">
-              <input type="checkbox" id="terms" className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" required disabled={isLoading} />
-              <label htmlFor="terms" className="text-xs text-gray-600">
-                I agree to the <a href="#" className="text-blue-600 hover:underline">Terms of Service</a> and <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>
-              </label>
+            <div className="flex justify-center">
+                 <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    theme="outline"
+                    size="large"
+                    text="signup_with"
+                    width="100%"
+                    locale="en"
+                  />
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating Account...
-                </>
-              ) : (
-                <>
-                  Create Account
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">or continue with</span>
-            </div>
-          </div>
-
-           {/* Google Login */}
-              <div className="flex justify-center">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={handleGoogleError}
-                  theme="outline"
-                  size="large"
-                  text="signin_with"
-                />
-              </div>
-
-          <p className="text-center text-gray-600 mt-4 text-sm">
-            Already have an account?{" "}
-            <Link to="/login" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">Sign in</Link>
-          </p>
+            <p className="text-center text-sm text-gray-600">
+                Already have an account?{" "}
+                <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors">
+                    Sign in
+                </Link>
+            </p>
         </div>
       </div>
     </div>
