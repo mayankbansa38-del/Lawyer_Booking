@@ -1,262 +1,420 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Mail, Lock, User, Phone, Scale, ShieldCheck, Building2, ArrowRight, Eye, EyeOff, CheckCircle2, Sparkles } from 'lucide-react';
+import { Link, useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
+import { Mail, Lock, Phone, Building2, ArrowRight, Eye, EyeOff, CheckCircle2, AlertCircle, User, Scale, Loader2 } from 'lucide-react';
+import { SIGNUP_ROLES } from '../constants/roles';
+import { useAuth } from "../context/AuthContext";
+import NyayBookerLogo from "../components/NyayBookerLogo";
 
 const Signup = () => {
+  const navigate = useNavigate();
+  const { register, registerLawyer, googleLogin, error: authError } = useAuth();
+
   const [state, setState] = useState("User");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    name: "", email: "", phone: "", password: "", confirmPassword: "", barNumber: "", specialization: ""
+    firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "", barNumber: "", barState: "", specialization: "", customBarState: ""
   });
-
-  const roles = [
-    { id: "User", icon: User, label: "Client", desc: "Find & book lawyers" },
-    { id: "Lawyer", icon: Scale, label: "Lawyer", desc: "Grow your practice" },
-    { id: "Admin", icon: ShieldCheck, label: "Admin", desc: "Manage platform" },
-  ];
-
-  const benefits = [
-    "Access to verified legal experts",
-    "Secure & confidential consultations",
-    "Easy appointment scheduling",
-    "24/7 customer support"
-  ];
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
+  };
+
+  const validateForm = () => {
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      setError("Please enter your full name");
+      return false;
+    }
+    if (!formData.email.includes("@")) {
+      setError("Please enter a valid email address");
+      return false;
+    }
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return false;
+    }
+    if (state === "Lawyer" && !formData.barNumber.trim()) {
+      setError("Bar registration number is required for lawyers");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setIsLoading(true);
+    setError("");
+
+    try {
+      let result;
+      if (state === "Lawyer") {
+        result = await registerLawyer({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+          barCouncilId: formData.barNumber,
+          barCouncilState: formData.barState === 'Other' ? formData.customBarState : (formData.barState || "Delhi"),
+          enrollmentYear: new Date().getFullYear(),
+        });
+      } else {
+        result = await register({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+        });
+      }
+
+      if (result.success) {
+        navigate("/login");
+      } else {
+        setError(result.error || "Registration failed");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsLoading(true);
+    try {
+      const result = await googleLogin(credentialResponse.credential);
+      if (result.success) {
+        const userRole = result.user.role;
+        if (userRole === "LAWYER") navigate("/lawyer");
+        else navigate("/user");
+      } else {
+        setError(result.error || "Google signup failed");
+      }
+    } catch (err) {
+      setError("Google signup failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError("Google sign-in was cancelled or failed.");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-      {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-[radial-gradient(circle,rgba(59,130,246,0.1)_0%,transparent_50%)]" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-[radial-gradient(circle,rgba(99,102,241,0.1)_0%,transparent_50%)]" />
-      </div>
+    <div className="flex min-h-screen bg-white font-sans">
+      {/* Left Side - Abstract Visuals (Desktop Only) */}
+      {/* Left Side - Professional Visuals (Desktop Only) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gray-900">
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=2070&auto=format&fit=crop"
+            alt="Legal Consultation"
+            className="w-full h-full object-cover opacity-50"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent"></div>
+        </div>
 
-      <div className="relative w-full max-w-5xl grid lg:grid-cols-2 gap-8 items-center">
-        {/* Left - Benefits (hidden on mobile) */}
-        <div className="hidden lg:block text-white p-8">
-          <h2 className="text-4xl font-bold mb-4">Join Nyay Booker Today</h2>
-          <p className="text-slate-300 text-lg mb-8">Connect with experienced lawyers and get the legal help you deserve.</p>
+        <div className="relative z-10 p-12 flex flex-col justify-center h-full text-white">
+          <h2 className="text-4xl font-bold mb-6 leading-tight">Join the Future of Legal Practice</h2>
+          <p className="text-lg text-white/80 leading-relaxed mb-8 max-w-md">
+            Create an account to access a world of legal opportunities, streamlined case management, and secure consultations.
+          </p>
 
           <div className="space-y-4">
-            {benefits.map((benefit, idx) => (
-              <div key={idx} className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-4 h-4 text-green-400" />
-                </div>
-                <span className="text-slate-200">{benefit}</span>
+            {[
+              "Access to verified legal experts",
+              "Secure & confidential consultations",
+              "Easy appointment scheduling",
+              "24/7 customer support"
+            ].map((item, index) => (
+              <div key={index} className="flex items-center gap-3 text-white/90">
+                <CheckCircle2 className="w-5 h-5 text-blue-400" />
+                <span>{item}</span>
               </div>
             ))}
           </div>
-
-          <div className="mt-12 p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10">
-            <div className="flex items-center gap-4 mb-4">
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=lawyer1" alt="User" className="w-12 h-12 rounded-full border-2 border-white/20" />
-              <div>
-                <p className="font-semibold text-white">Nyay Booker</p>
-                <p className="text-sm text-slate-400">Legal Platform</p>
-              </div>
-            </div>
-            <p className="text-slate-300 italic">"Nyay Booker made finding the right lawyer so easy. The whole process was seamless and professional."</p>
-          </div>
         </div>
+      </div>
 
-        {/* Right - Form */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/20">
+      {/* Right Side - Signup Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-gray-50/50 overflow-y-auto">
+        <div className="w-full max-w-[500px] space-y-6">
           {/* Header */}
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 mb-3 shadow-lg shadow-blue-500/30">
-              <Scale className="w-7 h-7 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
-            <p className="text-gray-500 mt-1 text-sm">Start your legal journey today</p>
+          <div className="flex flex-col items-center text-center space-y-2">
+            <NyayBookerLogo size={50} />
+            <h1 className="text-2xl font-bold text-gray-900 mt-2">Create Account</h1>
+            <p className="text-sm text-gray-500">Join Nyay Booker today</p>
           </div>
 
           {/* Role Selector */}
-          <div className="mb-5">
-            <div className="grid grid-cols-3 gap-2">
-              {roles.map((role) => {
-                const Icon = role.icon;
-                return (
-                  <button
-                    key={role.id}
-                    type="button"
-                    onClick={() => setState(role.id)}
-                    className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 ${state === role.id
-                      ? "border-blue-500 bg-blue-50 shadow-md"
-                      : "border-gray-200 bg-gray-50 hover:border-gray-300"
-                      }`}
-                  >
-                    <Icon className={`w-5 h-5 mx-auto mb-0.5 ${state === role.id ? "text-blue-600" : "text-gray-500"}`} />
-                    <p className={`text-xs font-semibold ${state === role.id ? "text-blue-700" : "text-gray-700"}`}>{role.label}</p>
-                    {state === role.id && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                        <Sparkles className="w-2.5 h-2.5 text-white" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="p-1 bg-gray-100/80 rounded-xl grid grid-cols-2 gap-1 mb-4">
+            {SIGNUP_ROLES.map((role) => (
+              <button
+                key={role.id}
+                onClick={() => setState(role.id)}
+                className={`
+                      relative py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out flex items-center justify-center gap-2
+                      ${state === role.id
+                    ? "bg-white text-blue-700 shadow-sm ring-1 ring-black/5"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"}
+                    `}
+              >
+                <span>{role.label}</span>
+              </button>
+            ))}
           </div>
 
+          {/* Error Display */}
+          {(error || authError) && (
+            <div className="p-4 bg-red-50/50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 text-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <span>{error || authError}</span>
+            </div>
+          )}
+
           {/* Form */}
-          <form className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-700 ml-1">First Name</label>
+                <div className="relative group">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                   <input
-                    type="text" name="name" value={formData.name} onChange={handleChange}
-                    placeholder="John Doe"
-                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                    placeholder="John"
                     required
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-700 ml-1">Last Name</label>
+                <div className="relative group">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                   <input
-                    type="email" name="email" value={formData.email} onChange={handleChange}
-                    placeholder="you@example.com"
-                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                    placeholder="Doe"
                     required
                   />
                 </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-700 ml-1">Email</label>
+              <div className="relative group">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <input
-                  type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                  placeholder="+1 (555) 000-0000"
-                  className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                  placeholder="you@example.com"
                   required
                 />
               </div>
             </div>
 
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-700 ml-1">Phone Number</label>
+              <div className="relative group">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, phone: value });
+                    setError("");
+                  }}
+                  className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                  placeholder="9876543210"
+                />
+              </div>
+            </div>
+
             {state === "Lawyer" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                <div>
-                  <label className="block text-xs font-medium text-blue-700 mb-1">Bar Registration No.</label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400" />
+              <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-blue-800 ml-1">Bar Registration No.</label>
+                  <div className="relative group">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 group-focus-within:text-blue-600 transition-colors" />
                     <input
-                      type="text" name="barNumber" value={formData.barNumber} onChange={handleChange}
-                      placeholder="BAR-XXXXX"
-                      className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                      type="text"
+                      name="barNumber"
+                      value={formData.barNumber}
+                      onChange={handleChange}
+                      className="w-full pl-9 pr-3 py-2.5 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                      placeholder="DEL/12345/2020"
                       required
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-blue-700 mb-1">Specialization</label>
-                  <div className="relative">
-                    <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400" />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-blue-800 ml-1">Bar Council State</label>
+                  <div className="relative group">
+                    <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 group-focus-within:text-blue-600 transition-colors" />
                     <select
-                      name="specialization" value={formData.specialization} onChange={handleChange}
-                      className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none"
-                      required
+                      name="barState"
+                      value={formData.barState === 'Other' || !["Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Gujarat", "Uttar Pradesh", ""].includes(formData.barState) ? 'Other' : formData.barState}
+                      onChange={(e) => {
+                        if (e.target.value === 'Other') {
+                          setFormData({ ...formData, barState: 'Other', customBarState: '' });
+                        } else {
+                          setFormData({ ...formData, barState: e.target.value, customBarState: '' });
+                        }
+                      }}
+                      className="w-full pl-9 pr-3 py-2.5 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm text-gray-900 appearance-none"
                     >
-                      <option value="">Select area</option>
-                      <option value="criminal">Criminal Law</option>
-                      <option value="family">Family Law</option>
-                      <option value="corporate">Corporate Law</option>
-                      <option value="property">Property Law</option>
-                      <option value="immigration">Immigration</option>
+                      <option value="">Select State</option>
+                      <option value="Delhi">Delhi</option>
+                      <option value="Maharashtra">Maharashtra</option>
+                      <option value="Karnataka">Karnataka</option>
+                      <option value="Tamil Nadu">Tamil Nadu</option>
+                      <option value="Gujarat">Gujarat</option>
+                      <option value="Uttar Pradesh">Uttar Pradesh</option>
+                      <option value="Other">Other</option>
                     </select>
                   </div>
                 </div>
+
+                {formData.barState === 'Other' && (
+                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                    <label className="text-xs font-medium text-blue-800 ml-1">Specify Bar Council State</label>
+                    <div className="relative group">
+                      <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 group-focus-within:text-blue-600 transition-colors" />
+                      <input
+                        type="text"
+                        value={formData.customBarState || ''}
+                        onChange={(e) => setFormData({ ...formData, customBarState: e.target.value })}
+                        className="w-full pl-9 pr-3 py-2.5 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                        placeholder="Enter state name"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-700 ml-1">Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                   <input
-                    type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange}
-                    placeholder="••••••••"
-                    className="w-full pl-9 pr-10 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full pl-9 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                    placeholder="Min. 8 chars"
                     required
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-md transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Confirm Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-700 ml-1">Confirm Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                   <input
-                    type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange}
-                    placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all"
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                    placeholder="Re-enter password"
                     required
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex items-start gap-2 pt-1">
+            <div className="flex items-start gap-2 pt-2">
               <input type="checkbox" id="terms" className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" required />
-              <label htmlFor="terms" className="text-xs text-gray-600">
-                I agree to the <a href="#" className="text-blue-600 hover:underline">Terms of Service</a> and <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>
+              <label htmlFor="terms" className="text-xs text-gray-500">
+                I agree to the <Link to="#" className="text-blue-600 hover:underline">Terms of Service</Link> and <Link to="#" className="text-blue-600 hover:underline">Privacy Policy</Link>
               </label>
             </div>
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+              disabled={isLoading}
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
             >
-              Create Account
-              <ArrowRight className="w-4 h-4" />
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Creating Account...</span>
+                </>
+              ) : (
+                <>
+                  <span>Create Account</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">or continue with</span>
-            </div>
-          </div>
+          {state !== "Lawyer" && (
+            <>
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-gray-50 px-2 text-gray-500">Or continue with</span>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
-              <span className="text-sm font-medium text-gray-700">Google</span>
-            </button>
-            <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-              </svg>
-              <span className="text-sm font-medium text-gray-700">GitHub</span>
-            </button>
-          </div>
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  theme="outline"
+                  size="large"
+                  text="signup_with"
+                  width="100%"
+                  locale="en"
+                />
+              </div>
+            </>
+          )}
 
-          <p className="text-center text-gray-600 mt-4 text-sm">
+          <p className="text-center text-sm text-gray-600">
             Already have an account?{" "}
-            <Link to="/login" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">Sign in</Link>
+            <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors">
+              Sign in
+            </Link>
           </p>
         </div>
       </div>

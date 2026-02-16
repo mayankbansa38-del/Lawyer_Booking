@@ -9,11 +9,11 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, User, Calendar, Users, Briefcase,
-    DollarSign, BarChart3, FileText, Clock, Settings,
+    DollarSign, FileText, Clock, Settings,
     LogOut, Menu, X, ChevronRight, Bell
 } from 'lucide-react';
 import NyayBookerLogo from '../components/NyayBookerLogo';
-import { useAuth } from '../context/mockAuth';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
     { path: '/lawyer/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -23,7 +23,6 @@ const navItems = [
     { path: '/lawyer/clients', icon: Users, label: 'Clients' },
     { path: '/lawyer/cases', icon: Briefcase, label: 'Cases' },
     { path: '/lawyer/earnings', icon: DollarSign, label: 'Earnings' },
-    { path: '/lawyer/analytics', icon: BarChart3, label: 'Analytics' },
     { path: '/lawyer/documents', icon: FileText, label: 'Documents' },
     { path: '/lawyer/availability', icon: Settings, label: 'Availability' },
 ];

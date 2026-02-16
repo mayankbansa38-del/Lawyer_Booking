@@ -9,19 +9,18 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
     Calendar, Users, DollarSign, TrendingUp, Clock,
-    ChevronRight, Eye, Star, Briefcase
+    ChevronRight, Star, Briefcase
 } from 'lucide-react';
 import { StatCard, AppointmentCard, PageHeader } from '../../components/dashboard';
-import { appointmentAPI, paymentAPI, lawyerAPI, clientAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { appointmentAPI, paymentAPI, clientAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LawyerDashboard() {
     const { user } = useAuth();
     const [stats, setStats] = useState({
         appointments: { pending: 0, today: 0, total: 0 },
-        earnings: { thisMonth: 0, pending: 0 },
+        earnings: { totalEarnings: 0, thisMonth: 0 },
         clients: 0,
-        analytics: { views: 0, bookingRate: 0 }
     });
     const [recentAppointments, setRecentAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -29,28 +28,37 @@ export default function LawyerDashboard() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const lawyerId = user?.id || '1';
+                const lawyerId = user?.lawyer?.id || user?.id;
+
+                // Guard: do not fetch with an unknown ID
+                if (!lawyerId) {
+                    console.warn('LawyerDashboard: no lawyerId available yet');
+                    setLoading(false);
+                    return;
+                }
 
                 // Fetch appointments
                 const { data: appointments } = await appointmentAPI.getAll({ lawyerId });
+                // Normalize dates to YYYY-MM-DD for reliable comparison
                 const today = new Date().toISOString().split('T')[0];
                 const pending = appointments.filter(a => a.status === 'pending').length;
-                const todayApts = appointments.filter(a => a.date === today).length;
+                const todayApts = appointments.filter(a => {
+                    const aptDate = typeof a.date === 'string'
+                        ? a.date.split('T')[0]
+                        : new Date(a.date).toISOString().split('T')[0];
+                    return aptDate === today;
+                }).length;
 
                 // Fetch earnings
-                const { data: earnings } = await paymentAPI.getEarningsSummary(lawyerId);
+                const { data: earnings } = await paymentAPI.getEarningsSummary();
 
                 // Fetch clients
                 const { data: clients } = await clientAPI.getByLawyer(lawyerId);
 
-                // Fetch analytics
-                const { data: analytics } = await lawyerAPI.getAnalytics(lawyerId);
-
                 setStats({
                     appointments: { pending, today: todayApts, total: appointments.length },
-                    earnings: { thisMonth: earnings.thisMonth, pending: earnings.pendingPayouts || 0 },
+                    earnings: { totalEarnings: earnings.totalEarnings || 0, thisMonth: earnings.monthlyEarnings || 0 },
                     clients: clients.length,
-                    analytics: { views: analytics.profileViews.thisMonth, bookingRate: analytics.bookingRate.percentage }
                 });
 
                 // Get recent appointments (limit 5)
@@ -70,7 +78,9 @@ export default function LawyerDashboard() {
             const status = action === 'confirm' ? 'confirmed' : 'cancelled';
             await appointmentAPI.updateStatus(appointmentId, status);
             // Refresh appointments
-            const { data } = await appointmentAPI.getAll({ lawyerId: user?.id || '1' });
+            const lawyerId = user?.lawyer?.id || user?.id;
+            if (!lawyerId) return;
+            const { data } = await appointmentAPI.getAll({ lawyerId });
             setRecentAppointments(data.slice(0, 5));
         } catch (error) {
             console.error('Error updating appointment:', error);
@@ -112,19 +122,17 @@ export default function LawyerDashboard() {
                 />
                 <StatCard
                     title="This Month's Earnings"
-                    value={`₹${stats.earnings.thisMonth.toLocaleString('en-IN')}`}
-                    subtitle={`₹${stats.earnings.pending.toLocaleString('en-IN')} pending`}
+                    value={`₹${Number(stats.earnings.thisMonth).toLocaleString('en-IN')}`}
+                    subtitle={`₹${Number(stats.earnings.totalEarnings).toLocaleString('en-IN')} total`}
                     icon={DollarSign}
                     trend="up"
                     trendValue={18}
                 />
                 <StatCard
-                    title="Profile Views"
-                    value={stats.analytics.views}
-                    subtitle={`${stats.analytics.bookingRate}% booking rate`}
-                    icon={Eye}
-                    trend="up"
-                    trendValue={5}
+                    title="Total Earnings"
+                    value={`₹${Number(stats.earnings.totalEarnings).toLocaleString('en-IN')}`}
+                    subtitle="All time"
+                    icon={TrendingUp}
                 />
             </div>
 
@@ -222,10 +230,10 @@ export default function LawyerDashboard() {
                             </div>
                         </div>
                         <Link
-                            to="/lawyer/analytics"
+                            to="/lawyer/earnings"
                             className="mt-4 block w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-center text-sm font-medium transition-colors"
                         >
-                            View Full Analytics
+                            View Earnings
                         </Link>
                     </div>
                 </div>

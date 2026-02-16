@@ -2,13 +2,13 @@ import { Link } from "react-router-dom";
 import { Scale, Users, Building2, Home, Monitor, FileText, LayoutGrid } from 'lucide-react';
 
 const specialties = [
-  { name: "All", icon: LayoutGrid },
-  { name: "Criminal Lawyer", icon: Scale },
-  { name: "Family Lawyer", icon: Users },
-  { name: "Corporate Lawyer", icon: Building2 },
-  { name: "Property Lawyer", icon: Home },
-  { name: "Cyber Lawyer", icon: Monitor },
-  { name: "Civil Lawyer", icon: FileText },
+  { name: "All", slug: "All", icon: LayoutGrid },
+  { name: "Criminal Lawyer", slug: "criminal-law", icon: Scale },
+  { name: "Family Lawyer", slug: "family-law", icon: Users },
+  { name: "Corporate Lawyer", slug: "corporate-law", icon: Building2 },
+  { name: "Property Lawyer", slug: "real-estate-law", icon: Home },
+  { name: "Cyber Lawyer", slug: "cyber-law", icon: Monitor },
+  { name: "Civil Lawyer", slug: "civil-litigation", icon: FileText },
 ];
 
 const Speciality = () => {
@@ -28,8 +28,8 @@ const Speciality = () => {
             const IconComponent = item.icon;
             return (
               <Link
-                to="/All_lawyer"
-                state={{ specialty: item.name }}
+                to="/lawyers"
+                state={{ specialty: item.slug }}
                 key={index}
                 className="group flex flex-col items-center p-6 bg-gray-50 rounded-xl hover:bg-blue-50 hover:shadow-md transition-all duration-300 cursor-pointer"
               >

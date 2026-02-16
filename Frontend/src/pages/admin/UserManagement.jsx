@@ -1,0 +1,375 @@
+/**
+ * User Management Page
+ * Admin can view, edit, and delete users
+ */
+
+import { useState, useEffect } from 'react';
+import { Search, Filter, MoreVertical, Trash2, Ban, CheckCircle, Eye, Mail } from 'lucide-react';
+import apiClient from '../../services/apiClient';
+import { useSmartPosition } from '../../hooks/useSmartPosition';
+
+// ══════════════════════════════════════════════════════════════════════════
+// MOBILE CARD COMPONENT
+// ══════════════════════════════════════════════════════════════════════════
+
+function UserCard({ user, onToggleStatus, onDelete, deletingId }) {
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            {/* Header: Avatar + Name + Email */}
+            <div className="flex items-start gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                    {user.firstName?.[0]}{user.lastName?.[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate">
+                        {user.firstName} {user.lastName}
+                    </h3>
+                    <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                </div>
+            </div>
+
+            {/* Info Grid */}
+            <div className="space-y-3 mb-4">
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Contact</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-900">{user.phone || 'N/A'}</span>
+                        {user.isEmailVerified && (
+                            <CheckCircle className="w-4 h-4 text-green-500" title="Email Verified" />
+                        )}
+                    </div>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Status</span>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {user.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">Joined</span>
+                    <span className="text-sm text-gray-900">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                    </span>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-3 border-t border-gray-100">
+                <button
+                    onClick={() => onToggleStatus(user.id)}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                    {user.isActive ? (
+                        <>
+                            <Ban className="w-4 h-4 text-orange-500" />
+                            Deactivate
+                        </>
+                    ) : (
+                        <>
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            Activate
+                        </>
+                    )}
+                </button>
+                <button
+                    onClick={() => onDelete(user.id)}
+                    disabled={deletingId === user.id}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {deletingId === user.id ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                            Deleting...
+                        </>
+                    ) : (
+                        <>
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                        </>
+                    )}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ACTION DROPDOWN WITH SMART POSITIONING
+// ══════════════════════════════════════════════════════════════════════════
+
+function ActionDropdown({ user, isOpen, onToggle, onToggleStatus, onDelete, deletingId }) {
+    const { ref, positionClass } = useSmartPosition(isOpen, 150);
+
+    return (
+        <div className="relative flex justify-end">
+            <button
+                ref={ref}
+                onClick={onToggle}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+                <MoreVertical className="w-5 h-5 text-gray-400" />
+            </button>
+
+            {isOpen && (
+                <div className={`absolute right-0 ${positionClass} w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-10`}>
+                    <button
+                        onClick={() => onToggleStatus(user.id)}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left hover:bg-gray-50"
+                    >
+                        {user.isActive ? (
+                            <>
+                                <Ban className="w-4 h-4 text-orange-500" />
+                                Deactivate
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                Activate
+                            </>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => onDelete(user.id)}
+                        disabled={deletingId === user.id}
+                        className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {deletingId === user.id ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                Deleting...
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="w-4 h-4" />
+                                Delete User
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ══════════════════════════════════════════════════════════════════════════
+
+export default function UserManagement() {
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filter, setFilter] = useState('all'); // all, active, inactive
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [showActionMenu, setShowActionMenu] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const fetchUsers = async () => {
+        try {
+            const response = await apiClient.get('/admin/users');
+            // Backend returns users array directly at response.data.data
+            const users = Array.isArray(response.data.data)
+                ? response.data.data
+                : response.data.data?.users || [];
+            setUsers(users);
+        } catch (error) {
+            console.error('Failed to fetch users:', error);
+            setUsers([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleToggleStatus = async (userId) => {
+        try {
+            const user = users.find(u => u.id === userId);
+            await apiClient.put(`/admin/users/${userId}/status`, { isActive: !user.isActive });
+            setUsers(users.map(u => u.id === userId ? { ...u, isActive: !u.isActive } : u));
+        } catch (error) {
+            console.error('Failed to update user status:', error);
+            // Demo toggle
+            setUsers(users.map(u => u.id === userId ? { ...u, isActive: !u.isActive } : u));
+        }
+        setShowActionMenu(null);
+    };
+
+    const handleDeleteUser = async (userId) => {
+        // Close menu first
+        setShowActionMenu(null);
+
+        if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+            return;
+        }
+
+        setDeletingId(userId);
+
+        try {
+            console.log('Deleting user:', userId);
+            await apiClient.delete(`/admin/users/${userId}`);
+
+            // Success
+            setUsers(users.filter(u => u.id !== userId));
+            // Optional: You could add a toast notification here
+            console.log('User deleted successfully');
+        } catch (error) {
+            console.error('Failed to delete user:', error);
+            const msg = error.response?.data?.message || 'Failed to delete user';
+            alert(msg);
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const filteredUsers = users.filter(user => {
+        const matchesSearch =
+            user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesFilter =
+            filter === 'all' ||
+            (filter === 'active' && user.isActive) ||
+            (filter === 'inactive' && !user.isActive);
+
+        return matchesSearch && matchesFilter;
+    });
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+                    <p className="text-gray-500 mt-1">Manage registered users on the platform</p>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                        {users.length} Total Users
+                    </span>
+                </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search users..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                </div>
+                <select
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                >
+                    <option value="all">All Users</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+
+            {/* Desktop Table - Hidden on Mobile */}
+            <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Joined</th>
+                                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {filteredUsers.map((user) => (
+                                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                                {user.firstName?.[0]}{user.lastName?.[0]}
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-gray-900">{user.firstName} {user.lastName}</p>
+                                                <p className="text-sm text-gray-500">{user.email}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-gray-600">{user.phone || 'N/A'}</span>
+                                            {user.isEmailVerified && (
+                                                <CheckCircle className="w-4 h-4 text-green-500" title="Email Verified" />
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${user.isActive
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-red-100 text-red-700'
+                                            }`}>
+                                            {user.isActive ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                        {new Date(user.createdAt).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <ActionDropdown
+                                            user={user}
+                                            isOpen={showActionMenu === user.id}
+                                            onToggle={() => setShowActionMenu(showActionMenu === user.id ? null : user.id)}
+                                            onToggleStatus={handleToggleStatus}
+                                            onDelete={handleDeleteUser}
+                                            deletingId={deletingId}
+                                        />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {filteredUsers.length === 0 && (
+                    <div className="py-12 text-center">
+                        <p className="text-gray-500">No users found matching your criteria.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Mobile Card Grid - Hidden on Desktop */}
+            <div className="md:hidden space-y-4">
+                {filteredUsers.map((user) => (
+                    <UserCard
+                        key={user.id}
+                        user={user}
+                        onToggleStatus={handleToggleStatus}
+                        onDelete={handleDeleteUser}
+                        deletingId={deletingId}
+                    />
+                ))}
+                {filteredUsers.length === 0 && (
+                    <div className="py-12 text-center bg-white rounded-2xl border border-gray-100">
+                        <p className="text-gray-500">No users found matching your criteria.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}

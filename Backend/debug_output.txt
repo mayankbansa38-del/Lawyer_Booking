@@ -1,0 +1,102 @@
+Searching for Ashok...
+Found lawyers: [
+  {
+    "id": "a221a2e1-56d1-4e7e-8261-d4908679959b",
+    "userId": "61af66fc-4c7c-4187-9834-d75f8749939f",
+    "barCouncilId": "DEL/2432/3525",
+    "barCouncilState": "Other",
+    "enrollmentYear": 2026,
+    "languages": [
+      "Hindi",
+      "English",
+      "Punjabi"
+    ],
+    "bio": "Exprince in legal case\n",
+    "headline": null,
+    "experience": 11,
+    "hourlyRate": "45001",
+    "consultationFee": "1200",
+    "currency": "INR",
+    "city": "Bilaspur",
+    "state": "H P",
+    "address": null,
+    "pincode": null,
+    "verificationStatus": "VERIFIED",
+    "verifiedAt": "2026-02-15T17:44:07.701Z",
+    "verifiedBy": "0e5912f1-a868-4f14-9ada-20032fa00366",
+    "rejectionReason": null,
+    "isAvailable": true,
+    "availability": {
+      "Friday": {
+        "end": "17:00",
+        "start": "09:00",
+        "enabled": true
+      },
+      "Monday": {
+        "end": "17:00",
+        "start": "09:00",
+        "enabled": true
+      },
+      "Sunday": {
+        "end": "17:00",
+        "start": "09:00",
+        "enabled": false
+      },
+      "Tuesday": {
+        "end": "17:00",
+        "start": "09:00",
+        "enabled": true
+      },
+      "Saturday": {
+        "end": "17:00",
+        "start": "09:00",
+        "enabled": true
+      },
+      "Thursday": {
+        "end": "17:00",
+        "start": "09:00",
+        "enabled": true
+      },
+      "Wednesday": {
+        "end": "17:00",
+        "start": "09:00",
+        "enabled": true
+      }
+    },
+    "totalBookings": 0,
+    "completedBookings": 0,
+    "totalEarnings": "0",
+    "averageRating": 0,
+    "totalReviews": 0,
+    "slug": null,
+    "featured": false,
+    "featuredOrder": null,
+    "createdAt": "2026-02-15T16:29:53.919Z",
+    "updatedAt": "2026-02-16T08:47:56.206Z",
+    "user": {
+      "id": "61af66fc-4c7c-4187-9834-d75f8749939f",
+      "email": "ankitsharma730g@gmail.com",
+      "password": "$2b$12$WmpAOCX0Xav2cKEG8Xl7nuo4SEEd3u.2IFmA3pPxVKJTqgG6.2kra",
+      "googleId": null,
+      "role": "LAWYER",
+      "firstName": "Ashok",
+      "lastName": "Kumar",
+      "phone": "+917876789794",
+      "avatar": null,
+      "isEmailVerified": false,
+      "isPhoneVerified": false,
+      "emailVerifiedAt": null,
+      "isActive": true,
+      "lastLoginAt": "2026-02-16T08:45:08.974Z",
+      "lastLoginIp": null,
+      "createdAt": "2026-02-15T16:29:53.919Z",
+      "updatedAt": "2026-02-16T08:47:56.206Z",
+      "deletedAt": null
+    }
+  }
+]
+
+Checking Lawyer: Ashok Kumar
+- Verification Status: 'VERIFIED' (Needs 'VERIFIED')
+- Is Available: true (Needs true)
+- User Active: true (Needs true)

@@ -31,7 +31,6 @@ const NyayBookerLogo = ({
                 rx="1"
                 fill={primaryColor}
             />
-
             {/* Main "L" shape - horizontal bar */}
             <rect
                 x="8"
@@ -41,7 +40,6 @@ const NyayBookerLogo = ({
                 rx="1"
                 fill={primaryColor}
             />
-
             {/* Gold accent circle */}
             <circle
                 cx="32"
@@ -49,7 +47,6 @@ const NyayBookerLogo = ({
                 r="8"
                 fill={accentColor}
             />
-
             {/* Text (optional) */}
             {showText && (
                 <g>

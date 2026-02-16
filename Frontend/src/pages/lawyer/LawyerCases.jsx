@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Briefcase, Search, ChevronRight, Calendar, MapPin, FileText } from 'lucide-react';
 import { PageHeader, CaseCard, EmptyState } from '../../components/dashboard';
 import { caseAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 const tabs = [
     { id: 'all', label: 'All' },
@@ -27,7 +27,7 @@ export default function LawyerCases() {
     useEffect(() => {
         async function fetchCases() {
             try {
-                const params = { lawyerId: user?.id || '1' };
+                const params = { lawyerId: user?.lawyer?.id || user?.id };
                 if (activeTab !== 'all') params.status = activeTab;
                 const { data } = await caseAPI.getAll(params);
                 setCases(data);

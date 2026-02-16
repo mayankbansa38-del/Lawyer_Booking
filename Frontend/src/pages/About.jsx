@@ -1,12 +1,15 @@
 import { Link } from "react-router-dom";
 import { Scale, Users, Award, Target, Heart, Shield, ArrowRight, CheckCircle2, Quote } from 'lucide-react';
 
+import ashrufImage from "../assets/photo/ashruf.jpeg";
+import amarpaulImage from "../assets/photo/amar_paul.jpg";
+
 const About = () => {
   const team = [
-    { name: "Prof. Amar Paul Singh", role: "Project Guide", image: "/lawyer1.png", bio: "Mentoring the team to build scalable and efficient solutions." },
+    { name: "Prof. Amar Paul Singh", role: "Project Guide", image: amarpaulImage, bio: "Mentoring the team to build scalable and efficient solutions." },
     { name: "Mayank Bansal", role: "Team Member", image: "/lawyer5.png", bio: "Full Stack Developer passionate about legal tech innovation." },
     { name: "Piyush Sharma", role: "Team Member", image: "/lawyer3.png", bio: "Frontend specialist focused on creating intuitive user experiences." },
-    { name: "Ashruf Khan", role: "Team Member", image: "/lawyer6.png", bio: "Backend developer ensuring secure and robust system architecture." },
+    { name: "Ashruf Khan", role: "Team Member", image: ashrufImage, bio: "Backend developer ensuring secure and robust system architecture." },
   ];
 
   const values = [
@@ -152,7 +155,7 @@ const About = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {team.map((member, idx) => (
               <div key={idx} className="bg-white rounded-2xl p-6 text-center shadow-sm hover:shadow-lg transition-shadow border border-gray-100">
-                <img src={member.image} alt={member.name} className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-gray-100" />
+                <img src={member.image} alt={member.name} className="w-40 h-40 rounded-3xl mx-auto mb-5 border-4 border-gray-100 object-cover shadow-lg" />
                 <h3 className="text-lg font-bold text-gray-900">{member.name}</h3>
                 <p className="text-blue-600 font-medium text-sm mb-2">{member.role}</p>
                 <p className="text-gray-500 text-sm">{member.bio}</p>

@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Clock, Save, Plus, X, Calendar } from 'lucide-react';
 import { PageHeader } from '../../components/dashboard';
 import { lawyerAPI } from '../../services/api';
-import { useAuth } from '../../context/mockAuth';
+import { useAuth } from '../../context/AuthContext';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS = { monday: 'Monday', tuesday: 'Tuesday', wednesday: 'Wednesday', thursday: 'Thursday', friday: 'Friday', saturday: 'Saturday', sunday: 'Sunday' };
@@ -24,8 +24,8 @@ export default function LawyerAvailability() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const { data } = await lawyerAPI.getById(user?.id || '1');
-                setWorkingHours(data.workingHours || {});
+                const { data } = await lawyerAPI.getById(user?.lawyer?.id || user?.id);
+                setWorkingHours(data.availability || {});
             } catch (error) {
                 console.error('Error fetching availability:', error);
             } finally {
@@ -58,7 +58,7 @@ export default function LawyerAvailability() {
         setSaving(true);
         setMessage({ type: '', text: '' });
         try {
-            await lawyerAPI.updateProfile(user?.id || '1', { workingHours });
+            await lawyerAPI.updateProfile(user?.lawyer?.id || user?.id, { availability: workingHours });
             setMessage({ type: 'success', text: 'Availability updated successfully!' });
         } catch (error) {
             setMessage({ type: 'error', text: 'Failed to update. Please try again.' });
