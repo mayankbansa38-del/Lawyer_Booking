@@ -52,9 +52,9 @@ const LawyerCard = ({ lawyer }) => {
   const isAvailable = lawyer.isAvailable !== undefined ? lawyer.isAvailable : lawyer.availability === 'Available';
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col">
       {/* Header with gradient cover */}
-      <div className="relative">
+      <div className="relative shrink-0">
         <div className="h-32 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600" />
 
         {/* Status Badge */}
@@ -78,13 +78,13 @@ const LawyerCard = ({ lawyer }) => {
       </div>
 
       {/* Card Body */}
-      <div className="pt-12 pb-6 px-6">
+      <div className="pt-12 pb-6 px-6 flex flex-col flex-1">
         <div className="text-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{displayName}</h3>
-          <p className="text-sm text-blue-600 font-medium">{displayType}</p>
+          <h3 className="text-lg font-semibold text-gray-900 line-clamp-1" title={displayName}>{displayName}</h3>
+          <p className="text-sm text-blue-600 font-medium line-clamp-1">{displayType}</p>
         </div>
 
-        <p className="text-gray-600 text-sm text-center mb-4 line-clamp-2">
+        <p className="text-gray-600 text-sm text-center mb-4 line-clamp-2 min-h-[40px]">
           {lawyer.description || lawyer.bio || `Experienced ${displayType} ready to help with your legal needs.`}
         </p>
 
@@ -103,33 +103,27 @@ const LawyerCard = ({ lawyer }) => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-            <Trophy className="w-5 h-5 text-blue-600 shrink-0" />
-            <div>
-              <div className="text-sm font-semibold text-gray-900">{displayCases}+</div>
-              <div className="text-xs text-gray-500">Wins</div>
-            </div>
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="flex flex-col items-center justify-center p-2 bg-blue-50 rounded-lg text-center h-full">
+            <Trophy className="w-4 h-4 text-blue-600 mb-1" />
+            <div className="text-sm font-semibold text-gray-900 leading-tight">{displayCases}+</div>
+            <div className="text-[10px] text-gray-500">Wins</div>
           </div>
-          <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-            <Clock className="w-5 h-5 text-blue-600 shrink-0" />
-            <div>
-              <div className="text-sm font-semibold text-gray-900">{displayExperience}</div>
-              <div className="text-xs text-gray-500">Exp</div>
-            </div>
+          <div className="flex flex-col items-center justify-center p-2 bg-blue-50 rounded-lg text-center h-full">
+            <Clock className="w-4 h-4 text-blue-600 mb-1" />
+            <div className="text-sm font-semibold text-gray-900 leading-tight">{displayExperience}</div>
+            <div className="text-[10px] text-gray-500">Exp</div>
           </div>
-          <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
-            <Star className="w-5 h-5 fill-yellow-400 text-yellow-400 shrink-0" />
-            <div>
-              <div className="text-sm font-semibold text-gray-900">{displayRating}</div>
-              <div className="text-xs text-gray-500">Rating</div>
-            </div>
+          <div className="flex flex-col items-center justify-center p-2 bg-yellow-50 rounded-lg text-center h-full">
+            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mb-1" />
+            <div className="text-sm font-semibold text-gray-900 leading-tight">{displayRating}</div>
+            <div className="text-[10px] text-gray-500">Rating</div>
           </div>
         </div>
 
         <button
           onClick={() => navigate(`/lawyers/${lawyer.slug || lawyer.id}`)}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
+          className="mt-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
         >
           Book Consultation
         </button>

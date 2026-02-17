@@ -200,10 +200,11 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
 
     // Specialization filter
     if (specialization) {
+        const specs = specialization.split(',');
         where.specializations = {
             some: {
                 practiceArea: {
-                    slug: specialization,
+                    slug: { in: specs },
                 },
             },
         };
@@ -264,7 +265,7 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
                     },
                 },
                 specializations: {
-                    where: { isPrimary: true },
+
                     take: 3,
                     select: {
                         practiceArea: {

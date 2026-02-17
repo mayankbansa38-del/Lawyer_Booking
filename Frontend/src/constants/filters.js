@@ -13,7 +13,6 @@ export const specialties = [
     { label: 'Criminal Lawyer', value: 'criminal-law' },
     { label: 'Family Lawyer', value: 'family-law' },
     { label: 'Corporate Lawyer', value: 'corporate-law' },
-    { label: 'Property Lawyer', value: 'real-estate-law' },
     { label: 'Cyber Lawyer', value: 'cyber-law' },
     { label: 'Civil Lawyer', value: 'civil-litigation' },
     { label: 'Immigration Law', value: 'immigration-law' },

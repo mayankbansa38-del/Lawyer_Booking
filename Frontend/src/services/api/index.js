@@ -17,8 +17,12 @@ export const lawyerAPI = {
         if (filters.limit) params.limit = filters.limit;
         if (filters.page) params.page = filters.page;
         if (filters.search) params.search = filters.search;
-        if (filters.locations && filters.locations.length) params.city = filters.locations[0]; // Simple filter for now
-        if (filters.specialties && filters.specialties.length) params.specialization = filters.specialties[0];
+        if (filters.locations && filters.locations.length) {
+            const [cityParam, stateParam] = filters.locations[0].split(',').map(s => s.trim());
+            if (cityParam) params.city = cityParam;
+            if (stateParam) params.state = stateParam;
+        }
+        if (filters.specialties && filters.specialties.length) params.specialization = filters.specialties.join(',');
         if (filters.costRange) {
             params.minRate = filters.costRange[0];
             params.maxRate = filters.costRange[1];
