@@ -97,7 +97,7 @@ const Signup = () => {
       if (result.success) {
         const userRole = result.user.role;
         if (userRole === "LAWYER") navigate("/lawyer");
-        else navigate("/user");
+        else navigate("/");
       } else {
         setError(result.error || "Google signup failed");
       }

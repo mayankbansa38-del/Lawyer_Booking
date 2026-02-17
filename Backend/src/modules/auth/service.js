@@ -237,7 +237,7 @@ export async function loginUser({ email, password, rememberMe = false }) {
     });
 
     if (!user) {
-        throw new AuthenticationError('invalidCredentials');
+        throw new AuthenticationError('emailNotRegistered');
     }
 
     // Check if account is active
@@ -248,7 +248,7 @@ export async function loginUser({ email, password, rememberMe = false }) {
     // Verify password
     const isValidPassword = await comparePassword(password, user.password);
     if (!isValidPassword) {
-        throw new AuthenticationError('invalidCredentials');
+        throw new AuthenticationError('invalidPassword');
     }
 
     // Update last login

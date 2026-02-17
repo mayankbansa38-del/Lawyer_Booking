@@ -123,7 +123,8 @@ apiClient.interceptors.response.use(
         const originalRequest = error.config;
 
         // If 401 and not already retrying
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Skip for login requests to allow form error handling
+        if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/auth/login')) {
             if (isRefreshing) {
                 // Queue the request
                 return new Promise((resolve, reject) => {

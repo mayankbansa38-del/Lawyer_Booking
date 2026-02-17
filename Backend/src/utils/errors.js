@@ -180,6 +180,8 @@ export class AuthenticationError extends UnauthorizedError {
             tokenMissing: 'No authentication token provided',
             emailNotVerified: 'Please verify your email first',
             accountDisabled: 'Account has been disabled',
+            emailNotRegistered: 'Email not registered',
+            invalidPassword: 'Invalid password',
         };
 
         const errorCodes = {
@@ -190,6 +192,8 @@ export class AuthenticationError extends UnauthorizedError {
             tokenMissing: ERROR_CODES.UNAUTHORIZED,
             emailNotVerified: ERROR_CODES.UNAUTHORIZED,
             accountDisabled: ERROR_CODES.FORBIDDEN,
+            emailNotRegistered: ERROR_CODES.NOT_FOUND,
+            invalidPassword: ERROR_CODES.INVALID_CREDENTIALS,
         };
 
         super(messages[type] || messages.generic, errorCodes[type] || errorCodes.generic);

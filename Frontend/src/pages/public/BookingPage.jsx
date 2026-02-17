@@ -4,10 +4,25 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link , useLocation} from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { Calendar, Clock, ChevronLeft, ChevronRight, Video, MapPin, CreditCard, CheckCircle } from 'lucide-react';
 import { lawyerAPI, appointmentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+
+// Convert 24h time to 12h format (e.g., "13:00" → "1:00 PM")
+const formatTime12h = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const h = hours % 12 || 12;
+    return `${h}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
+// Format date to YYYY-MM-DD in local time
+const formatDateLocal = (date) => {
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().split('T')[0];
+};
 
 const CONSULTATION_TYPES = [
     { id: 'video', label: 'Video Consultation', icon: Video, description: 'Online video call' },
@@ -33,11 +48,11 @@ export default function BookingPage() {
     const [submitting, setSubmitting] = useState(false);
     const [success] = useState(false);
 
-    // Generate dates for next 14 days
+    // Generate dates for next 14 days (including today)
     const availableDates = Array.from({ length: 14 }, (_, i) => {
         const date = new Date();
-        date.setDate(date.getDate() + i + 1);
-        return date.toISOString().split('T')[0];
+        date.setDate(date.getDate() + i);
+        return formatDateLocal(date);
     });
 
     useEffect(() => {
@@ -61,11 +76,32 @@ export default function BookingPage() {
                     const res = await lawyerAPI.getAvailability(id, booking.date);
                     const data = res.data || res;
                     const rawSlots = data.slots || [];
-                    setTimeSlots(rawSlots.map(s => ({
+
+                    // Filter out past time slots if selected date is today
+                    const now = new Date();
+                    const selectedDate = new Date(booking.date);
+                    const isToday = selectedDate.getDate() === now.getDate() &&
+                        selectedDate.getMonth() === now.getMonth() &&
+                        selectedDate.getFullYear() === now.getFullYear();
+
+                    const slots = rawSlots.filter(s => {
+                        if (!isToday) return true;
+                        const [hours, minutes] = s.time.split(':').map(Number);
+                        return (hours * 60 + minutes) > (now.getHours() * 60 + now.getMinutes());
+                    }).map(s => ({
                         time: s.time,
                         available: true,
                         duration: s.duration || 60,
-                    })));
+                    }));
+
+                    setTimeSlots(slots);
+                    // Auto-select first available time slot
+                    if (slots.length > 0 && !booking.time) {
+                        setBooking(prev => ({ ...prev, time: slots[0].time }));
+                    } else if (slots.length === 0) {
+                        // If no slots valid (e.g. all passed), clear selection
+                        setBooking(prev => ({ ...prev, time: '' }));
+                    }
                 } catch (err) {
                     console.error('Error fetching availability:', err);
                     setTimeSlots([]);
@@ -137,7 +173,7 @@ export default function BookingPage() {
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
                             <Clock className="w-4 h-4" />
-                            {booking.time}
+                            {formatTime12h(booking.time)}
                         </div>
                     </div>
                     <Link to="/user/appointments" className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors inline-block">
@@ -230,20 +266,26 @@ export default function BookingPage() {
                                 {booking.date && (
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Choose a time</label>
-                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                                            {timeSlots.map(slot => (
-                                                <button
-                                                    key={slot.time}
-                                                    disabled={!slot.available}
-                                                    onClick={() => setBooking({ ...booking, time: slot.time })}
-                                                    className={`py-2.5 rounded-lg text-sm font-medium transition-all ${!slot.available ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
-                                                        booking.time === slot.time ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                        }`}
-                                                >
-                                                    {slot.time}
-                                                </button>
-                                            ))}
-                                        </div>
+                                        {timeSlots.length > 0 ? (
+                                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                                {timeSlots.map(slot => (
+                                                    <button
+                                                        key={slot.time}
+                                                        disabled={!slot.available}
+                                                        onClick={() => setBooking({ ...booking, time: slot.time })}
+                                                        className={`py-2.5 rounded-lg text-sm font-medium transition-all ${!slot.available ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
+                                                            booking.time === slot.time ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                            }`}
+                                                    >
+                                                        {formatTime12h(slot.time)}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-500 text-sm italic border border-dashed border-gray-200 rounded-lg p-4 text-center bg-gray-50">
+                                                No upcoming slots available for this date.
+                                            </p>
+                                        )}
                                     </div>
                                 )}
 
@@ -282,7 +324,7 @@ export default function BookingPage() {
                                         </div>
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <Clock className="w-4 h-4" />
-                                            {booking.time}
+                                            {formatTime12h(booking.time)}
                                         </div>
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <CreditCard className="w-4 h-4" />
@@ -338,7 +380,7 @@ export default function BookingPage() {
                             {booking.time && (
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Time</span>
-                                    <span className="font-medium">{booking.time}</span>
+                                    <span className="font-medium">{formatTime12h(booking.time)}</span>
                                 </div>
                             )}
                         </div>
