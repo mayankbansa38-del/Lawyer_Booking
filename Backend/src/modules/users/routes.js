@@ -123,6 +123,115 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     });
 }));
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SAVED LAWYERS (Favorites) - Must be before /:id route
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * @route   GET /api/v1/users/saved-lawyers
+ * @desc    Get user's saved/favorite lawyers
+ * @access  Private
+ */
+router.get('/saved-lawyers', authenticate, asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+
+    const savedLawyers = await prisma.savedLawyer.findMany({
+        where: { userId: req.user.id },
+        orderBy: { createdAt: 'desc' },
+        include: {
+            lawyer: {
+                select: {
+                    id: true,
+                    slug: true,
+                    bio: true,
+                    headline: true,
+                    experience: true,
+                    hourlyRate: true,
+                    consultationFee: true,
+                    city: true,
+                    state: true,
+                    isAvailable: true,
+                    averageRating: true,
+                    completedBookings: true,
+                    user: {
+                        select: {
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                        },
+                    },
+                    specializations: {
+                        where: { isPrimary: true },
+                        take: 3,
+                        select: {
+                            practiceArea: { select: { name: true } },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const transformed = savedLawyers.map(sl => ({
+        id: sl.lawyer.id,
+        savedAt: sl.createdAt,
+        name: `${sl.lawyer.user.firstName} ${sl.lawyer.user.lastName}`,
+        image: sl.lawyer.user.avatar,
+        location: [sl.lawyer.city, sl.lawyer.state].filter(Boolean).join(', ') || 'India',
+        experience: sl.lawyer.experience,
+        rating: sl.lawyer.averageRating || 0,
+        casesWon: sl.lawyer.completedBookings || 0,
+        specialty: sl.lawyer.specializations.map(s => s.practiceArea.name),
+        consultationFee: parseFloat(sl.lawyer.consultationFee) || 0,
+        isAvailable: sl.lawyer.isAvailable,
+    }));
+
+    return sendSuccess(res, { data: transformed });
+}));
+
+/**
+ * @route   POST /api/v1/users/saved-lawyers/:lawyerId
+ * @desc    Save/favorite a lawyer
+ * @access  Private
+ */
+router.post('/saved-lawyers/:lawyerId', authenticate, asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+    const { lawyerId } = req.params;
+
+    // Verify lawyer exists
+    const lawyer = await prisma.lawyer.findUnique({ where: { id: lawyerId } });
+    if (!lawyer) {
+        throw new NotFoundError('Lawyer');
+    }
+
+    // Upsert to handle duplicate gracefully
+    await prisma.savedLawyer.upsert({
+        where: {
+            userId_lawyerId: { userId: req.user.id, lawyerId },
+        },
+        create: { userId: req.user.id, lawyerId },
+        update: {}, // No-op if already exists
+    });
+
+    return sendSuccess(res, { message: 'Lawyer saved to favorites' });
+}));
+
+/**
+ * @route   DELETE /api/v1/users/saved-lawyers/:lawyerId
+ * @desc    Remove a saved/favorite lawyer
+ * @access  Private
+ */
+router.delete('/saved-lawyers/:lawyerId', authenticate, asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+    const { lawyerId } = req.params;
+
+    await prisma.savedLawyer.deleteMany({
+        where: { userId: req.user.id, lawyerId },
+    });
+
+    return sendSuccess(res, { message: 'Lawyer removed from favorites' });
+}));
+
 /**
  * @route   GET /api/v1/users/:id
  * @desc    Get user by ID (Admin only)
