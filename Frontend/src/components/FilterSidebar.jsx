@@ -51,7 +51,7 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
     filters.casesWonRange[0] > 0 ||
     filters.casesWonRange[1] < 350 ||
     filters.costRange[0] > 0 ||
-    filters.costRange[1] < 25000;
+    filters.costRange[1] < 200000;
 
   const activeFilterCount =
     filters.locations.length +
@@ -59,7 +59,7 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
     filters.availability.length +
     (filters.experienceRange[0] > 0 || filters.experienceRange[1] < 25 ? 1 : 0) +
     (filters.casesWonRange[0] > 0 || filters.casesWonRange[1] < 350 ? 1 : 0) +
-    (filters.costRange[0] > 0 || filters.costRange[1] < 25000 ? 1 : 0);
+    (filters.costRange[0] > 0 || filters.costRange[1] < 200000 ? 1 : 0);
 
   /* 
    * This was previously a component defined inside another component, which causes
@@ -261,7 +261,7 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
               <input
                 type="number"
                 min="0"
-                max="25000"
+                max="200000"
                 step="1000"
                 value={filters.costRange[0]}
                 onChange={(e) => setFilters({
@@ -274,7 +274,7 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
               <input
                 type="number"
                 min="0"
-                max="25000"
+                max="200000"
                 step="1000"
                 value={filters.costRange[1]}
                 onChange={(e) => setFilters({
@@ -286,7 +286,7 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
             </div>
             <DualRangeSlider
               min={0}
-              max={25000}
+              max={200000}
               step={1000}
               value={[Number(filters.costRange[0]), Number(filters.costRange[1])]}
               onChange={(value) => setFilters({ ...filters, costRange: value })}
@@ -373,7 +373,7 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
       )}
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-80 bg-white border-r border-gray-200 h-screen overflow-y-auto sticky top-0">
+      <aside className="hidden lg:block w-80 bg-white border-r border-gray-200 h-screen overflow-y-auto scrollbar-hide sticky top-0">
         {renderFilterContent()}
       </aside>
     </>

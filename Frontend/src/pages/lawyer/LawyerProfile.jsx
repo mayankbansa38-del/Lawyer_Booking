@@ -107,6 +107,12 @@ export default function LawyerProfile() {
     };
 
     const handleSave = async () => {
+        // Validation: Fees limit check (Max 1 Lakh)
+        if ((profile.consultationFee && profile.consultationFee > 100000) || (profile.hourlyRate && profile.hourlyRate > 100000)) {
+            setMessage({ type: 'error', text: 'Case limit is high. Maximum accepted amount is ₹1,00,000 (1 Lakh).' });
+            return;
+        }
+
         setSaving(true);
         setMessage({ type: '', text: '' });
         try {
@@ -257,7 +263,12 @@ export default function LawyerProfile() {
                     </div>
                     <div className="col-span-1 sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Years of Experience</label>
-                        <input type="number" value={profile.experience || 0} onChange={(e) => handleChange('experience', parseInt(e.target.value) || 0)} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                        <input
+                            type="number"
+                            value={profile.experience === 0 ? 0 : (profile.experience || '')}
+                            onChange={(e) => handleChange('experience', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
                     </div>
                 </div>
                 <div>
@@ -302,11 +313,21 @@ export default function LawyerProfile() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Consultation Fee (₹)</label>
-                        <input type="number" value={profile.consultationFee || 0} onChange={(e) => handleChange('consultationFee', parseInt(e.target.value) || 0)} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                        <input
+                            type="number"
+                            value={profile.consultationFee === 0 ? 0 : (profile.consultationFee || '')}
+                            onChange={(e) => handleChange('consultationFee', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate (₹)</label>
-                        <input type="number" value={profile.hourlyRate || 0} onChange={(e) => handleChange('hourlyRate', parseInt(e.target.value) || 0)} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Average Cost Per Case (₹)</label>
+                        <input
+                            type="number"
+                            value={profile.hourlyRate === 0 ? 0 : (profile.hourlyRate || '')}
+                            onChange={(e) => handleChange('hourlyRate', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
                     </div>
                 </div>
             </div>
