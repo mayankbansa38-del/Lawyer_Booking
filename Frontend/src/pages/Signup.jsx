@@ -239,6 +239,7 @@ const Signup = () => {
               <label className="text-xs font-medium text-gray-700 ml-1">Phone Number</label>
               <div className="relative group">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                <span className="absolute left-9 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium select-none">+91</span>
                 <input
                   type="tel"
                   name="phone"
@@ -248,7 +249,7 @@ const Signup = () => {
                     setFormData({ ...formData, phone: value });
                     setError("");
                   }}
-                  className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                  className="w-full pl-16 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
                   placeholder="9876543210"
                 />
               </div>

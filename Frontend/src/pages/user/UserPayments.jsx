@@ -20,7 +20,22 @@ export default function UserPayments() {
             try {
                 if (!user?.id) return;
                 const { data } = await paymentAPI.getAll({ clientId: user.id });
-                setPayments(data);
+
+                // Transform data
+                const formattedData = data.map(p => ({
+                    ...p,
+                    lawyerName: p.booking?.lawyer?.user
+                        ? `${p.booking.lawyer.user.firstName} ${p.booking.lawyer.user.lastName}`
+                        : 'Unknown Lawyer',
+                    description: p.booking
+                        ? `${p.booking.meetingType} Consultation (${p.booking.bookingNumber})`
+                        : 'Legal Service',
+                    date: p.createdAt || p.processedAt,
+                    amount: Number(p.amount) || 0,
+                    status: p.status?.toUpperCase() || 'PENDING'
+                }));
+
+                setPayments(formattedData);
             } catch (error) {
                 console.error('Error fetching payments:', error);
             } finally {
@@ -30,9 +45,9 @@ export default function UserPayments() {
         fetchPayments();
     }, [user]);
 
-    const filteredPayments = filter === 'all' ? payments : payments.filter(p => p.status === filter);
-    const total = payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0);
-    const pending = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+    const filteredPayments = filter === 'all' ? payments : payments.filter(p => p.status === filter.toUpperCase());
+    const total = payments.filter(p => p.status === 'COMPLETED').reduce((sum, p) => sum + p.amount, 0);
+    const pending = payments.filter(p => p.status === 'PENDING').reduce((sum, p) => sum + p.amount, 0);
 
     const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -90,7 +105,7 @@ export default function UserPayments() {
                 />
                 <StatCard
                     title="Completed"
-                    value={payments.filter(p => p.status === 'completed').length}
+                    value={payments.filter(p => p.status === 'COMPLETED').length}
                     icon={CheckCircle}
                     color="bg-green-500"
                     subtitle="Successful payments"
@@ -138,13 +153,13 @@ export default function UserPayments() {
                                         <td className="px-5 py-4 text-sm text-gray-600">{new Date(payment.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                                         <td className="px-5 py-4 text-sm font-semibold text-gray-900">₹{payment.amount.toLocaleString('en-IN')}</td>
                                         <td className="px-5 py-4">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${payment.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                {payment.status === 'completed' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                                {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${payment.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                {payment.status === 'COMPLETED' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                                {payment.status.charAt(0).toUpperCase() + payment.status.slice(1).toLowerCase()}
                                             </span>
                                         </td>
                                         <td className="px-5 py-4 text-right">
-                                            {payment.status === 'completed' && (
+                                            {payment.status === 'COMPLETED' && (
                                                 <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                                     <Download className="w-4 h-4" />
                                                 </button>

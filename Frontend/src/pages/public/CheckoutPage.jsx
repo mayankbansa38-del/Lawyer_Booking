@@ -489,6 +489,9 @@ export default function CheckoutPage() {
                                     </div>
                                     <p className="text-[10px] text-gray-400 pb-1">Currency: INR</p>
                                 </div>
+                                <div className="mt-4 bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg border border-red-100 text-center">
+                                    Note: Consultation fees are non-refundable.
+                                </div>
                             </div>
                         </div>
 

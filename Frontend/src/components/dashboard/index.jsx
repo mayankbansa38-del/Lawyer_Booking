@@ -46,6 +46,8 @@ export function StatCard({ title, value, subtitle, icon: Icon, trend, trendValue
  * AppointmentCard - Display appointment information
  */
 export function AppointmentCard({ appointment, showClient = true, showLawyer = false, onAction }) {
+    const status = appointment.status?.toLowerCase() || 'pending';
+
     const statusColors = {
         pending: 'bg-yellow-100 text-yellow-800',
         confirmed: 'bg-green-100 text-green-800',
@@ -58,7 +60,7 @@ export function AppointmentCard({ appointment, showClient = true, showLawyer = f
         confirmed: CheckCircle,
         completed: CheckCircle,
         cancelled: XCircle
-    }[appointment.status];
+    }[status] || AlertCircle;
 
     return (
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
@@ -73,9 +75,9 @@ export function AppointmentCard({ appointment, showClient = true, showLawyer = f
                         <h4 className="font-semibold text-gray-900 truncate">
                             {showClient ? appointment.clientName : appointment.lawyerName}
                         </h4>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${statusColors[appointment.status]}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${statusColors[status]}`}>
                             <StatusIcon className="w-3 h-3" />
-                            {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
                         </span>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{appointment.caseType}</p>
@@ -91,7 +93,7 @@ export function AppointmentCard({ appointment, showClient = true, showLawyer = f
                     </div>
                 </div>
             </div>
-            {appointment.status === 'pending' && onAction && (
+            {status === 'pending' && onAction && (
                 <div className="flex gap-2 mt-4 pt-4 border-t">
                     <button
                         onClick={() => onAction('confirm', appointment.id)}

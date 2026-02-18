@@ -38,11 +38,24 @@ export default function LawyerDashboard() {
                 }
 
                 // Fetch appointments
-                const { data: appointments } = await appointmentAPI.getAll({ lawyerId });
+                const { data: rawAppointments } = await appointmentAPI.getLawyerBookings();
+
+                // Transform appointments to match Card component expected format
+                const appointments = rawAppointments.map(apt => ({
+                    ...apt,
+                    date: apt.scheduledDate,
+                    time: apt.scheduledTime,
+                    clientName: apt.client ? `${apt.client.firstName} ${apt.client.lastName}` : 'Unknown Client',
+                    clientImage: apt.client?.avatar,
+                    caseType: apt.meetingType,
+                    status: apt.status
+                }));
+
                 // Normalize dates to YYYY-MM-DD for reliable comparison
                 const today = new Date().toISOString().split('T')[0];
-                const pending = appointments.filter(a => a.status === 'pending').length;
+                const pending = appointments.filter(a => a.status === 'PENDING').length;
                 const todayApts = appointments.filter(a => {
+                    if (!a.date) return false;
                     const aptDate = typeof a.date === 'string'
                         ? a.date.split('T')[0]
                         : new Date(a.date).toISOString().split('T')[0];
@@ -75,12 +88,16 @@ export default function LawyerDashboard() {
 
     const handleAppointmentAction = async (action, appointmentId) => {
         try {
-            const status = action === 'confirm' ? 'confirmed' : 'cancelled';
-            await appointmentAPI.updateStatus(appointmentId, status);
+            if (action === 'confirm') {
+                await appointmentAPI.confirm(appointmentId);
+            } else {
+                await appointmentAPI.cancel(appointmentId);
+            }
+
             // Refresh appointments
             const lawyerId = user?.lawyer?.id || user?.id;
             if (!lawyerId) return;
-            const { data } = await appointmentAPI.getAll({ lawyerId });
+            const { data } = await appointmentAPI.getLawyerBookings();
             setRecentAppointments(data.slice(0, 5));
         } catch (error) {
             console.error('Error updating appointment:', error);

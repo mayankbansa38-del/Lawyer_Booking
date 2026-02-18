@@ -29,20 +29,30 @@ export default function UserDashboard() {
             try {
                 const userId = user.id;
                 const [aptsRes, favsRes, casesRes, notifsRes] = await Promise.all([
-                    appointmentAPI.getAll({ userId }),
+                    appointmentAPI.getAll(),
                     favoritesAPI.getByUser(userId),
                     caseAPI.getAll({ clientId: userId }),
                     notificationAPI.getAll(userId, 'client').catch(() => ({ data: [] }))
                 ]);
 
-                const upcoming = aptsRes.data.filter(a => a.status === 'confirmed' || a.status === 'pending');
-                const activeCases = casesRes.data.filter(c => c.status === 'active').length;
+                const upcoming = aptsRes.data
+                    .filter(a => a.status === 'CONFIRMED' || a.status === 'PENDING')
+                    .map(apt => ({
+                        ...apt,
+                        date: apt.scheduledDate,
+                        time: apt.scheduledTime,
+                        lawyerName: apt.lawyer.name,
+                        lawyerImage: apt.lawyer.avatar,
+                        caseType: apt.meetingType + ' - ' + (apt.lawyer.specialization || 'Legal Consultation'),
+                        status: apt.status
+                    }));
+                const activeCases = casesRes.data.filter(c => c.status === 'ACTIVE' || c.status === 'OPEN').length;
 
                 setStats({
                     upcoming: upcoming.length,
                     saved: favsRes.data.length,
                     activeCases,
-                    totalPayments: aptsRes.data.filter(a => a.status === 'completed').length
+                    totalPayments: aptsRes.data.filter(a => a.status === 'COMPLETED').length
                 });
                 setUpcomingAppointments(upcoming.slice(0, 3));
                 setSavedLawyers(favsRes.data.slice(0, 4));
