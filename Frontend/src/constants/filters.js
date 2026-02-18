@@ -10,11 +10,11 @@ export const locations = [
 ];
 
 export const specialties = [
-    { label: 'Criminal Lawyer', value: 'criminal-law' },
-    { label: 'Family Lawyer', value: 'family-law' },
-    { label: 'Corporate Lawyer', value: 'corporate-law' },
-    { label: 'Cyber Lawyer', value: 'cyber-law' },
-    { label: 'Civil Lawyer', value: 'civil-litigation' },
+    { label: 'Criminal Lawyer', value: 'criminal-lawyer' },
+    { label: 'Family Lawyer', value: 'family-lawyer' },
+    { label: 'Corporate Lawyer', value: 'corporate-lawyer' },
+    { label: 'Cyber Lawyer', value: 'cyber-lawyer' },
+    { label: 'Civil Lawyer', value: 'civil-lawyer' },
     { label: 'Immigration Law', value: 'immigration-law' },
     { label: 'Human Rights', value: 'human-rights' },
     { label: 'Real Estate Law', value: 'real-estate-law' },

@@ -106,12 +106,12 @@ export default function LawyerCalendar() {
     };
 
     return (
-        <div className="h-[calc(100vh-100px)]">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+        <div className="h-[calc(100vh-8rem)] overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
                 {/* ── LEFT: Calendar Grid (9 columns) ── */}
-                <div className="lg:col-span-9 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-full">
+                <div className="lg:col-span-9 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col overflow-hidden">
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-3">
                         <div>
                             <h3 className="text-2xl font-bold text-gray-900">
                                 {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
@@ -128,17 +128,12 @@ export default function LawyerCalendar() {
                             <button onClick={() => navigateMonth(1)} className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all">
                                 <ChevronRight className="w-5 h-5 text-gray-600" />
                             </button>
-                            <div className="w-px h-6 bg-gray-200 mx-2" />
-                            <div className="flex text-xs font-medium text-gray-500 gap-2">
-                                <span className="text-blue-600 bg-white shadow-sm px-3 py-1.5 rounded-lg cursor-pointer">Month</span>
-                                <span className="hover:text-gray-900 px-3 py-1.5 cursor-pointer">Week</span>
-                                <span className="hover:text-gray-900 px-3 py-1.5 cursor-pointer">Day</span>
-                            </div>
+
                         </div>
                     </div>
 
                     {/* Days Header */}
-                    <div className="grid grid-cols-7 border-b border-gray-100 pb-2 mb-2">
+                    <div className="grid grid-cols-7 border-b border-gray-100 pb-1 mb-1">
                         {DAYS.map(day => (
                             <div key={day} className="text-center text-xs font-semibold text-gray-400 uppercase tracking-widest py-2">
                                 {day}
@@ -147,13 +142,13 @@ export default function LawyerCalendar() {
                     </div>
 
                     {/* Calendar Grid */}
-                    <div className="grid grid-cols-7 grid-rows-6 gap-px bg-gray-100 flex-1 border border-gray-100 rounded-lg overflow-hidden">
+                    <div className="grid grid-cols-7 auto-rows-fr gap-px bg-gray-100 flex-1 border border-gray-100 rounded-lg overflow-hidden min-h-0">
                         {calendarDays.map((item, idx) => (
                             <div
                                 key={idx}
                                 onClick={() => item.date && setSelectedDate(item.date)}
                                 className={`
-                                    relative bg-white p-2 min-h-[100px] hover:bg-gray-50/50 transition-colors cursor-pointer group
+                                    relative bg-white p-2 overflow-hidden hover:bg-gray-50/50 transition-colors cursor-pointer group
                                     ${!item.day ? 'bg-gray-50/30' : ''}
                                     ${item.date === selectedDate ? 'bg-blue-50/30' : ''}
                                 `}
@@ -200,7 +195,7 @@ export default function LawyerCalendar() {
                 </div>
 
                 {/* ── RIGHT: Timeline Panel (3 columns) ── */}
-                <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
+                <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
                     {/* Timeline Header */}
                     <div className="p-6 border-b border-gray-100">
                         <div className="flex items-center justify-between mb-1">
@@ -210,7 +205,7 @@ export default function LawyerCalendar() {
                     </div>
 
                     {/* Timeline List */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    <div className="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-6">
                         {loading ? (
                             <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
                         ) : selectedAppointments.length > 0 ? (
@@ -299,5 +294,5 @@ function calculateEndTime(startTime, durationMinutes) {
     const date = new Date();
     date.setHours(hours, minutes + durationMinutes);
 
-    return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }

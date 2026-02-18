@@ -14,7 +14,7 @@ const AllLawyers = () => {
         experienceRange: [0, 25],
         casesWonRange: [0, 350],
         specialties: [],
-        costRange: [0, 25000],
+        costRange: [0, 200000],
         availability: []
     });
 

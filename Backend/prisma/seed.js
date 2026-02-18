@@ -20,18 +20,15 @@ const prisma = new PrismaClient();
 // ═══════════════════════════════════════════════════════════════════════════
 
 const PRACTICE_AREAS = [
-    { name: 'Criminal Law', slug: 'criminal-law', description: 'Defense and prosecution in criminal cases', icon: 'gavel', displayOrder: 1 },
-    { name: 'Family Law', slug: 'family-law', description: 'Divorce, custody, adoption, and family matters', icon: 'family', displayOrder: 2 },
-    { name: 'Corporate Law', slug: 'corporate-law', description: 'Business formation, contracts, and compliance', icon: 'business', displayOrder: 3 },
-    { name: 'Real Estate Law', slug: 'real-estate-law', description: 'Property transactions and disputes', icon: 'home', displayOrder: 4 },
-    { name: 'Intellectual Property', slug: 'intellectual-property', description: 'Patents, trademarks, and copyrights', icon: 'lightbulb', displayOrder: 5 },
-    { name: 'Tax Law', slug: 'tax-law', description: 'Tax planning, disputes, and compliance', icon: 'receipt', displayOrder: 6 },
-    { name: 'Immigration Law', slug: 'immigration-law', description: 'Visas, citizenship, and immigration matters', icon: 'flight', displayOrder: 7 },
-    { name: 'Labor & Employment', slug: 'labor-employment', description: 'Employment contracts and workplace disputes', icon: 'work', displayOrder: 8 },
-    { name: 'Civil Litigation', slug: 'civil-litigation', description: 'Civil disputes and lawsuits', icon: 'scale', displayOrder: 9 },
-    { name: 'Consumer Protection', slug: 'consumer-protection', description: 'Consumer rights and product liability', icon: 'shield', displayOrder: 10 },
-    { name: 'Banking & Finance', slug: 'banking-finance', description: 'Banking regulations and financial disputes', icon: 'account_balance', displayOrder: 11 },
-    { name: 'Medical & Healthcare', slug: 'medical-healthcare', description: 'Medical malpractice and healthcare law', icon: 'local_hospital', displayOrder: 12 },
+    { name: 'Criminal Lawyer', slug: 'criminal-lawyer', description: 'Defense and prosecution in criminal cases', icon: 'gavel', displayOrder: 1 },
+    { name: 'Family Lawyer', slug: 'family-lawyer', description: 'Divorce, custody, adoption, and family matters', icon: 'family', displayOrder: 2 },
+    { name: 'Corporate Lawyer', slug: 'corporate-lawyer', description: 'Business formation, contracts, and compliance', icon: 'business', displayOrder: 3 },
+    { name: 'Cyber Lawyer', slug: 'cyber-lawyer', description: 'Cyber crimes, data protection, and digital rights', icon: 'lock', displayOrder: 4 },
+    { name: 'Civil Lawyer', slug: 'civil-lawyer', description: 'Civil disputes, property, and lawsuits', icon: 'scale', displayOrder: 5 },
+    { name: 'Immigration Law', slug: 'immigration-law', description: 'Visas, citizenship, and immigration matters', icon: 'flight', displayOrder: 6 },
+    { name: 'Human Rights', slug: 'human-rights', description: 'Protection of fundamental human rights', icon: 'accessibility', displayOrder: 7 },
+    { name: 'Real Estate Law', slug: 'real-estate-law', description: 'Property transactions and disputes', icon: 'home', displayOrder: 8 },
+    { name: 'Tax Law', slug: 'tax-law', description: 'Tax planning, disputes, and compliance', icon: 'receipt', displayOrder: 9 },
 ];
 
 const ADMIN_USER = {
@@ -72,7 +69,7 @@ const TEST_LAWYERS = [
             state: 'Delhi',
             isAvailable: true,
             verificationStatus: 'VERIFIED',
-            specializations: ['criminal-law', 'civil-litigation'],
+            specializations: ['criminal-lawyer', 'civil-lawyer'],
         },
     },
     {
@@ -97,7 +94,7 @@ const TEST_LAWYERS = [
             state: 'Maharashtra',
             isAvailable: true,
             verificationStatus: 'VERIFIED',
-            specializations: ['family-law', 'civil-litigation'],
+            specializations: ['family-lawyer', 'civil-lawyer'],
         },
     },
     {
@@ -107,7 +104,7 @@ const TEST_LAWYERS = [
             firstName: 'Suresh',
             lastName: 'Reddy',
             phone: '+919876543222',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop'
+            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop'
         },
         lawyer: {
             barCouncilId: 'KA/9012/2012',
@@ -124,7 +121,7 @@ const TEST_LAWYERS = [
             verificationStatus: 'VERIFIED',
             featured: true,
             featuredOrder: 1,
-            specializations: ['corporate-law', 'intellectual-property'],
+            specializations: ['corporate-lawyer', 'tax-law'],
         },
     },
     {
@@ -149,7 +146,7 @@ const TEST_LAWYERS = [
             state: 'Tamil Nadu',
             isAvailable: true,
             verificationStatus: 'VERIFIED',
-            specializations: ['real-estate-law', 'banking-finance'],
+            specializations: ['real-estate-law', 'civil-lawyer'],
         },
     },
     {
@@ -159,7 +156,7 @@ const TEST_LAWYERS = [
             firstName: 'Imran',
             lastName: 'Khan',
             phone: '+919876543224',
-            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop'
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop'
         },
         lawyer: {
             barCouncilId: 'UP/7890/2019',
@@ -174,7 +171,7 @@ const TEST_LAWYERS = [
             state: 'Uttar Pradesh',
             isAvailable: true,
             verificationStatus: 'VERIFIED',
-            specializations: ['tax-law', 'corporate-law'],
+            specializations: ['tax-law', 'corporate-lawyer'],
         },
     },
     {
@@ -217,6 +214,15 @@ async function hashPassword(password) {
 async function seedPracticeAreas() {
     console.log('🌱 Seeding practice areas...');
 
+    // 1. Delete practice areas that are NOT in our list
+    const slugList = PRACTICE_AREAS.map(p => p.slug);
+    await prisma.practiceArea.deleteMany({
+        where: {
+            slug: { notIn: slugList }
+        }
+    });
+
+    // 2. Upsert the valid ones
     for (const area of PRACTICE_AREAS) {
         await prisma.practiceArea.upsert({
             where: { slug: area.slug },
@@ -225,7 +231,7 @@ async function seedPracticeAreas() {
         });
     }
 
-    console.log(`✅ ${PRACTICE_AREAS.length} practice areas seeded`);
+    console.log(`✅ ${PRACTICE_AREAS.length} practice areas seeded and verified`);
 }
 
 async function seedAdmin() {
