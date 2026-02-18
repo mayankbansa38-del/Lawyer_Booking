@@ -15,6 +15,7 @@ import { getPrismaClient } from '../../config/database.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../utils/errors.js';
 import { parsePaginationParams } from '../../utils/pagination.js';
 import logger from '../../utils/logger.js';
+import { createNotification } from '../notifications/routes.js';
 
 const router = Router();
 
@@ -150,6 +151,30 @@ router.post('/:caseId/messages', authenticate, asyncHandler(async (req, res) => 
         caseId,
         senderId: req.user.id,
     });
+
+    // Notify the other party (fire-and-forget)
+    try {
+        const caseData = await prisma.case.findUnique({
+            where: { id: caseId },
+            include: { lawyer: { select: { userId: true } } },
+        });
+        if (caseData) {
+            const recipientId = caseData.clientId === req.user.id
+                ? caseData.lawyer.userId
+                : caseData.clientId;
+            const senderName = `${message.sender.firstName} ${message.sender.lastName}`;
+            createNotification({
+                userId: recipientId,
+                type: 'MESSAGE',
+                title: 'New Message',
+                message: `${senderName}: ${(content || '').slice(0, 80)}`,
+                actionUrl: `/cases/${caseId}`,
+                actionLabel: 'View Chat',
+            }).catch(err => logger.warn('Failed to create chat notification', { err: err.message }));
+        }
+    } catch (notifErr) {
+        logger.warn('Chat notification lookup failed', { err: notifErr.message });
+    }
 
     return sendSuccess(res, {
         data: {

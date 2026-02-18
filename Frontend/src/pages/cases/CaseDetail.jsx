@@ -3,7 +3,7 @@
  * Shared between lawyer/case/:id and user/case/:id routes
  */
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { caseAPI, chatAPI, documentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import './CaseDetail.css';
@@ -29,6 +29,7 @@ const STATUS_MAP = {
 export default function CaseDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
     const [caseData, setCaseData] = useState(null);
     const [activeTab, setActiveTab] = useState('overview');
@@ -37,6 +38,13 @@ export default function CaseDetail() {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [tabLoading, setTabLoading] = useState(false);
+
+    // Description editing state (lawyers only)
+    const [editingDesc, setEditingDesc] = useState(false);
+    const [descDraft, setDescDraft] = useState('');
+    const [savingDesc, setSavingDesc] = useState(false);
+
+    const isLawyer = user?.role === 'LAWYER' || user?.role === 'ADMIN';
 
     // Load case data
     useEffect(() => {
@@ -84,6 +92,22 @@ export default function CaseDetail() {
             }
         })();
     }, [id, activeTab]);
+
+    // Description save handler
+    const handleDescSave = async () => {
+        setSavingDesc(true);
+        try {
+            const res = await caseAPI.update(id, { description: descDraft });
+            setCaseData(prev => ({ ...prev, description: descDraft }));
+            setEditingDesc(false);
+        } catch (err) {
+            console.error('Failed to update description:', err);
+        } finally {
+            setSavingDesc(false);
+        }
+    };
+
+    const chatBasePath = location.pathname.includes('/lawyer/') ? '/lawyer/chat' : '/user/chat';
 
     if (loading) {
         return (
@@ -145,12 +169,42 @@ export default function CaseDetail() {
                             <InfoCard label="Client" value={caseData.client ? `${caseData.client.firstName} ${caseData.client.lastName}` : '—'} />
                             <InfoCard label="Lawyer" value={caseData.lawyer?.user ? `${caseData.lawyer.user.firstName} ${caseData.lawyer.user.lastName}` : '—'} />
                         </div>
-                        {caseData.description && (
-                            <div className="case-detail__description">
+
+                        {/* Description — editable by lawyers */}
+                        <div className="case-detail__description">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                 <h3>Description</h3>
-                                <p>{caseData.description}</p>
+                                {isLawyer && !editingDesc && (
+                                    <button
+                                        className="case-detail__edit-btn"
+                                        onClick={() => { setDescDraft(caseData.description || ''); setEditingDesc(true); }}
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                                        Edit
+                                    </button>
+                                )}
                             </div>
-                        )}
+                            {editingDesc ? (
+                                <div className="case-detail__desc-editor">
+                                    <textarea
+                                        value={descDraft}
+                                        onChange={e => setDescDraft(e.target.value)}
+                                        rows={6}
+                                        placeholder="Describe the case details, notes, or instructions..."
+                                        className="case-detail__desc-textarea"
+                                    />
+                                    <div className="case-detail__desc-actions">
+                                        <button className="case-detail__desc-cancel" onClick={() => setEditingDesc(false)} disabled={savingDesc}>Cancel</button>
+                                        <button className="case-detail__desc-save" onClick={handleDescSave} disabled={savingDesc}>
+                                            {savingDesc ? 'Saving...' : 'Save'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p>{caseData.description || 'No description provided.'}</p>
+                            )}
+                        </div>
+
                         <div className="case-detail__stats-row">
                             <StatCard label="Messages" value={caseData._count?.messages || 0} />
                             <StatCard label="Documents" value={caseData._count?.documents || 0} />
@@ -161,6 +215,16 @@ export default function CaseDetail() {
 
                 {activeTab === 'chat' && (
                     <div className="case-detail__messages">
+                        {/* Open Chat button */}
+                        <div className="case-detail__chat-actions">
+                            <button
+                                className="case-detail__open-chat-btn"
+                                onClick={() => navigate(chatBasePath, { state: { caseId: id } })}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                                Open Full Chat
+                            </button>
+                        </div>
                         {messages.length === 0 ? (
                             <div className="case-detail__empty-tab">No messages in this case yet.</div>
                         ) : messages.map(m => (
