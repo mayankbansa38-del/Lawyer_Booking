@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { CreditCard, Download, CheckCircle, Clock, XCircle, IndianRupee, Receipt, TrendingUp } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/dashboard';
-import { paymentAPI } from '../../services/api';
+import { paymentAPI, casePaymentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 export default function UserPayments() {
@@ -19,11 +19,17 @@ export default function UserPayments() {
         async function fetchPayments() {
             try {
                 if (!user?.id) return;
-                const { data } = await paymentAPI.getAll({ clientId: user.id });
 
-                // Transform data
-                const formattedData = data.map(p => ({
+                // Fetch both booking-payments and case-payments concurrently
+                const [bookingRes, caseRes] = await Promise.allSettled([
+                    paymentAPI.getAll({ clientId: user.id }),
+                    casePaymentAPI.getMyPayments(),
+                ]);
+
+                // Transform booking payments
+                const bookingPayments = (bookingRes.status === 'fulfilled' ? bookingRes.value.data : []).map(p => ({
                     ...p,
+                    _source: 'booking',
                     lawyerName: p.booking?.lawyer?.user
                         ? `${p.booking.lawyer.user.firstName} ${p.booking.lawyer.user.lastName}`
                         : 'Unknown Lawyer',
@@ -32,10 +38,27 @@ export default function UserPayments() {
                         : 'Legal Service',
                     date: p.createdAt || p.processedAt,
                     amount: Number(p.amount) || 0,
-                    status: p.status?.toUpperCase() || 'PENDING'
+                    status: p.status?.toUpperCase() || 'PENDING',
                 }));
 
-                setPayments(formattedData);
+                // Transform case payments into the same shape
+                const casePayments = (caseRes.status === 'fulfilled' ? caseRes.value.data : []).map(cp => ({
+                    ...cp,
+                    _source: 'case',
+                    lawyerName: cp.case?.lawyer?.user
+                        ? `${cp.case.lawyer.user.firstName} ${cp.case.lawyer.user.lastName}`
+                        : 'Unknown Lawyer',
+                    description: `Case Payment: ${cp.description || cp.case?.title || 'Legal Service'}`,
+                    date: cp.createdAt,
+                    amount: (cp.amountInPaise || 0) / 100,
+                    status: cp.status === 'COMPLETED' ? 'COMPLETED' : cp.status === 'DENIED' ? 'FAILED' : 'PENDING',
+                }));
+
+                // Merge and sort by date descending
+                const merged = [...bookingPayments, ...casePayments]
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                setPayments(merged);
             } catch (error) {
                 console.error('Error fetching payments:', error);
             } finally {
@@ -153,9 +176,14 @@ export default function UserPayments() {
                                         <td className="px-5 py-4 text-sm text-gray-600">{new Date(payment.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                                         <td className="px-5 py-4 text-sm font-semibold text-gray-900">₹{payment.amount.toLocaleString('en-IN')}</td>
                                         <td className="px-5 py-4">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${payment.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                {payment.status === 'COMPLETED' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                                {payment.status.charAt(0).toUpperCase() + payment.status.slice(1).toLowerCase()}
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${payment.status === 'COMPLETED' ? 'bg-green-100 text-green-700'
+                                                    : payment.status === 'FAILED' ? 'bg-red-100 text-red-700'
+                                                        : 'bg-yellow-100 text-yellow-700'
+                                                }`}>
+                                                {payment.status === 'COMPLETED' ? <CheckCircle className="w-3 h-3" />
+                                                    : payment.status === 'FAILED' ? <XCircle className="w-3 h-3" />
+                                                        : <Clock className="w-3 h-3" />}
+                                                {payment.status === 'COMPLETED' ? 'Completed' : payment.status === 'FAILED' ? 'Denied' : 'Pending'}
                                             </span>
                                         </td>
                                         <td className="px-5 py-4 text-right">

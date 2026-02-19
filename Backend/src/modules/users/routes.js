@@ -63,9 +63,9 @@ router.get('/profile', authenticate, asyncHandler(async (req, res) => {
  */
 router.post('/avatar', authenticate, asyncHandler(async (req, res) => {
     try {
-        const { uploadAvatar, handleUpload } = await import('../../middleware/upload.js');
+        const { uploadAvatar, handleUpload, generateFilename } = await import('../../middleware/upload.js');
         const { BadRequestError } = await import('../../utils/errors.js');
-        const { uploadToStorage } = await import('../../config/supabase.js');
+        const { uploadFile, BUCKETS } = await import('../../config/supabase.js');
 
         // Wrap middleware in promise to handle async flow
         await new Promise((resolve, reject) => {
@@ -80,19 +80,27 @@ router.post('/avatar', authenticate, asyncHandler(async (req, res) => {
         }
 
         const prisma = getPrismaClient();
+        const filename = generateFilename(req.file);
+        const filePath = `${req.user.id}/${filename}`;
 
         // Upload to storage (Supabase)
-        const avatarUrl = await uploadToStorage(req.file, 'avatars', req.user.id);
+        const { url } = await uploadFile({
+            bucket: BUCKETS.AVATARS,
+            path: filePath,
+            file: req.file.buffer,
+            contentType: req.file.mimetype,
+            upsert: true
+        });
 
         const user = await prisma.user.update({
             where: { id: req.user.id },
-            data: { avatar: avatarUrl },
+            data: { avatar: url },
             select: { id: true, avatar: true }
         });
 
         return sendSuccess(res, {
             data: { avatar: user.avatar },
-            message: 'Profile picture updated'
+            message: 'Profile picture updated successfully'
         });
     } catch (error) {
         throw error;

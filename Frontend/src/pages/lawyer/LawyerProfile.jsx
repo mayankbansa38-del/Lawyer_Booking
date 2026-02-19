@@ -4,10 +4,11 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Camera, Save, MapPin, Phone, Mail, Briefcase, Award, Languages, DollarSign, Clock } from 'lucide-react';
+import { Save, MapPin, Phone, Mail, Briefcase, Award, Languages, DollarSign, Clock } from 'lucide-react';
 import { PageHeader } from '../../components/dashboard';
 import { lawyerAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import AvatarUpload from '../../components/common/AvatarUpload';
 
 
 const languageOptions = ['Hindi', 'English', 'Punjabi', 'Gujarati', 'Marathi', 'Tamil', 'Telugu', 'Bengali'];
@@ -129,42 +130,7 @@ export default function LawyerProfile() {
         }
     };
 
-    const handleImageUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
 
-        // Create FormData
-        const formData = new FormData();
-        formData.append('avatar', file);
-
-        try {
-            setSaving(true);
-            setMessage({ type: '', text: '' });
-
-            // Upload to backend
-            // Assuming endpoint exists based on user routes or standard convention
-            // If specific endpoint unknown, we'll try '/users/avatar' or '/lawyers/profile/avatar'
-            // For now, let's use a standard pattern and if it fails we debug.
-            // Actually, let's assume we update the profile with the image URL if the backend handles upload separately
-            // OR we post to an upload endpoint. 
-            // Let's try to upload to /users/me/avatar if it exists, or just send the file to updateProfile if it supports multipart.
-            // Given the previous code didn't show upload logic, I'll assume we need to add handling.
-            // Let's try a common pattern: POST /users/avatar
-
-            const response = await apiClient.post('/users/avatar', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            // Update profile with new image URL
-            setProfile(prev => ({ ...prev, image: response.data.data.avatar }));
-            setMessage({ type: 'success', text: 'Profile picture updated successfully!' });
-        } catch (error) {
-            console.error('Error uploading image:', error);
-            setMessage({ type: 'error', text: 'Failed to upload image. Please try again.' });
-        } finally {
-            setSaving(false);
-        }
-    };
 
     if (loading) {
         return (
@@ -205,16 +171,14 @@ export default function LawyerProfile() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
                 <div className="flex flex-col sm:flex-row items-start gap-6">
                     <div className="relative">
-                        <img src={profile.image || '/default-avatar.png'} alt={profile.name} className="w-32 h-32 rounded-2xl object-cover bg-gray-100" />
-                        <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-blue-700 transition-colors cursor-pointer">
-                            <Camera className="w-5 h-5" />
-                            <input
-                                type="file"
-                                className="hidden"
-                                accept="image/*"
-                                onChange={handleImageUpload}
-                            />
-                        </label>
+                        <AvatarUpload
+                            initialImage={profile.image || '/default-avatar.png'}
+                            size="lg" // w-32 h-32
+                            onUploadSuccess={(url) => {
+                                setProfile(prev => ({ ...prev, image: url }));
+                                setMessage({ type: 'success', text: 'Profile picture updated successfully!' });
+                            }}
+                        />
                     </div>
                     <div className="flex-1 space-y-4 w-full">
                         <div>

@@ -257,6 +257,38 @@ export const caseAPI = {
     },
 };
 
+export const casePaymentAPI = {
+    async requestPayment(caseId, { amount, description }) {
+        const response = await apiClient.post(`/case-payments/cases/${caseId}/request`, { amount, description });
+        return response.data;
+    },
+
+    async getCasePayments(caseId) {
+        const response = await apiClient.get(`/case-payments/cases/${caseId}`);
+        return response.data;
+    },
+
+    async denyPayment(paymentId) {
+        const response = await apiClient.put(`/case-payments/${paymentId}/deny`);
+        return response.data;
+    },
+
+    async payPayment(paymentId) {
+        const response = await apiClient.post(`/case-payments/${paymentId}/pay`);
+        return response.data;
+    },
+
+    async getById(paymentId) {
+        const response = await apiClient.get(`/case-payments/${paymentId}`);
+        return response.data;
+    },
+
+    async getMyPayments() {
+        const response = await apiClient.get('/case-payments/my-payments');
+        return response.data;
+    },
+};
+
 export const clientAPI = {
     async getByLawyer() {
         // Derived from bookings — get unique clients from lawyer's bookings
@@ -451,9 +483,16 @@ export const userAPI = {
         const response = await apiClient.get(`/users/${id}`);
         return response.data;
     },
+
+    async uploadAvatar(formData) {
+        const response = await apiClient.post('/users/avatar', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
 };
 
 
 
-export default { lawyer: lawyerAPI, appointment: appointmentAPI, case: caseAPI, client: clientAPI, payment: paymentAPI, notification: notificationAPI, document: documentAPI, favorites: favoritesAPI, chat: chatAPI, user: userAPI };
+export default { lawyer: lawyerAPI, appointment: appointmentAPI, case: caseAPI, casePayment: casePaymentAPI, client: clientAPI, payment: paymentAPI, notification: notificationAPI, document: documentAPI, favorites: favoritesAPI, chat: chatAPI, user: userAPI };
 

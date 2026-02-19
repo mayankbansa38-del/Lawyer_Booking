@@ -7,9 +7,10 @@ import { useState, useEffect } from 'react';
 import { User, Mail, Phone, MapPin, Save, Bell, Shield, CheckCircle, Camera } from 'lucide-react';
 import { userAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import AvatarUpload from '../../components/common/AvatarUpload';
 
 export default function UserSettings() {
-    const { user, getFullUserData } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -51,7 +52,7 @@ export default function UserSettings() {
                 location: profile.location,
             });
             // Refresh auth context with updated user data
-            if (getFullUserData) await getFullUserData();
+            if (refreshUser) await refreshUser();
             setMessage({ type: 'success', text: 'Profile updated successfully!' });
         } catch (error) {
             console.error('Error saving profile:', error);
@@ -101,16 +102,21 @@ export default function UserSettings() {
                     <h3 className="font-semibold text-gray-900">Profile Photo</h3>
                 </div>
                 <div className="flex items-center gap-5">
-                    <img
-                        src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'user'}`}
-                        alt={user?.name}
-                        className="w-20 h-20 rounded-2xl object-cover ring-4 ring-gray-100"
+                    <AvatarUpload
+                        initialImage={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'user'}`}
+                        size="lg" // w-32 h-32
+                        onUploadSuccess={(url) => {
+                            setMessage({ type: 'success', text: 'Profile photo updated successfully!' });
+                            // Optionally update local user state if needed immediately,
+                            // though AuthContext refresh handles it globally.
+                        }}
                     />
                     <div>
-                        <button className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-xl transition-colors border border-blue-200">
-                            Change Photo
-                        </button>
-                        <p className="text-xs text-gray-400 mt-2">JPG, PNG or GIF. Max 2MB</p>
+                        <h4 className="font-medium text-gray-900">Change Profile Photo</h4>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Click the camera icon to upload. <br />
+                            JPG, PNG or GIF. Max 2MB.
+                        </p>
                     </div>
                 </div>
             </div>

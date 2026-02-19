@@ -2,6 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "ERD.svg"
+  format   = "svg"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -369,6 +375,7 @@ model Case {
   booking     Booking?     @relation(fields: [bookingId], references: [id])
   client      User         @relation("ClientCases", fields: [clientId], references: [id])
   lawyer      Lawyer       @relation(fields: [lawyerId], references: [id])
+  casePayments CasePayment[]
   documents   Document[]
   messages    Message[]
 
@@ -486,6 +493,8 @@ enum NotificationType {
   BOOKING_REMINDER
   PAYMENT_RECEIVED
   PAYMENT_REFUNDED
+  PAYMENT_REQUESTED
+  PAYMENT_REQUEST_RECEIVED
   REVIEW_RECEIVED
   PROFILE_VERIFIED
   MESSAGE_RECEIVED
@@ -527,4 +536,32 @@ enum AuditAction {
   MESSAGE_SENT
   PAYMENT_MADE
   ASSIGNED
+}
+
+model CasePayment {
+  id                  String            @id @default(cuid())
+  caseId              String            @map("case_id")
+  amountInPaise       Int               @map("amount_in_paise")
+  currency            String            @default("INR")
+  status              CasePaymentStatus @default(REQUESTED)
+  description         String
+  requestedByLawyerId String            @map("requested_by_lawyer_id")
+  razorpayOrderId     String?           @unique @map("razorpay_order_id")
+  razorpayPaymentId   String?           @unique @map("razorpay_payment_id")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  case                Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([status])
+  @@index([razorpayOrderId])
+  @@map("case_payments")
+}
+
+enum CasePaymentStatus {
+  REQUESTED
+  PROCESSING
+  DENIED
+  COMPLETED
+  FAILED
 }

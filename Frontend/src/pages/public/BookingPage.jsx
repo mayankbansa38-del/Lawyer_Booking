@@ -120,37 +120,19 @@ export default function BookingPage() {
             return;
         }
 
-        setSubmitting(true);
-        try {
-            const result = await appointmentAPI.create({
-                lawyerId: id,
-                scheduledDate: booking.date,
-                scheduledTime: booking.time,
-                meetingType: booking.type === 'video' ? 'VIDEO' : 'IN_PERSON',
-                duration: 60,
-                clientNotes: booking.notes,
-                amount: lawyer.consultationFee || lawyer.hourlyRate || 0,
-            });
+        // Store booking details for checkout page — NO booking created here.
+        // The actual Booking + Payment records are created atomically in CheckoutPage.
+        sessionStorage.setItem('pendingBooking', JSON.stringify({
+            date: booking.date,
+            time: booking.time,
+            type: booking.type,
+            meetingType: booking.type === 'video' ? 'VIDEO' : 'IN_PERSON',
+            notes: booking.notes,
+            amount: lawyer.consultationFee || lawyer.hourlyRate || 0,
+        }));
 
-            // Store booking details for checkout page
-            sessionStorage.setItem('pendingBooking', JSON.stringify({
-                date: booking.date,
-                time: booking.time,
-                type: booking.type,
-                meetingType: booking.type === 'video' ? 'VIDEO' : 'IN_PERSON',
-                notes: booking.notes,
-                amount: lawyer.consultationFee || lawyer.hourlyRate || 0,
-                bookingId: result?.data?.id,
-            }));
-
-            // Navigate to checkout page
-            navigate(`/lawyers/${id}/checkout`);
-        } catch (error) {
-            console.error('Error creating appointment:', error);
-            alert(error.response?.data?.message || 'Booking failed. Please try again.');
-        } finally {
-            setSubmitting(false);
-        }
+        // Navigate to checkout page
+        navigate(`/lawyers/${id}/checkout`);
     };
 
     if (loading) {
