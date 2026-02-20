@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, MapPin, Save, Bell, Shield, CheckCircle, Camera } from 'lucide-react';
 import { userAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -11,6 +12,7 @@ import AvatarUpload from '../../components/common/AvatarUpload';
 
 export default function UserSettings() {
     const { user, refreshUser } = useAuth();
+    const navigate = useNavigate();
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -200,7 +202,7 @@ export default function UserSettings() {
                     <h3 className="font-semibold text-gray-900">Security</h3>
                 </div>
                 <div className="space-y-3">
-                    <button className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors">
+                    <button onClick={() => navigate('/forgot-password')} className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors">
                         <div>
                             <p className="font-medium text-sm">Change Password</p>
                             <p className="text-xs text-gray-500 mt-0.5">Update your account password</p>
