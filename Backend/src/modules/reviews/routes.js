@@ -54,33 +54,36 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
         throw new ConflictError('You have already reviewed this booking');
     }
 
-    // Create review (set isPublished: true so it's included in avg calculation)
-    const review = await prisma.review.create({
-        data: {
-            bookingId,
-            authorId: req.user.id,
-            lawyerId: booking.lawyerId,
-            rating,
-            title,
-            content,
-            isVerified: true, // Verified because it's tied to a completed booking
-            isPublished: true, // Published immediately — included in avg rating
-        },
-    });
+    // Atomic: create review + recalculate rating in one transaction
+    const review = await prisma.$transaction(async (tx) => {
+        const r = await tx.review.create({
+            data: {
+                bookingId,
+                authorId: req.user.id,
+                lawyerId: booking.lawyerId,
+                rating,
+                title,
+                content,
+                isVerified: true,
+                isPublished: true,
+            },
+        });
 
-    // Update lawyer average rating (include all published reviews)
-    const aggregation = await prisma.review.aggregate({
-        where: { lawyerId: booking.lawyerId, isPublished: true },
-        _avg: { rating: true },
-        _count: { rating: true },
-    });
+        const aggregation = await tx.review.aggregate({
+            where: { lawyerId: booking.lawyerId, isPublished: true },
+            _avg: { rating: true },
+            _count: { rating: true },
+        });
 
-    await prisma.lawyer.update({
-        where: { id: booking.lawyerId },
-        data: {
-            averageRating: aggregation._avg.rating || 0,
-            totalReviews: aggregation._count.rating || 0,
-        },
+        await tx.lawyer.update({
+            where: { id: booking.lawyerId },
+            data: {
+                averageRating: aggregation._avg.rating || 0,
+                totalReviews: aggregation._count.rating || 0,
+            },
+        });
+
+        return r;
     });
 
     logger.logBusiness('REVIEW_CREATED', {
@@ -265,24 +268,28 @@ router.put('/:id', authenticate, asyncHandler(async (req, res) => {
         throw new BadRequestError('Reviews can only be edited within 48 hours of submission');
     }
 
-    const updated = await prisma.review.update({
-        where: { id: review.id },
-        data: {
-            rating: rating !== undefined ? rating : undefined,
-            title: title !== undefined ? title : undefined,
-            content: content !== undefined ? content : undefined,
-        },
-    });
+    // Atomic: update review + recalculate rating
+    const updated = await prisma.$transaction(async (tx) => {
+        const u = await tx.review.update({
+            where: { id: review.id },
+            data: {
+                rating: rating !== undefined ? rating : undefined,
+                title: title !== undefined ? title : undefined,
+                content: content !== undefined ? content : undefined,
+            },
+        });
 
-    // Recalculate lawyer rating
-    const aggregation = await prisma.review.aggregate({
-        where: { lawyerId: review.lawyerId, isPublished: true },
-        _avg: { rating: true },
-    });
+        const aggregation = await tx.review.aggregate({
+            where: { lawyerId: review.lawyerId, isPublished: true },
+            _avg: { rating: true },
+        });
 
-    await prisma.lawyer.update({
-        where: { id: review.lawyerId },
-        data: { averageRating: aggregation._avg.rating || 0 },
+        await tx.lawyer.update({
+            where: { id: review.lawyerId },
+            data: { averageRating: aggregation._avg.rating || 0 },
+        });
+
+        return u;
     });
 
     return sendSuccess(res, {
@@ -386,23 +393,25 @@ router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
         throw new ForbiddenError('Not authorized to delete this review');
     }
 
-    await prisma.review.delete({
-        where: { id: review.id },
-    });
+    // Atomic: delete review + recalculate rating
+    await prisma.$transaction(async (tx) => {
+        await tx.review.delete({
+            where: { id: review.id },
+        });
 
-    // Recalculate lawyer rating
-    const aggregation = await prisma.review.aggregate({
-        where: { lawyerId: review.lawyerId, isPublished: true },
-        _avg: { rating: true },
-        _count: { rating: true },
-    });
+        const aggregation = await tx.review.aggregate({
+            where: { lawyerId: review.lawyerId, isPublished: true },
+            _avg: { rating: true },
+            _count: { rating: true },
+        });
 
-    await prisma.lawyer.update({
-        where: { id: review.lawyerId },
-        data: {
-            averageRating: aggregation._avg.rating || 0,
-            totalReviews: aggregation._count.rating || 0,
-        },
+        await tx.lawyer.update({
+            where: { id: review.lawyerId },
+            data: {
+                averageRating: aggregation._avg.rating || 0,
+                totalReviews: aggregation._count.rating || 0,
+            },
+        });
     });
 
     logger.logBusiness('REVIEW_DELETED', { reviewId: review.id });

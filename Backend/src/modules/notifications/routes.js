@@ -75,6 +75,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
         total,
         page,
         limit,
+        meta: { unreadCount },
     });
 }));
 

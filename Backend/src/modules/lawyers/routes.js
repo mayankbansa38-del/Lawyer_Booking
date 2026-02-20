@@ -32,10 +32,7 @@ router.get('/profile', authenticate, asyncHandler(async (req, res) => {
     const prisma = getPrismaClient();
 
     if (req.user.role !== 'LAWYER') {
-        return res.status(403).json({
-            success: false,
-            message: 'Access denied. Only lawyers can access this route.',
-        });
+        throw new ForbiddenError('Access denied. Only lawyers can access this route.');
     }
 
     const lawyer = await prisma.lawyer.findUnique({
@@ -114,8 +111,6 @@ router.get('/profile', authenticate, asyncHandler(async (req, res) => {
         averageRating: lawyer.averageRating,
         totalReviews: lawyer.totalReviews,
         casesWon: lawyer.completedBookings || 0,
-        completedConsultations: lawyer.completedBookings,
-        isAvailable: lawyer.isAvailable,
         completedConsultations: lawyer.completedBookings,
         isAvailable: lawyer.isAvailable,
         availability: lawyer.availability || {},
@@ -307,7 +302,6 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
         averageRating: lawyer.averageRating,
         totalReviews: lawyer.totalReviews,
         isAvailable: lawyer.isAvailable,
-        availability: lawyer.availability || {},
         availabilityStatus: lawyer.isAvailable ? 'Available' : 'Busy',
         featured: lawyer.featured,
         casesWon: lawyer.completedBookings || 0,
@@ -578,10 +572,6 @@ router.get('/:slugOrId', optionalAuth, asyncHandler(async (req, res) => {
         rating: lawyer.averageRating ? Math.round(lawyer.averageRating * 10) / 10 : 0,
         averageRating: lawyer.averageRating,
         totalReviews: lawyer.totalReviews,
-        casesWon: lawyer.completedBookings || 0,
-        completedConsultations: lawyer.completedBookings,
-        isAvailable: lawyer.isAvailable,
-        casesWon: lawyer.completedBookings || 0,
         completedConsultations: lawyer.completedBookings,
         isAvailable: lawyer.isAvailable,
         availability: lawyer.availability || {}, // Return actual availability object (schedule)
@@ -763,10 +753,7 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     const prisma = getPrismaClient();
 
     if (req.user.role !== 'LAWYER') {
-        return res.status(403).json({
-            success: false,
-            message: 'Access denied. Only lawyers can update their profile.',
-        });
+        throw new ForbiddenError('Access denied. Only lawyers can update their profile.');
     }
 
     const {
