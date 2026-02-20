@@ -76,33 +76,36 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
         throw new BookingError('alreadyBooked');
     }
 
-    // Create booking
-    const booking = await prisma.booking.create({
-        data: {
-            bookingNumber: generateBookingNumber(),
-            clientId: req.user.id,
-            lawyerId,
-            scheduledDate: new Date(scheduledDate),
-            scheduledTime,
-            duration,
-            meetingType,
-            clientNotes,
-            amount: lawyer.hourlyRate * (duration / 60),
-            status: 'PENDING',
-        },
-        include: {
-            lawyer: {
-                include: {
-                    user: { select: { firstName: true, lastName: true } },
+    // Atomic: create booking + update stats in single transaction
+    const booking = await prisma.$transaction(async (tx) => {
+        const b = await tx.booking.create({
+            data: {
+                bookingNumber: generateBookingNumber(),
+                clientId: req.user.id,
+                lawyerId,
+                scheduledDate: new Date(scheduledDate),
+                scheduledTime,
+                duration,
+                meetingType,
+                clientNotes,
+                amount: lawyer.hourlyRate * (duration / 60),
+                status: 'PENDING',
+            },
+            include: {
+                lawyer: {
+                    include: {
+                        user: { select: { firstName: true, lastName: true } },
+                    },
                 },
             },
-        },
-    });
+        });
 
-    // Update lawyer stats
-    await prisma.lawyer.update({
-        where: { id: lawyerId },
-        data: { totalBookings: { increment: 1 } },
+        await tx.lawyer.update({
+            where: { id: lawyerId },
+            data: { totalBookings: { increment: 1 } },
+        });
+
+        return b;
     });
 
     logger.logBusiness('BOOKING_CREATED', {
@@ -548,6 +551,7 @@ router.put('/:id/complete', authenticate, requireVerifiedLawyer, asyncHandler(as
     }
 
     // Update booking and lawyer stats in transaction
+    // Note: totalEarnings is NOT incremented here — it was already counted at payment time
     const [updated] = await prisma.$transaction([
         prisma.booking.update({
             where: { id: booking.id },
@@ -561,7 +565,6 @@ router.put('/:id/complete', authenticate, requireVerifiedLawyer, asyncHandler(as
             where: { id: booking.lawyerId },
             data: {
                 completedBookings: { increment: 1 },
-                totalEarnings: { increment: booking.amount },
             },
         }),
     ]);

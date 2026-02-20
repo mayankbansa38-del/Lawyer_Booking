@@ -12,9 +12,10 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../../middleware/auth.js';
 import { paymentLimiter } from '../../middleware/rateLimiter.js';
 import { sendSuccess, sendCreated, asyncHandler } from '../../utils/response.js';
+import { Prisma } from '@prisma/client';
 import { getPrismaClient } from '../../config/database.js';
-import { NotFoundError, ForbiddenError, PaymentError } from '../../utils/errors.js';
-import { verifyRazorpaySignature, createHmac } from '../../utils/crypto.js';
+import { NotFoundError, ForbiddenError, PaymentError, ConflictError } from '../../utils/errors.js';
+import { verifyRazorpaySignature, createHmac, generateBookingNumber } from '../../utils/crypto.js';
 import { sendPaymentConfirmationEmail, sendPaymentReceivedEmail } from '../../utils/email.js';
 import env from '../../config/env.js';
 import logger from '../../utils/logger.js';
@@ -191,88 +192,109 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
         scheduledTime,
         duration = 60,
         meetingType = 'VIDEO',
-        amount,
         clientNotes,
         paymentMethod = 'CARD',
     } = req.body;
 
-    // Validate required fields
-    if (!lawyerId || !scheduledDate || !scheduledTime || !amount) {
-        throw new PaymentError('Missing required fields: lawyerId, scheduledDate, scheduledTime, amount');
+    // Validate required fields (amount is NOT accepted from client — zero-trust)
+    if (!lawyerId || !scheduledDate || !scheduledTime) {
+        throw new PaymentError('Missing required fields: lawyerId, scheduledDate, scheduledTime');
     }
-
-    // Verify lawyer exists and is verified
-    const lawyer = await prisma.lawyer.findUnique({
-        where: { id: lawyerId },
-        include: {
-            user: { select: { id: true, firstName: true, lastName: true, email: true } },
-        },
-    });
-
-    if (!lawyer || lawyer.verificationStatus !== 'VERIFIED') {
-        throw new NotFoundError('Verified lawyer');
-    }
-
-    // Generate booking number: NB-YYYYMMDD-XXXX
-    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const randomPart = crypto.randomBytes(2).toString('hex').toUpperCase();
-    const bookingNumber = `NB-${datePart}-${randomPart}`;
 
     // Generate simulated gateway IDs
     const gatewayOrderId = `order_sim_${crypto.randomBytes(8).toString('hex')}`;
     const gatewayPaymentId = `pay_sim_${crypto.randomBytes(8).toString('hex')}`;
 
-    // Create booking + payment + update lawyer stats in a single transaction
-    const result = await prisma.$transaction(async (tx) => {
-        // 1. Create booking (CONFIRMED since payment is immediate)
-        const booking = await tx.booking.create({
-            data: {
-                bookingNumber,
-                clientId: req.user.id,
-                lawyerId: lawyer.id,
-                scheduledDate: new Date(scheduledDate),
-                scheduledTime,
-                duration: parseInt(duration),
-                meetingType,
-                amount: parseFloat(amount),
-                currency: 'INR',
-                status: 'CONFIRMED',
-                confirmedAt: new Date(),
-                clientNotes: clientNotes || null,
-            },
+    // Serializable transaction: prevents TOCTOU race conditions on concurrent bookings
+    let result;
+    let lawyer;
+    try {
+        result = await prisma.$transaction(async (tx) => {
+            // 1. Server-side pricing: fetch authoritative rate from DB
+            lawyer = await tx.lawyer.findUnique({
+                where: { id: lawyerId },
+                include: {
+                    user: { select: { id: true, firstName: true, lastName: true, email: true } },
+                },
+            });
+
+            if (!lawyer || lawyer.verificationStatus !== 'VERIFIED') {
+                throw new NotFoundError('Verified lawyer');
+            }
+
+            // Zero-trust: compute amount from DB, never from client
+            const computedAmount = parseFloat(lawyer.consultationFee || lawyer.hourlyRate) * (parseInt(duration) / 60);
+
+            // 2. Conflict check inside transaction (defense-in-depth with DB unique constraint)
+            const conflict = await tx.booking.findFirst({
+                where: {
+                    lawyerId,
+                    scheduledDate: new Date(scheduledDate),
+                    scheduledTime,
+                    status: { in: ['PENDING', 'CONFIRMED'] },
+                },
+            });
+            if (conflict) {
+                throw new ConflictError('This time slot is no longer available');
+            }
+
+            // 3. Create booking (CONFIRMED since payment is immediate)
+            const booking = await tx.booking.create({
+                data: {
+                    bookingNumber: generateBookingNumber(),
+                    clientId: req.user.id,
+                    lawyerId: lawyer.id,
+                    scheduledDate: new Date(scheduledDate),
+                    scheduledTime,
+                    duration: parseInt(duration),
+                    meetingType,
+                    amount: computedAmount,
+                    currency: 'INR',
+                    status: 'CONFIRMED',
+                    confirmedAt: new Date(),
+                    clientNotes: clientNotes || null,
+                },
+            });
+
+            // 4. Create payment (COMPLETED since simulated)
+            const payment = await tx.payment.create({
+                data: {
+                    bookingId: booking.id,
+                    amount: computedAmount,
+                    currency: 'INR',
+                    status: 'COMPLETED',
+                    method: paymentMethod,
+                    gatewayOrderId,
+                    gatewayPaymentId,
+                    processedAt: new Date(),
+                },
+            });
+
+            // 5. Update lawyer stats atomically
+            await tx.lawyer.update({
+                where: { id: lawyer.id },
+                data: {
+                    totalBookings: { increment: 1 },
+                    totalEarnings: { increment: computedAmount },
+                },
+            });
+
+            return { booking, payment, computedAmount };
+        }, {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         });
+    } catch (err) {
+        // DB unique constraint (P2002) → 409 Conflict
+        if (err.code === 'P2002') {
+            throw new ConflictError('This time slot is no longer available');
+        }
+        throw err;
+    }
 
-        // 2. Create payment (COMPLETED since simulated)
-        const payment = await tx.payment.create({
-            data: {
-                bookingId: booking.id,
-                amount: parseFloat(amount),
-                currency: 'INR',
-                status: 'COMPLETED',
-                method: paymentMethod,
-                gatewayOrderId,
-                gatewayPaymentId,
-                processedAt: new Date(),
-            },
-        });
-
-        // 3. Update lawyer stats
-        await tx.lawyer.update({
-            where: { id: lawyer.id },
-            data: {
-                totalBookings: { increment: 1 },
-                totalEarnings: { increment: parseFloat(amount) },
-            },
-        });
-
-        return { booking, payment };
-    });
-
-    // Send emails (fire-and-forget, don't block response)
+    // Fire-and-forget: emails (don't block response)
     const clientName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Client';
     const lawyerName = `${lawyer.user.firstName} ${lawyer.user.lastName}`;
 
-    // Email to client
     sendPaymentConfirmationEmail({
         to: req.user.email,
         name: clientName,
@@ -281,7 +303,6 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
         lawyer: { name: lawyerName },
     }).catch(err => logger.error('Failed to send client payment email', { error: err.message }));
 
-    // Email to lawyer
     sendPaymentReceivedEmail({
         to: lawyer.user.email,
         name: lawyerName,
@@ -290,14 +311,14 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
         client: { name: clientName },
     }).catch(err => logger.error('Failed to send lawyer payment email', { error: err.message }));
 
-    // Create in-app notifications for both
+    // Fire-and-forget: in-app notifications
     prisma.notification.createMany({
         data: [
             {
                 userId: req.user.id,
                 type: 'PAYMENT_RECEIVED',
                 title: 'Payment Successful',
-                message: `Your payment of ₹${parseFloat(amount).toLocaleString('en-IN')} to ${lawyerName} has been processed. Booking #${bookingNumber}`,
+                message: `Your payment of ₹${result.computedAmount.toLocaleString('en-IN')} to ${lawyerName} has been processed. Booking #${result.booking.bookingNumber}`,
                 actionUrl: '/user/payments',
                 actionLabel: 'View Payment',
             },
@@ -305,7 +326,7 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
                 userId: lawyer.user.id,
                 type: 'PAYMENT_RECEIVED',
                 title: 'New Payment Received',
-                message: `${clientName} paid ₹${parseFloat(amount).toLocaleString('en-IN')} for consultation. Booking #${bookingNumber}`,
+                message: `${clientName} paid ₹${result.computedAmount.toLocaleString('en-IN')} for consultation. Booking #${result.booking.bookingNumber}`,
                 actionUrl: '/lawyer/earnings',
                 actionLabel: 'View Earnings',
             },
@@ -315,7 +336,7 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
     logger.logBusiness('CHECKOUT_COMPLETED', {
         bookingId: result.booking.id,
         paymentId: result.payment.id,
-        amount,
+        amount: result.computedAmount,
         lawyerId: lawyer.id,
         clientId: req.user.id,
     });
@@ -508,7 +529,7 @@ router.post('/verify', authenticate, asyncHandler(async (req, res) => {
         client: { name: clientName },
     }).catch(err => logger.error('Failed to send lawyer payment email', { error: err.message }));
 
-    // In-app notifications
+    // Fire-and-forget: in-app notifications
     prisma.notification.createMany({
         data: [
             {
@@ -807,9 +828,8 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
 
     // Check authorization: client, lawyer, or admin
     const isClient = payment.booking.clientId === req.user.id;
-    const isLawyer = await prisma.lawyer.findFirst({
-        where: { userId: req.user.id, id: payment.booking.lawyerId },
-    });
+    // Use already-included data instead of extra DB query
+    const isLawyer = payment.booking.lawyer?.user?.email && req.user.id === payment.booking.lawyer.user.id;
     const isAdmin = req.user.role === 'ADMIN';
 
     if (!isClient && !isLawyer && !isAdmin) {
