@@ -31,14 +31,32 @@ const PRACTICE_AREAS = [
     { name: 'Tax Law', slug: 'tax-law', description: 'Tax planning, disputes, and compliance', icon: 'receipt', displayOrder: 9 },
 ];
 
-const ADMIN_USER = {
-    email: 'admin@nyaybooker.com',
-    password: 'Admin@123456',
-    firstName: 'System',
-    lastName: 'Administrator',
-    role: 'ADMIN',
-    isEmailVerified: true,
-};
+const ADMIN_USERS = [
+    {
+        email: 'mayank@nyaybooker.com',
+        password: 'Admin@123456',
+        firstName: 'Mayank',
+        lastName: 'Admin',
+        role: 'ADMIN',
+        isEmailVerified: true,
+    },
+    {
+        email: 'ashruf@nyaybooker.com',
+        password: 'Admin@123456',
+        firstName: 'Ashruf',
+        lastName: 'Admin',
+        role: 'ADMIN',
+        isEmailVerified: true,
+    },
+    {
+        email: 'piyush@nyaybooker.com',
+        password: 'Admin@123456',
+        firstName: 'Piyush',
+        lastName: 'Admin',
+        role: 'ADMIN',
+        isEmailVerified: true,
+    }
+];
 
 const TEST_USERS = [
     { email: 'user1@example.com', password: 'User@123456', firstName: 'Rahul', lastName: 'Sharma', phone: '+919876543210', isEmailVerified: true },
@@ -235,20 +253,22 @@ async function seedPracticeAreas() {
 }
 
 async function seedAdmin() {
-    console.log('🌱 Seeding admin user...');
+    console.log('🌱 Seeding admin users...');
 
-    const hashedPassword = await hashPassword(ADMIN_USER.password);
+    for (const admin of ADMIN_USERS) {
+        const hashedPassword = await hashPassword(admin.password);
 
-    await prisma.user.upsert({
-        where: { email: ADMIN_USER.email },
-        update: {},
-        create: {
-            ...ADMIN_USER,
-            password: hashedPassword,
-        },
-    });
+        await prisma.user.upsert({
+            where: { email: admin.email },
+            update: {},
+            create: {
+                ...admin,
+                password: hashedPassword,
+            },
+        });
+    }
 
-    console.log('✅ Admin user seeded');
+    console.log(`✅ ${ADMIN_USERS.length} admin users seeded`);
 }
 
 async function seedTestUsers() {
