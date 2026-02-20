@@ -155,18 +155,21 @@ export default function CaseDetail() {
         }
     };
 
-    const handlePay = async (paymentId) => {
-        if (!window.confirm('Confirm payment? This will process the payment immediately.')) return;
-        setActionLoading(paymentId);
-        try {
-            await casePaymentAPI.payPayment(paymentId);
-            const res = await casePaymentAPI.getCasePayments(id);
-            setPayments(res.data || []);
-        } catch (err) {
-            alert(err.response?.data?.error || 'Payment failed');
-        } finally {
-            setActionLoading(null);
-        }
+    const handlePay = (paymentId) => {
+        const payment = payments.find(p => p.id === paymentId);
+        if (!payment) return;
+
+        // Redirect to checkout with payment details
+        // The CheckoutPage will handle the actual payment processing via Razorpay
+        navigate(`/lawyers/${caseData.lawyer.id}/checkout`, {
+            state: {
+                casePaymentId: paymentId,
+                amount: payment.amountInPaise / 100, // Convert to rupees for display/logic if needed
+                description: payment.description,
+                caseId: id,
+                consultationFee: payment.amountInPaise / 100 // Override consultation fee with payment amount
+            }
+        });
     };
 
     const handleDeny = async (paymentId) => {

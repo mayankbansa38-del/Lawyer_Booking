@@ -4,12 +4,12 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
     CreditCard, Lock, ShieldCheck, CheckCircle, ArrowLeft,
     Calendar, Clock, Video, MapPin, User, Loader2
 } from 'lucide-react';
-import { lawyerAPI, paymentAPI } from '../../services/api';
+import { lawyerAPI, paymentAPI, casePaymentAPI } from '../../services/api';
 
 // ─── Card formatting helpers ────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ function PaymentSuccess({ lawyer, booking, paymentResult }) {
                 </div>
 
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Payment Successful!</h2>
-                <p className="text-gray-500 mb-6">Your consultation has been booked and confirmed.</p>
+                <p className="text-gray-500 mb-6">Your transaction has been processed successfully.</p>
 
                 {/* Booking receipt */}
                 <div className="bg-gray-50 rounded-xl p-5 mb-6 text-left space-y-3">
@@ -51,17 +51,25 @@ function PaymentSuccess({ lawyer, booking, paymentResult }) {
                         />
                         <div>
                             <p className="font-semibold text-gray-900">{paymentResult?.lawyerName || lawyer?.name}</p>
-                            <p className="text-sm text-gray-500">{lawyer?.specialty?.[0] || 'Legal Consultation'}</p>
+                            <p className="text-sm text-gray-500">{lawyer?.specialty?.[0] || 'Legal Services'}</p>
                         </div>
                     </div>
 
                     {/* Real booking details */}
-                    {paymentResult?.booking && (
+                    {booking.casePaymentId ? (
                         <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
-                            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Booking Confirmation</p>
-                            <p className="text-sm font-semibold text-gray-800">#{paymentResult.booking.bookingNumber}</p>
+                            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Payment Reference</p>
+                            <p className="text-sm font-semibold text-gray-800">#{booking.casePaymentId.slice(-8).toUpperCase()}</p>
                         </div>
+                    ) : (
+                        paymentResult?.booking && (
+                            <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                                <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Booking Confirmation</p>
+                                <p className="text-sm font-semibold text-gray-800">#{paymentResult.booking.bookingNumber}</p>
+                            </div>
+                        )
                     )}
+
                     {paymentResult?.payment && (
                         <div className="bg-green-50 rounded-lg p-3 border border-green-100">
                             <p className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">Transaction ID</p>
@@ -74,16 +82,16 @@ function PaymentSuccess({ lawyer, booking, paymentResult }) {
                             <Calendar className="w-4 h-4 text-blue-500" />
                             {(paymentResult?.booking?.scheduledDate || booking.date)
                                 ? new Date(paymentResult?.booking?.scheduledDate || booking.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-                                : 'N/A'}
+                                : 'Today'}
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
                             <Clock className="w-4 h-4 text-blue-500" />
-                            {paymentResult?.booking?.scheduledTime || booking.time || 'N/A'}
+                            {paymentResult?.booking?.scheduledTime || booking.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
                             {booking.type === 'video' || booking.meetingType === 'VIDEO'
                                 ? <><Video className="w-4 h-4 text-blue-500" /> Video Call</>
-                                : <><MapPin className="w-4 h-4 text-blue-500" /> In-Person</>}
+                                : <><MapPin className="w-4 h-4 text-blue-500" /> Payment</>}
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
                             <CreditCard className="w-4 h-4 text-blue-500" />
@@ -94,10 +102,10 @@ function PaymentSuccess({ lawyer, booking, paymentResult }) {
 
                 <div className="flex flex-col sm:flex-row gap-3">
                     <Link
-                        to="/user/appointments"
+                        to={booking.caseId ? `/user/cases/${booking.caseId}` : "/user/appointments"}
                         className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
                     >
-                        View My Appointments
+                        {booking.caseId ? 'Back to Case' : 'View My Appointments'}
                     </Link>
                     <Link
                         to="/"
@@ -116,8 +124,9 @@ function PaymentSuccess({ lawyer, booking, paymentResult }) {
 export default function CheckoutPage() {
     const { id } = useParams(); // lawyer id
     const navigate = useNavigate();
+    const location = useLocation();
 
-    // Booking details passed via location.state from BookingPage
+    // Booking details passed via location.state from BookingPage or CaseDetail
     const [lawyer, setLawyer] = useState(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
@@ -126,8 +135,9 @@ export default function CheckoutPage() {
     const [apiError, setApiError] = useState('');
     const [errors, setErrors] = useState({});
 
-    // Read booking info from sessionStorage (set by BookingPage)
+    // Read booking info from location.state (CaseDetail redirect) or sessionStorage (BookingPage)
     const [booking] = useState(() => {
+        if (location.state) return location.state;
         try {
             return JSON.parse(sessionStorage.getItem('pendingBooking') || '{}');
         } catch { return {}; }
@@ -192,16 +202,24 @@ export default function CheckoutPage() {
         setApiError('');
 
         try {
-            const response = await paymentAPI.checkout({
-                lawyerId: id,
-                scheduledDate: booking.date,
-                scheduledTime: booking.time,
-                duration: booking.duration || 60,
-                meetingType: booking.type?.toUpperCase() || booking.meetingType || 'VIDEO',
-                amount: parseFloat(amount),
-                clientNotes: booking.notes || '',
-                paymentMethod: 'CARD',
-            });
+            let response;
+
+            if (booking.casePaymentId) {
+                // Case payment flow: mark existing CasePayment as paid
+                response = await casePaymentAPI.payPayment(booking.casePaymentId);
+            } else {
+                // Regular booking checkout flow
+                response = await paymentAPI.checkout({
+                    lawyerId: id,
+                    scheduledDate: booking.date,
+                    scheduledTime: booking.time,
+                    duration: booking.duration || 60,
+                    meetingType: booking.type?.toUpperCase() || booking.meetingType || 'VIDEO',
+                    amount: parseFloat(amount),
+                    clientNotes: booking.notes || '',
+                    paymentMethod: 'CARD',
+                });
+            }
 
             sessionStorage.removeItem('pendingBooking');
             setPaymentResult(response.data);
