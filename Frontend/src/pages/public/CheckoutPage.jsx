@@ -192,16 +192,23 @@ export default function CheckoutPage() {
         setApiError('');
 
         try {
-            const response = await paymentAPI.checkout({
-                lawyerId: id,
-                scheduledDate: booking.date,
-                scheduledTime: booking.time,
-                duration: booking.duration || 60,
-                meetingType: booking.type?.toUpperCase() || booking.meetingType || 'VIDEO',
-                amount: parseFloat(amount),
-                clientNotes: booking.notes || '',
-                paymentMethod: 'CARD',
-            });
+            let response;
+
+            if (booking.casePaymentId) {
+                // Case payment flow: mark existing CasePayment as paid
+                response = await casePaymentAPI.payPayment(booking.casePaymentId);
+            } else {
+                // Regular booking checkout flow
+                response = await paymentAPI.checkout({
+                    lawyerId: id,
+                    scheduledDate: booking.date,
+                    scheduledTime: booking.time,
+                    duration: booking.duration || 60,
+                    meetingType: booking.type?.toUpperCase() || booking.meetingType || 'VIDEO',
+                    clientNotes: booking.notes || '',
+                    paymentMethod: 'CARD',
+                });
+            }
 
             sessionStorage.removeItem('pendingBooking');
             setPaymentResult(response.data);

@@ -809,6 +809,7 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
                             id: true,
                             user: {
                                 select: {
+                                    id: true,
                                     firstName: true,
                                     lastName: true,
                                     email: true,
