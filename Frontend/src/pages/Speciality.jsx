@@ -3,12 +3,12 @@ import { Scale, Users, Building2, Home, Monitor, FileText, LayoutGrid } from 'lu
 
 const specialties = [
   { name: "All", slug: "All", icon: LayoutGrid },
-  { name: "Criminal Lawyer", slug: "criminal-law", icon: Scale },
-  { name: "Family Lawyer", slug: "family-law", icon: Users },
-  { name: "Corporate Lawyer", slug: "corporate-law", icon: Building2 },
+  { name: "Criminal Lawyer", slug: "criminal-lawyer", icon: Scale },
+  { name: "Family Lawyer", slug: "family-lawyer", icon: Users },
+  { name: "Corporate Lawyer", slug: "corporate-lawyer", icon: Building2 },
   { name: "Property Lawyer", slug: "real-estate-law", icon: Home },
-  { name: "Cyber Lawyer", slug: "cyber-law", icon: Monitor },
-  { name: "Civil Lawyer", slug: "civil-litigation", icon: FileText },
+  { name: "Cyber Lawyer", slug: "cyber-lawyer", icon: Monitor },
+  { name: "Civil Lawyer", slug: "civil-lawyer", icon: FileText },
 ];
 
 const Speciality = () => {
