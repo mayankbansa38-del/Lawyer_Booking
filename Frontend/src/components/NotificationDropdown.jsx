@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
 import { Bell, Check, Clock, X } from "lucide-react";
+import { timeAgo } from "../utils/timeFormatter";
 
 /**
  * Premium Notification Dropdown
@@ -65,24 +66,24 @@ export default function NotificationDropdown({
                             <div
                                 key={notif.id}
                                 onClick={() => onNotificationClick && onNotificationClick(notif)}
-                                className={`p-4 hover:bg-blue-50/50 transition-colors cursor-pointer group flex gap-4 ${!notif.read ? 'bg-blue-50/30' : ''}`}
+                                className={`p-4 hover:bg-blue-50/50 transition-all duration-200 ease-out hover:scale-[1.02] cursor-pointer group flex gap-4 ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
                             >
                                 {/* Icon/Avatar */}
-                                <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${!notif.read ? 'bg-[#0c1f3f] text-[#cfa052]' : 'bg-gray-100 text-gray-400'}`}>
+                                <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${!notif.isRead ? 'bg-[#0c1f3f] text-[#cfa052]' : 'bg-gray-100 text-gray-400'}`}>
                                     <Bell className="w-4 h-4" />
                                 </div>
 
                                 <div className="flex-1 min-w-0">
-                                    <p className={`text-sm ${!notif.read ? 'text-gray-900 font-semibold' : 'text-gray-600'} leading-snug line-clamp-2`}>
+                                    <p className={`text-sm ${!notif.isRead ? 'text-gray-900 font-semibold' : 'text-gray-600'} leading-snug line-clamp-2`}>
                                         {notif.message}
                                     </p>
                                     <div className="flex items-center gap-2 mt-1.5">
                                         <Clock className="w-3 h-3 text-gray-400" />
-                                        <span className="text-xs text-gray-400 font-medium">{notif.timeAgo || 'Just now'}</span>
+                                        <span className="text-xs text-gray-400 font-medium">{timeAgo(notif.createdAt)}</span>
                                     </div>
                                 </div>
 
-                                {!notif.read && (
+                                {!notif.isRead && (
                                     <div className="shrink-0 self-center">
                                         <div className="w-2 h-2 rounded-full bg-[#cfa052] shadow-sm shadow-[#cfa052]/50"></div>
                                     </div>

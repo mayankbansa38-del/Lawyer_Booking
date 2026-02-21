@@ -1,69 +1,68 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { notificationAPI } from '../services/api';
 
 /**
- * Custom hook for managing notification state
- * @param {string} userId - User ID
- * @param {string} userType - User type ('client', 'lawyer', 'admin')
- * @returns {Object} - { notifications, unreadCount, loading, markAsRead, markAllAsRead, refresh }
+ * Robust Native Hook for Notifications
+ * Integrates AbortController for race-condition prevention and uses Backend Meta O(1) unread counting.
  */
-export function useNotifications(userId, userType) {
+export const useNotifications = (params = { page: 1, limit: 10, unreadOnly: false }) => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(true);
 
-    const fetchNotifications = async () => {
-        if (!userId) {
-            setLoading(false);
-            return;
-        }
-
+    const fetchNotifications = useCallback(async (abortSignal) => {
         try {
             setLoading(true);
-            const { data } = await notificationAPI.getAll(userId, userType);
+            const response = await notificationAPI.getAll(params, abortSignal ? { signal: abortSignal } : {});
+            const data = response.data || [];
+
             setNotifications(data);
-            setUnreadCount(data.filter(n => !n.read).length);
+
+            // Rely on backend meta for exact count (O(1) on frontend), fallback to local compute
+            setUnreadCount(response.meta?.unreadCount ?? data.filter(n => !n.isRead).length);
         } catch (error) {
-            console.error('Error fetching notifications:', error);
-            setNotifications([]);
-            setUnreadCount(0);
+            // Prevent throwing errors if the component simply unmounted (Axios throws CanceledError)
+            if (error?.name !== 'AbortError' && error?.name !== 'CanceledError') {
+                console.error('Notification fetch failed:', error);
+            }
         } finally {
             setLoading(false);
         }
-    };
+    }, [params.page, params.limit, params.unreadOnly]);
 
     useEffect(() => {
-        fetchNotifications();
-    }, [userId, userType]);
+        const controller = new AbortController();
+        fetchNotifications(controller.signal);
 
-    const markAsRead = async (notificationId) => {
+        // Strict cleanup: cancels in-flight requests if user navigates away
+        return () => controller.abort();
+    }, [fetchNotifications]);
+
+    const markAsRead = async (id) => {
+        // Optimistic UI update
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+
         try {
-            await notificationAPI.markAsRead(notificationId);
-            setNotifications(prev => prev.map(n =>
-                n.id === notificationId ? { ...n, read: true } : n
-            ));
-            setUnreadCount(prev => Math.max(0, prev - 1));
+            await notificationAPI.markAsRead(id);
         } catch (error) {
-            console.error('Error marking notification as read:', error);
+            // Revert on failure
+            fetchNotifications();
         }
     };
 
     const markAllAsRead = async () => {
+        // Optimistic UI update
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+
         try {
             await notificationAPI.markAllAsRead();
-            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-            setUnreadCount(0);
         } catch (error) {
-            console.error('Error marking all notifications as read:', error);
+            // Revert on failure
+            fetchNotifications();
         }
     };
 
-    return {
-        notifications,
-        unreadCount,
-        loading,
-        markAsRead,
-        markAllAsRead,
-        refresh: fetchNotifications
-    };
-}
+    return { notifications, unreadCount, loading, markAsRead, markAllAsRead, fetchNotifications };
+};

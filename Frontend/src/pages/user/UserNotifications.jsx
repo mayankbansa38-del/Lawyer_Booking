@@ -6,50 +6,16 @@
 import { useState, useEffect } from 'react';
 import { Bell, Check, Mail, MailOpen, CheckCheck } from 'lucide-react';
 import { PageHeader, NotificationCard, EmptyState } from '../../components/dashboard';
-import { notificationAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../hooks/useNotifications';
 
 export default function UserNotifications() {
     const { user } = useAuth();
-    const [notifications, setNotifications] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
 
-    useEffect(() => {
-        async function fetchNotifications() {
-            try {
-                if (!user?.id) return;
-                const { data } = await notificationAPI.getAll(user.id, 'client');
-                setNotifications(data);
-            } catch (error) {
-                console.error('Error fetching notifications:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchNotifications();
-    }, [user]);
+    const { notifications, unreadCount, loading, markAsRead: handleMarkRead, markAllAsRead: handleMarkAllRead } = useNotifications({ limit: 50 });
 
-    const handleMarkRead = async (id) => {
-        try {
-            await notificationAPI.markAsRead(id);
-            setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-        } catch (error) {
-            console.error('Error marking notification:', error);
-        }
-    };
-
-    const handleMarkAllRead = async () => {
-        try {
-            await notificationAPI.markAllAsRead();
-            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-        } catch (error) {
-            console.error('Error marking all notifications:', error);
-        }
-    };
-
-    const unreadCount = notifications.filter(n => !n.isRead).length;
-    const readCount = notifications.filter(n => n.isRead).length;
+    const readCount = notifications.length - unreadCount;
 
     const filteredNotifications = filter === 'all' ? notifications :
         filter === 'unread' ? notifications.filter(n => !n.isRead) :
