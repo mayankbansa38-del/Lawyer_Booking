@@ -84,7 +84,7 @@ const About = () => {
                   </div>
                   <div>
                     <p className="font-semibold">Nyay Booker Team</p>
-                    <p className="text-blue-200 text-sm">College Project 2024-25</p>
+                    <p className="text-blue-200 text-sm">College Project 2025-26</p>
                   </div>
                 </div>
               </div>
