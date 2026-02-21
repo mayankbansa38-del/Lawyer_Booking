@@ -13,7 +13,6 @@ const TABS = [
     { id: 'payments', label: 'Payments', icon: '💰' },
     { id: 'chat', label: 'Messages', icon: '💬' },
     { id: 'documents', label: 'Documents', icon: '📄' },
-    { id: 'history', label: 'History', icon: '🕒' },
 ];
 
 const STATUS_MAP = {
@@ -49,7 +48,6 @@ export default function CaseDetail() {
     const [activeTab, setActiveTab] = useState('overview');
     const [messages, setMessages] = useState([]);
     const [documents, setDocuments] = useState([]);
-    const [history, setHistory] = useState([]);
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [tabLoading, setTabLoading] = useState(false);
@@ -105,11 +103,6 @@ export default function CaseDetail() {
                     case 'documents': {
                         const res = await documentAPI.getByCase(id);
                         setDocuments(res.data || []);
-                        break;
-                    }
-                    case 'history': {
-                        const res = await caseAPI.getHistory(id);
-                        setHistory(res.data || []);
                         break;
                     }
                     case 'payments': {
@@ -547,23 +540,6 @@ export default function CaseDetail() {
                     </div>
                 )}
 
-                {/* ─── History ─── */}
-                {activeTab === 'history' && !tabLoading && (
-                    <div className="flex flex-col pl-4 border-l-2 border-slate-200">
-                        {history.length === 0 ? (
-                            <div className="text-center py-12 text-slate-400 text-sm">No activity history yet.</div>
-                        ) : history.map((h, i) => (
-                            <div key={h.id || i} className="relative flex gap-4 py-3">
-                                <div className="absolute -left-[22px] top-4 w-2.5 h-2.5 rounded-full bg-indigo-500 border-2 border-white" />
-                                <div>
-                                    <p className="text-sm font-semibold text-slate-700">{h.action}</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">{h.details || h.description}</p>
-                                    <span className="text-[0.65rem] text-slate-400 mt-1 block">{new Date(h.createdAt).toLocaleString()}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
             </div>
 
             {/* Document Upload Modal */}
