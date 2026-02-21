@@ -142,11 +142,6 @@ export const lawyerAPI = {
         };
     },
 
-    async getFeatured(limit = 6) {
-        const response = await apiClient.get('/lawyers/featured', { params: { limit } });
-        return response.data?.data || response.data || [];
-    },
-
     async getReviews(lawyerId, page = 1, limit = 10) {
         const response = await apiClient.get(`/reviews/lawyer/${lawyerId}`, { params: { page, limit } });
         return response.data;
@@ -251,11 +246,6 @@ export const caseAPI = {
         return response.data;
     },
 
-    async getHistory(id, page = 1, limit = 20) {
-        const response = await apiClient.get(`/cases/${id}/history`, { params: { page, limit } });
-        return response.data;
-    },
-
     async createMeeting(id) {
         const response = await apiClient.post(`/cases/${id}/meeting`);
         return response.data;
@@ -343,11 +333,6 @@ export const paymentAPI = {
         return response.data;
     },
 
-    async requestRefund(paymentId, data) {
-        const response = await apiClient.post(`/payments/${paymentId}/refund`, data);
-        return response.data;
-    },
-
     async getEarningsSummary() {
         const response = await apiClient.get('/payments/earnings-summary');
         return response.data;
@@ -382,11 +367,6 @@ export const notificationAPI = {
 
     async delete(id) {
         const response = await apiClient.delete(`/notifications/${id}`);
-        return response.data;
-    },
-
-    async deleteAll() {
-        const response = await apiClient.delete('/notifications');
         return response.data;
     },
 };

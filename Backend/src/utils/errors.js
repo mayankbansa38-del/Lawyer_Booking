@@ -136,38 +136,6 @@ export class RateLimitError extends AppError {
 }
 
 /**
- * 500 Internal Server Error - Unexpected server error
- */
-export class InternalError extends AppError {
-    constructor(message = 'Internal server error') {
-        super(message, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_ERROR);
-    }
-}
-
-/**
- * Database operation error
- */
-export class DatabaseError extends AppError {
-    constructor(message = 'Database operation failed', operation = null) {
-        super(message, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.DATABASE_ERROR, { operation });
-    }
-}
-
-/**
- * External service error (Supabase, Razorpay, etc.)
- */
-export class ExternalServiceError extends AppError {
-    constructor(service, message = 'External service error') {
-        super(
-            `${service}: ${message}`,
-            HTTP_STATUS.SERVICE_UNAVAILABLE,
-            ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-            { service }
-        );
-    }
-}
-
-/**
  * Authentication-specific errors
  */
 export class AuthenticationError extends UnauthorizedError {
@@ -294,9 +262,6 @@ export default {
     ConflictError,
     ValidationError,
     RateLimitError,
-    InternalError,
-    DatabaseError,
-    ExternalServiceError,
     AuthenticationError,
     BusinessError,
     BookingError,

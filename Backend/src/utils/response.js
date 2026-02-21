@@ -64,15 +64,6 @@ export function sendCreated(res, data, message = 'Resource created successfully'
 }
 
 /**
- * Send no content response (204)
- * 
- * @param {import('express').Response} res - Express response object
- */
-export function sendNoContent(res) {
-    return res.status(HTTP_STATUS.NO_CONTENT).send();
-}
-
-/**
  * Send error response
  * 
  * @param {import('express').Response} res - Express response object
@@ -133,31 +124,6 @@ export function sendPaginated(res, { data, total, page, limit, message = 'Succes
 }
 
 /**
- * Send cursor-based paginated response
- * 
- * @param {import('express').Response} res - Express response object
- * @param {Object} options - Cursor pagination options
- * @param {Array} options.data - Array of items
- * @param {string|null} options.nextCursor - Cursor for next page
- * @param {string|null} options.prevCursor - Cursor for previous page
- * @param {boolean} options.hasMore - Whether there are more items
- * @param {string} [options.message='Success'] - Success message
- */
-export function sendCursorPaginated(res, { data, nextCursor, prevCursor, hasMore, message = 'Success' }) {
-    return sendSuccess(res, {
-        data,
-        message,
-        meta: {
-            pagination: {
-                nextCursor,
-                prevCursor,
-                hasMore,
-            },
-        },
-    });
-}
-
-/**
  * Response helper wrapper for async route handlers
  * Automatically catches errors and forwards them to error handler
  * 
@@ -170,36 +136,10 @@ export function asyncHandler(fn) {
     };
 }
 
-/**
- * Create a controller method with standard response handling
- * 
- * @param {Function} serviceMethod - Service method to call
- * @param {Object} options - Controller options
- * @param {number} [options.successStatus=200] - Success status code
- * @param {string} [options.successMessage='Success'] - Success message
- * @returns {Function} Express route handler
- */
-export function createController(serviceMethod, options = {}) {
-    const { successStatus = HTTP_STATUS.OK, successMessage = 'Success' } = options;
-
-    return asyncHandler(async (req, res) => {
-        const result = await serviceMethod(req);
-
-        return sendSuccess(res, {
-            data: result,
-            message: successMessage,
-            statusCode: successStatus,
-        });
-    });
-}
-
 export default {
     sendSuccess,
     sendCreated,
-    sendNoContent,
     sendError,
     sendPaginated,
-    sendCursorPaginated,
     asyncHandler,
-    createController,
 };
