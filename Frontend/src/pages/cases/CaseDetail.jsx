@@ -3,7 +3,7 @@
  * Shared between lawyer/case/:id and user/case/:id routes
  * Uses Tailwind CSS exclusively.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { caseAPI, chatAPI, documentAPI, casePaymentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -68,6 +68,13 @@ export default function CaseDetail() {
 
     // Pay/deny action
     const [actionLoading, setActionLoading] = useState(null);
+
+    // Document upload
+    const [showDocUploadModal, setShowDocUploadModal] = useState(false);
+    const [docUploading, setDocUploading] = useState(false);
+    const [docUploadData, setDocUploadData] = useState({ title: '', documentType: 'Legal Document' });
+    const docFileInputRef = useRef(null);
+    const [docSelectedFile, setDocSelectedFile] = useState(null);
 
     const isLawyer = user?.role === 'LAWYER' || user?.role === 'ADMIN';
 
@@ -202,6 +209,39 @@ export default function CaseDetail() {
             alert(err.response?.data?.message || 'Failed to start meeting');
         } finally {
             setActionLoading(null);
+        }
+    };
+
+    const handleDocUpload = async () => {
+        if (!docSelectedFile) return;
+        setDocUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('document', docSelectedFile);
+            if (docUploadData.title) formData.append('description', docUploadData.title);
+            formData.append('caseId', id);
+
+            const typeMap = {
+                'Legal Document': 'CASE_DOCUMENT',
+                'Evidence': 'CASE_DOCUMENT',
+                'Court Document': 'CASE_DOCUMENT',
+                'Other': 'OTHER'
+            };
+            formData.append('type', typeMap[docUploadData.documentType] || 'OTHER');
+
+            await documentAPI.upload(formData);
+            setShowDocUploadModal(false);
+            setDocSelectedFile(null);
+            setDocUploadData({ title: '', documentType: 'Legal Document' });
+
+            // Refresh
+            const res = await documentAPI.getByCase(id);
+            setDocuments(res.data || []);
+        } catch (error) {
+            console.error('Error uploading document:', error);
+            alert(error.response?.data?.message || 'Upload failed');
+        } finally {
+            setDocUploading(false);
         }
     };
 
@@ -449,31 +489,61 @@ export default function CaseDetail() {
 
                 {/* ─── Documents ─── */}
                 {activeTab === 'documents' && !tabLoading && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {documents.length === 0 ? (
-                            <div className="col-span-full text-center py-12 text-slate-400 text-sm">No documents uploaded yet.</div>
-                        ) : documents.map(d => (
-                            <div
-                                key={d.id}
-                                onClick={async () => {
-                                    try {
-                                        const res = await documentAPI.download(d.id);
-                                        if (res.data?.url) {
-                                            window.open(res.data.url, '_blank', 'noopener,noreferrer');
-                                        }
-                                    } catch (err) {
-                                        alert('Could not open document.');
-                                    }
-                                }}
-                                className="flex items-center gap-3.5 p-4 bg-slate-50 border border-slate-200 rounded-xl hover:shadow-md transition-shadow cursor-pointer"
+                    <div className="flex flex-col gap-4">
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setShowDocUploadModal(true)}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 text-sm font-semibold transition-colors"
                             >
-                                <span className="text-2xl">📄</span>
-                                <div>
-                                    <h4 className="text-sm font-semibold text-slate-900">{d.description || d.originalName}</h4>
-                                    <p className="text-xs text-slate-400 mt-1">{d.type} · {(d.size / 1024).toFixed(1)}KB · {new Date(d.createdAt).toLocaleDateString()}</p>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                Upload Document
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {documents.length === 0 ? (
+                                <div className="col-span-full text-center py-12 text-slate-400 text-sm bg-slate-50 border border-slate-200 rounded-xl">No documents uploaded yet.</div>
+                            ) : documents.map(d => (
+                                <div key={d.id} className="relative group">
+                                    <div
+                                        onClick={async () => {
+                                            try {
+                                                const res = await documentAPI.download(d.id);
+                                                if (res.data?.url) {
+                                                    window.open(res.data.url, '_blank', 'noopener,noreferrer');
+                                                }
+                                            } catch (err) {
+                                                alert('Could not open document.');
+                                            }
+                                        }}
+                                        className="flex items-center gap-3.5 p-4 bg-slate-50 border border-slate-200 rounded-xl hover:shadow-md transition-shadow cursor-pointer w-full"
+                                    >
+                                        <span className="text-2xl">📄</span>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="text-sm font-semibold text-slate-900 truncate">{d.description || d.originalName}</h4>
+                                            <p className="text-xs text-slate-400 mt-1">{d.type} · {(d.size / 1024).toFixed(1)}KB · {new Date(d.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    {isLawyer && (
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                if (!window.confirm('Delete this document?')) return;
+                                                try {
+                                                    await documentAPI.delete(d.id);
+                                                    setDocuments(docs => docs.filter(doc => doc.id !== d.id));
+                                                } catch (err) {
+                                                    alert('Failed to delete document');
+                                                }
+                                            }}
+                                            className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                                            title="Delete document"
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                        </button>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -495,6 +565,74 @@ export default function CaseDetail() {
                     </div>
                 )}
             </div>
+
+            {/* Document Upload Modal */}
+            {showDocUploadModal && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-[fadeIn_0.15s_ease-out]">
+                    <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md animate-[slideUp_0.2s_ease-out]">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900">Upload Document</h3>
+                            <button onClick={() => { setShowDocUploadModal(false); setDocSelectedFile(null); }} className="p-1 hover:bg-gray-100 rounded-lg text-slate-400 hover:text-slate-600">
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">File</label>
+                                <input
+                                    type="file"
+                                    ref={docFileInputRef}
+                                    onChange={(e) => setDocSelectedFile(e.target.files[0])}
+                                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                />
+                                {docSelectedFile && <p className="text-xs text-gray-500 mt-1">{(docSelectedFile.size / 1024).toFixed(1)} KB</p>}
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                <input
+                                    type="text"
+                                    value={docUploadData.title}
+                                    onChange={(e) => setDocUploadData(d => ({ ...d, title: e.target.value }))}
+                                    placeholder="Document title"
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Document Type</label>
+                                <select
+                                    value={docUploadData.documentType}
+                                    onChange={(e) => setDocUploadData(d => ({ ...d, documentType: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm bg-white outline-none"
+                                >
+                                    <option>Legal Document</option>
+                                    <option>Evidence</option>
+                                    <option>Court Document</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => { setShowDocUploadModal(false); setDocSelectedFile(null); }}
+                                className="flex-1 py-2 text-sm font-medium text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-100"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDocUpload}
+                                disabled={!docSelectedFile || docUploading}
+                                className="flex-1 py-2 text-sm font-semibold text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                            >
+                                {docUploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                                {docUploading ? 'Uploading...' : 'Upload'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

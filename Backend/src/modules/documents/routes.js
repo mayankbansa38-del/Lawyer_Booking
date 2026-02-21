@@ -89,16 +89,34 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     const { page, limit, skip } = parsePaginationParams(req.query);
     const { type, caseId } = req.query;
 
-    const where = {
-        userId: req.user.id,
-        deletedAt: null,
-    };
+    let where = { deletedAt: null };
+
+    if (caseId) {
+        // Shared access for cases: verify user is either client or lawyer
+        const caseRecord = await prisma.case.findUnique({
+            where: { id: caseId },
+            include: { client: true, lawyer: true }
+        });
+
+        if (!caseRecord) {
+            return res.status(404).json({ success: false, message: 'Case not found' });
+        }
+
+        const isClient = caseRecord.clientId === req.user.id;
+        const isLawyer = caseRecord.lawyer?.userId === req.user.id;
+
+        if (!isClient && !isLawyer && req.user.role !== 'ADMIN') {
+            return res.status(403).json({ success: false, message: 'Not authorized to view case documents' });
+        }
+
+        where.caseId = caseId;
+    } else {
+        // Individual access: only show strictly user's own documents
+        where.userId = req.user.id;
+    }
 
     if (type) {
         where.type = type.toUpperCase();
-    }
-    if (caseId) {
-        where.caseId = caseId;
     }
 
     const [documents, total] = await Promise.all([
@@ -148,11 +166,25 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
     }
 
     // Check authorization
+    let isAuthorized = false;
     const isOwner = document.userId === req.user.id;
     const isShared = document.sharedWith?.includes(req.user.id);
     const isAdmin = req.user.role === 'ADMIN';
 
-    if (!isOwner && !isShared && !isAdmin && !document.isPublic) {
+    if (isOwner || isShared || isAdmin || document.isPublic) {
+        isAuthorized = true;
+    } else if (document.caseId) {
+        // Shared access through case relation
+        const caseRecord = await prisma.case.findUnique({
+            where: { id: document.caseId },
+            include: { lawyer: true }
+        });
+        if (caseRecord && (caseRecord.clientId === req.user.id || caseRecord.lawyer?.userId === req.user.id)) {
+            isAuthorized = true;
+        }
+    }
+
+    if (!isAuthorized) {
         throw new ForbiddenError('You do not have access to this document');
     }
 
@@ -176,11 +208,25 @@ router.get('/:id/download', authenticate, asyncHandler(async (req, res) => {
     }
 
     // Check authorization
+    let isAuthorized = false;
     const isOwner = document.userId === req.user.id;
     const isShared = document.sharedWith?.includes(req.user.id);
     const isAdmin = req.user.role === 'ADMIN';
 
-    if (!isOwner && !isShared && !isAdmin && !document.isPublic) {
+    if (isOwner || isShared || isAdmin || document.isPublic) {
+        isAuthorized = true;
+    } else if (document.caseId) {
+        // Shared access through case relation
+        const caseRecord = await prisma.case.findUnique({
+            where: { id: document.caseId },
+            include: { lawyer: true }
+        });
+        if (caseRecord && (caseRecord.clientId === req.user.id || caseRecord.lawyer?.userId === req.user.id)) {
+            isAuthorized = true;
+        }
+    }
+
+    if (!isAuthorized) {
         throw new ForbiddenError('You do not have access to this document');
     }
 
@@ -213,7 +259,25 @@ router.put('/:id', authenticate, asyncHandler(async (req, res) => {
         throw new NotFoundError('Document');
     }
 
-    if (document.userId !== req.user.id && req.user.role !== 'ADMIN') {
+    // Check modifying permissions
+    let isAuthorized = false;
+    const isOwner = document.userId === req.user.id;
+    const isAdmin = req.user.role === 'ADMIN';
+
+    if (isOwner || isAdmin) {
+        isAuthorized = true;
+    } else if (document.caseId) {
+        // Only the lawyer of the case can modify its documents, client cannot
+        const caseRecord = await prisma.case.findUnique({
+            where: { id: document.caseId },
+            include: { lawyer: true }
+        });
+        if (caseRecord && caseRecord.lawyer?.userId === req.user.id) {
+            isAuthorized = true;
+        }
+    }
+
+    if (!isAuthorized) {
         throw new ForbiddenError('Not authorized to modify this document');
     }
 
@@ -247,7 +311,25 @@ router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
         throw new NotFoundError('Document');
     }
 
-    if (document.userId !== req.user.id && req.user.role !== 'ADMIN') {
+    // Check deleting permissions
+    let isAuthorized = false;
+    const isOwner = document.userId === req.user.id;
+    const isAdmin = req.user.role === 'ADMIN';
+
+    if (isOwner || isAdmin) {
+        isAuthorized = true;
+    } else if (document.caseId) {
+        // Only the lawyer of the case can delete its documents, client cannot
+        const caseRecord = await prisma.case.findUnique({
+            where: { id: document.caseId },
+            include: { lawyer: true }
+        });
+        if (caseRecord && caseRecord.lawyer?.userId === req.user.id) {
+            isAuthorized = true;
+        }
+    }
+
+    if (!isAuthorized) {
         throw new ForbiddenError('Not authorized to delete this document');
     }
 
