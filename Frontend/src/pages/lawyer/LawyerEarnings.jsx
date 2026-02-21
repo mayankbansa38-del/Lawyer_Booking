@@ -334,13 +334,13 @@ export default function LawyerEarnings() {
                 }
             />
 
-            {/* Stats — No "Pending Payouts" or "Pending Transactions" */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
-                    title="Total Earnings"
-                    value={`₹${Number(summary.totalEarnings || 0).toLocaleString('en-IN')}`}
-                    subtitle="All time"
-                    icon={DollarSign}
+                    title="Today's Earnings"
+                    value={`₹${Number(summary.todayEarnings || 0).toLocaleString('en-IN')}`}
+                    subtitle="Today"
+                    icon={Calendar}
                 />
                 <StatCard
                     title="This Month"
@@ -348,6 +348,12 @@ export default function LawyerEarnings() {
                     icon={TrendingUp}
                     trend="up"
                     trendValue={12}
+                />
+                <StatCard
+                    title="Total Earnings"
+                    value={`₹${Number(summary.totalEarnings || 0).toLocaleString('en-IN')}`}
+                    subtitle="All time"
+                    icon={DollarSign}
                 />
                 <StatCard
                     title="Completed Payments"

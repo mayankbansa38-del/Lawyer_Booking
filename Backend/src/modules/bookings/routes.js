@@ -276,7 +276,7 @@ router.get('/lawyer', authenticate, requireVerifiedLawyer, asyncHandler(async (r
             where,
             skip,
             take: limit,
-            orderBy: { scheduledDate: 'asc' },
+            orderBy: { createdAt: 'desc' },
             include: {
                 client: {
                     select: {
