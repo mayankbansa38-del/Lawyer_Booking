@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { CreditCard, Download, CheckCircle, Clock, XCircle, IndianRupee, Receipt, TrendingUp } from 'lucide-react';
+import { CreditCard, Download, CheckCircle, Clock, XCircle, IndianRupee, Receipt, TrendingUp, Calendar } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/dashboard';
 import { paymentAPI, casePaymentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -71,6 +71,8 @@ export default function UserPayments() {
     const filteredPayments = filter === 'all' ? payments : payments.filter(p => p.status === filter.toUpperCase());
     const total = payments.filter(p => p.status === 'COMPLETED').reduce((sum, p) => sum + p.amount, 0);
     const pending = payments.filter(p => p.status === 'PENDING').reduce((sum, p) => sum + p.amount, 0);
+    const today = new Date().toISOString().split('T')[0];
+    const todaySpent = payments.filter(p => p.status === 'COMPLETED' && p.date && new Date(p.date).toISOString().split('T')[0] === today).reduce((sum, p) => sum + p.amount, 0);
 
     // eslint-disable-next-line no-unused-vars
     const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
@@ -105,7 +107,14 @@ export default function UserPayments() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <StatCard
+                    title="Today Spent"
+                    value={`₹${todaySpent.toLocaleString('en-IN')}`}
+                    icon={Calendar}
+                    color="bg-purple-500"
+                    subtitle="Today"
+                />
                 <StatCard
                     title="Total Spent"
                     value={`₹${total.toLocaleString('en-IN')}`}
