@@ -8,7 +8,7 @@ import piyushImage from "../assets/photo/piyush.jpeg";
 const About = () => {
   const team = [
     { name: "Prof. Amar Paul Singh", role: "Project Guide", image: amarpaulImage, bio: "Mentoring the team to build scalable and efficient solutions.", phone: "9876543210", email: "amarpaul@example.com" },
-    { name: "Mayank Bansal", role: "Team Member", image: "/lawyer5.png", bio: "Designed and developed the overall frontend and backend of the platform.", phone: "9876543211", email: "mayank@example.com" },
+    { name: "Mayank Bansal", role: "Team Member", image: "/lawyer5.png", bio: "Architected the overall frontend and backend of the platform.", phone: "9876543211", email: "mayank@example.com" },
     { name: "Piyush Sharma", role: "Team Member", image: piyushImage, bio: "Frontend specialist focused on creating intuitive user experiences.", phone: "9876543212", email: "piyush@example.com" },
     { name: "Ashruf Khan", role: "Team Member", image: ashrufImage, bio: "Backend developer ensuring secure and robust system architecture.", phone: "9876543213", email: "ashruf@example.com" },
   ];
