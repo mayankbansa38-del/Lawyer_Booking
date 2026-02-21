@@ -255,6 +255,11 @@ export const caseAPI = {
         const response = await apiClient.get(`/cases/${id}/history`, { params: { page, limit } });
         return response.data;
     },
+
+    async createMeeting(id) {
+        const response = await apiClient.post(`/cases/${id}/meeting`);
+        return response.data;
+    },
 };
 
 export const casePaymentAPI = {
@@ -409,10 +414,8 @@ export const documentAPI = {
     },
 
     async download(id) {
-        const response = await apiClient.get(`/documents/${id}/download`, {
-            responseType: 'blob',
-        });
-        return response;
+        const response = await apiClient.get(`/documents/${id}/download`);
+        return response.data;
     },
 
     async update(id, data) {

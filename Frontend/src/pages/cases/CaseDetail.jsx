@@ -183,6 +183,28 @@ export default function CaseDetail() {
         }
     };
 
+    const handleStartMeeting = async () => {
+        setActionLoading('meeting');
+        try {
+            const res = await caseAPI.createMeeting(id);
+            if (res.data?.link) {
+                // Open meeting in new tab
+                window.open(res.data.link, '_blank', 'noopener,noreferrer');
+                // Refresh chat to show the new message
+                if (activeTab === 'chat') {
+                    const chatRes = await chatAPI.getMessages(id);
+                    setMessages(chatRes.data || []);
+                }
+                alert('Meeting started! Client has been notified.');
+            }
+        } catch (err) {
+            console.error('Failed to start meeting:', err);
+            alert(err.response?.data?.message || 'Failed to start meeting');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
     const chatBasePath = location.pathname.includes('/lawyer/') ? '/lawyer/chat' : '/user/chat';
 
     // ── Loading / empty states ──
@@ -220,9 +242,22 @@ export default function CaseDetail() {
                     <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{caseData.title}</h1>
                     <p className="text-sm text-slate-400 mt-1">{caseData.caseNumber}</p>
                 </div>
-                <span className={`shrink-0 px-3.5 py-1 rounded-full text-xs font-semibold border ${status.color}`}>
-                    {status.label}
-                </span>
+                <div className="flex items-center gap-3">
+                    {isLawyer && ['OPEN', 'IN_PROGRESS', 'UNDER_REVIEW', 'PENDING_DOCS'].includes(caseData.status) && (
+                        <button
+                            onClick={handleStartMeeting}
+                            disabled={actionLoading === 'meeting'}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+                            title="Start a video meeting and notify the client"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                            {actionLoading === 'meeting' ? 'Starting...' : 'Video Call'}
+                        </button>
+                    )}
+                    <span className={`shrink-0 px-3.5 py-1 rounded-full text-xs font-semibold border ${status.color}`}>
+                        {status.label}
+                    </span>
+                </div>
             </div>
 
             {/* ── Tabs (at the top) ── */}
@@ -418,11 +453,24 @@ export default function CaseDetail() {
                         {documents.length === 0 ? (
                             <div className="col-span-full text-center py-12 text-slate-400 text-sm">No documents uploaded yet.</div>
                         ) : documents.map(d => (
-                            <div key={d.id} className="flex items-center gap-3.5 p-4 bg-slate-50 border border-slate-200 rounded-xl hover:shadow-md transition-shadow cursor-pointer">
+                            <div
+                                key={d.id}
+                                onClick={async () => {
+                                    try {
+                                        const res = await documentAPI.download(d.id);
+                                        if (res.data?.url) {
+                                            window.open(res.data.url, '_blank', 'noopener,noreferrer');
+                                        }
+                                    } catch (err) {
+                                        alert('Could not open document.');
+                                    }
+                                }}
+                                className="flex items-center gap-3.5 p-4 bg-slate-50 border border-slate-200 rounded-xl hover:shadow-md transition-shadow cursor-pointer"
+                            >
                                 <span className="text-2xl">📄</span>
                                 <div>
-                                    <h4 className="text-sm font-semibold text-slate-900">{d.title || d.originalName}</h4>
-                                    <p className="text-xs text-slate-400 mt-1">{d.fileType} · {(d.fileSize / 1024).toFixed(1)}KB · {new Date(d.createdAt).toLocaleDateString()}</p>
+                                    <h4 className="text-sm font-semibold text-slate-900">{d.description || d.originalName}</h4>
+                                    <p className="text-xs text-slate-400 mt-1">{d.type} · {(d.size / 1024).toFixed(1)}KB · {new Date(d.createdAt).toLocaleDateString()}</p>
                                 </div>
                             </div>
                         ))}

@@ -51,8 +51,6 @@ const envSchema = z.object({
 
     // Google OAuth + Calendar (Meet link generation)
     GOOGLE_CLIENT_ID: z.string().optional().default(''),
-    GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
-    GOOGLE_REFRESH_TOKEN: z.string().optional().default(''),
 
     // Email Configuration
     SMTP_HOST: z.string().default('smtp.gmail.com'),
