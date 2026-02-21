@@ -350,8 +350,13 @@ export const paymentAPI = {
 };
 
 export const notificationAPI = {
-    async getAll() {
-        const response = await apiClient.get('/notifications');
+    async getAll(filters = {}, options = {}) {
+        const params = {};
+        if (filters.page) params.page = filters.page;
+        if (filters.limit) params.limit = filters.limit;
+        if (filters.unreadOnly !== undefined) params.unreadOnly = filters.unreadOnly;
+
+        const response = await apiClient.get('/notifications', { params, ...options });
         return response.data;
     },
 

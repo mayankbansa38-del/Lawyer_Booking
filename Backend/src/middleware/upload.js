@@ -18,6 +18,7 @@ import { BadRequestError } from '../utils/errors.js';
  * Multer storage configuration
  * Uses memory storage for processing before upload to Supabase
  */
+
 const memoryStorage = multer.memoryStorage();
 
 /**

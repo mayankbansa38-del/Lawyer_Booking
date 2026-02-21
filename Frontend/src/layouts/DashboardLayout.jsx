@@ -137,10 +137,7 @@ export default function DashboardLayout({ role = 'user' }) {
     const isAdminRole = role === 'admin';
 
     // Notification hook for navbar badge
-    const { unreadCount, notifications, markAllAsRead } = useNotifications(
-        user?.id,
-        isAdminRole ? 'admin' : role === 'lawyer' ? 'lawyer' : 'client'
-    );
+    const { unreadCount, notifications, markAllAsRead } = useNotifications({ limit: 5 });
 
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const notificationRef = useRef(null);

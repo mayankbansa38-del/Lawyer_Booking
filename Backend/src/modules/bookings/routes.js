@@ -18,6 +18,7 @@ import { sendBookingConfirmationEmail, sendBookingCancellationEmail } from '../.
 import { parsePaginationParams } from '../../utils/pagination.js';
 import { createNotification } from '../notifications/routes.js';
 import logger from '../../utils/logger.js';
+import { generateMeetAndUpdateBooking } from '../../services/calendar.service.js';
 
 const router = Router();
 
@@ -405,6 +406,12 @@ router.put('/:id/confirm', authenticate, requireVerifiedLawyer, asyncHandler(asy
             meetingLink: meetingLink || undefined,
         },
     });
+
+    // Generate meeting link for video bookings (fire-and-forget)
+    if (booking.meetingType === 'VIDEO' && !meetingLink) {
+        generateMeetAndUpdateBooking({ bookingId: booking.id })
+            .catch(err => logger.error('Meet link generation failed', err));
+    }
 
     // Send confirmation email
     sendBookingConfirmationEmail({

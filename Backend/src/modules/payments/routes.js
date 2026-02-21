@@ -21,6 +21,7 @@ import env from '../../config/env.js';
 import logger from '../../utils/logger.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import { generateMeetAndUpdateBooking } from '../../services/calendar.service.js';
 
 const router = Router();
 
@@ -341,6 +342,12 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
         clientId: req.user.id,
     });
 
+    // Generate meeting link for video bookings (fire-and-forget)
+    if (result.booking.meetingType === 'VIDEO') {
+        generateMeetAndUpdateBooking({ bookingId: result.booking.id })
+            .catch(err => logger.error('Meet link generation failed (checkout)', err));
+    }
+
     return sendCreated(res, {
         message: 'Payment successful! Booking confirmed.',
         data: {
@@ -557,6 +564,12 @@ router.post('/verify', authenticate, asyncHandler(async (req, res) => {
         amount: payment.amount,
     });
 
+    // Generate meeting link for video bookings (fire-and-forget)
+    if (payment.booking.meetingType === 'VIDEO') {
+        generateMeetAndUpdateBooking({ bookingId: payment.bookingId })
+            .catch(err => logger.error('Meet link generation failed (verify)', err));
+    }
+
     return sendSuccess(res, {
         message: 'Payment verified successfully',
         bookingId: payment.bookingId,
@@ -651,6 +664,12 @@ async function handlePaymentCaptured(prisma, paymentData) {
     ]);
 
     logger.logBusiness('PAYMENT_CAPTURED_WEBHOOK', { paymentId: payment.id });
+
+    // Generate meeting link for video bookings (fire-and-forget)
+    if (payment.booking.meetingType === 'VIDEO') {
+        generateMeetAndUpdateBooking({ bookingId: payment.bookingId })
+            .catch(err => logger.error('Meet link generation failed (webhook)', err));
+    }
 }
 
 /**

@@ -54,9 +54,8 @@ export default function LawyerAppointments() {
         setActionLoading(appointmentId);
         try {
             await appointmentAPI.confirm(appointmentId);
-            setAppointments(prev =>
-                prev.map(apt => apt.id === appointmentId ? { ...apt, status: 'CONFIRMED' } : apt)
-            );
+            // Re-fetch to get the generated meetingLink from the backend
+            await fetchAppointments();
         } catch (error) {
             console.error('Error confirming appointment:', error);
             alert('Failed to confirm appointment.');
@@ -253,6 +252,17 @@ export default function LawyerAppointments() {
                                     )}
                                     {apt.status === 'CONFIRMED' && (
                                         <div className="flex sm:flex-col gap-2 flex-shrink-0">
+                                            {apt.meetingLink && (
+                                                <a
+                                                    href={apt.meetingLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                                >
+                                                    <ExternalLink className="w-4 h-4" />
+                                                    Join Call
+                                                </a>
+                                            )}
                                             <button
                                                 onClick={() => handleCancel(apt.id)}
                                                 disabled={isLoading}

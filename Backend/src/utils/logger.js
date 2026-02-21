@@ -9,6 +9,7 @@
  */
 
 import winston from 'winston';
+import 'winston-mongodb';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -63,8 +64,20 @@ const transports = [
     }),
 ];
 
-// Add file transports ONLY in development (Avoids Read-Only FS errors on Vercel)
-if (NODE_ENV !== 'production') {
+// Add MongoDB Transport in production, otherwise use File transports
+if (NODE_ENV === 'production' && process.env.MONGODB_URI) {
+    transports.push(
+        new winston.transports.MongoDB({
+            level: 'info', // Record both info and errors to DB
+            db: process.env.MONGODB_URI,
+            options: { useUnifiedTopology: true },
+            collection: 'system_logs',
+            storeHost: true,
+            capped: true,
+            cappedMax: 100000
+        })
+    );
+} else if (NODE_ENV !== 'production') {
     transports.push(
         // Error log file
         new winston.transports.File({

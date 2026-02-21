@@ -49,8 +49,10 @@ const envSchema = z.object({
     JWT_REFRESH_SECRET: z.string().min(16).default('default-refresh-secret-change-in-production'),
     JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
 
-    // Google OAuth
+    // Google OAuth + Calendar (Meet link generation)
     GOOGLE_CLIENT_ID: z.string().optional().default(''),
+    GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
+    GOOGLE_REFRESH_TOKEN: z.string().optional().default(''),
 
     // Email Configuration
     SMTP_HOST: z.string().default('smtp.gmail.com'),
