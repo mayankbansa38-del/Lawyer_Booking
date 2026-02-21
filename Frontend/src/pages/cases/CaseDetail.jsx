@@ -155,18 +155,23 @@ export default function CaseDetail() {
         }
     };
 
-    const handlePay = async (paymentId) => {
-        if (!window.confirm('Confirm payment? This will process the payment immediately.')) return;
-        setActionLoading(paymentId);
-        try {
-            await casePaymentAPI.payPayment(paymentId);
-            const res = await casePaymentAPI.getCasePayments(id);
-            setPayments(res.data || []);
-        } catch (err) {
-            alert(err.response?.data?.message || 'Payment failed');
-        } finally {
-            setActionLoading(null);
-        }
+    const handlePay = (paymentId, amountInPaise, description) => {
+        if (!window.confirm('Confirm payment? You will be redirected to the secure checkout page.')) return;
+
+        // Store payment info for the CheckoutPage (same pattern as BookingPage)
+        const pendingBooking = {
+            casePaymentId: paymentId,
+            amount: amountInPaise / 100,
+            description: description || 'Case Payment',
+            type: 'case_payment',
+            caseId: id,
+            caseTitle: caseData?.title,
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(pendingBooking));
+
+        // Navigate to the checkout page using the lawyer's ID
+        const lawyerId = caseData?.lawyer?.id || caseData?.lawyerId;
+        navigate(`/lawyers/${lawyerId}/checkout`);
     };
 
     const handleDeny = async (paymentId) => {
@@ -416,7 +421,7 @@ export default function CaseDetail() {
                                                 <span className="text-xs text-slate-400">{new Date(p.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                                 {canAct && (
                                                     <div className="flex gap-2">
-                                                        <button onClick={() => handlePay(p.id)} disabled={busy} className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600 disabled:opacity-50 transition-colors">
+                                                        <button onClick={() => handlePay(p.id, p.amountInPaise, p.description)} disabled={busy} className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-600 disabled:opacity-50 transition-colors">
                                                             {busy ? 'Processing...' : 'Pay Now'}
                                                         </button>
                                                         <button onClick={() => handleDeny(p.id)} disabled={busy} className="px-3 py-1.5 text-red-500 border border-red-200 rounded-lg text-xs font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors">

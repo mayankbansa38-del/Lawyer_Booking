@@ -26,7 +26,7 @@ function formatExpiry(value) {
 
 // ─── Success Screen ─────────────────────────────────────────────────────────
 
-function PaymentSuccess({ lawyer, booking, paymentResult }) {
+function PaymentSuccess({ lawyer, booking, paymentResult, isCasePayment }) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full text-center animate-fade-in">
@@ -39,7 +39,7 @@ function PaymentSuccess({ lawyer, booking, paymentResult }) {
                 </div>
 
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Payment Successful!</h2>
-                <p className="text-gray-500 mb-6">Your consultation has been booked and confirmed.</p>
+                <p className="text-gray-500 mb-6">{isCasePayment ? 'Your case payment has been processed successfully.' : 'Your consultation has been booked and confirmed.'}</p>
 
                 {/* Booking receipt */}
                 <div className="bg-gray-50 rounded-xl p-5 mb-6 text-left space-y-3">
@@ -94,10 +94,10 @@ function PaymentSuccess({ lawyer, booking, paymentResult }) {
 
                 <div className="flex flex-col sm:flex-row gap-3">
                     <Link
-                        to="/user/appointments"
+                        to={isCasePayment ? `/user/cases/${booking.caseId}` : '/user/appointments'}
                         className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
                     >
-                        View My Appointments
+                        {isCasePayment ? 'Back to Case' : 'View My Appointments'}
                     </Link>
                     <Link
                         to="/"
@@ -242,7 +242,7 @@ export default function CheckoutPage() {
     // ── Success state ───────────────────────────────────────────────────────
 
     if (success) {
-        return <PaymentSuccess lawyer={lawyer} booking={{ ...booking, amount }} paymentResult={paymentResult} />;
+        return <PaymentSuccess lawyer={lawyer} booking={{ ...booking, amount }} paymentResult={paymentResult} isCasePayment={!!booking.casePaymentId} />;
     }
 
     // ── Main render ─────────────────────────────────────────────────────────
@@ -428,7 +428,7 @@ export default function CheckoutPage() {
                     {/* ── RIGHT: Booking Summary ────────────────────────────── */}
                     <div className="lg:col-span-5">
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-7 sticky top-8">
-                            <h3 className="text-lg font-bold text-gray-900 mb-5">Booking Summary</h3>
+                            <h3 className="text-lg font-bold text-gray-900 mb-5">{booking.casePaymentId ? 'Payment Summary' : 'Booking Summary'}</h3>
 
                             {/* Lawyer info */}
                             <div className="flex items-center gap-4 mb-6 pb-5 border-b border-gray-100">
@@ -447,20 +447,22 @@ export default function CheckoutPage() {
                             <div className="space-y-4 mb-6">
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                                        <Video className="w-5 h-5 text-blue-500" />
+                                        {booking.casePaymentId ? <CreditCard className="w-5 h-5 text-blue-500" /> : <Video className="w-5 h-5 text-blue-500" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-gray-800">
-                                            {booking.type === 'video' || booking.meetingType === 'VIDEO' ? 'Video Consultation' : 'In-Person Consultation'} (60 min)
+                                            {booking.casePaymentId
+                                                ? (booking.description || 'Case Payment')
+                                                : `${booking.type === 'video' || booking.meetingType === 'VIDEO' ? 'Video Consultation' : 'In-Person Consultation'} (60 min)`}
                                         </p>
-                                        <p className="text-xs text-gray-400">Legal Advice Session</p>
+                                        <p className="text-xs text-gray-400">{booking.casePaymentId ? (booking.caseTitle || 'Case Payment') : 'Legal Advice Session'}</p>
                                     </div>
                                     <span className="text-sm font-bold text-gray-800">₹{Number(amount).toLocaleString('en-IN')}</span>
                                 </div>
                             </div>
 
                             {/* Booking details */}
-                            {booking.date && (
+                            {booking.date && !booking.casePaymentId && (
                                 <div className="space-y-2 mb-6 pb-5 border-b border-gray-100 text-sm">
                                     <div className="flex items-center gap-2 text-gray-600">
                                         <Calendar className="w-4 h-4 text-blue-500" />
@@ -495,9 +497,6 @@ export default function CheckoutPage() {
                                         <p className="text-2xl font-bold text-blue-600">₹{Number(amount).toLocaleString('en-IN')}</p>
                                     </div>
                                     <p className="text-[10px] text-gray-400 pb-1">Currency: INR</p>
-                                </div>
-                                <div className="mt-4 bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg border border-red-100 text-center">
-                                    Note: Consultation fees are non-refundable.
                                 </div>
                             </div>
                         </div>
