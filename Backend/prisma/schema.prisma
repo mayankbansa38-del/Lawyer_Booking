@@ -205,7 +205,6 @@ model Booking {
   @@index([status])
   @@index([scheduledDate])
   @@index([bookingNumber])
-  @@unique([lawyerId, scheduledDate, scheduledTime], map: "unique_lawyer_slot")
   @@map("bookings")
 }
 
