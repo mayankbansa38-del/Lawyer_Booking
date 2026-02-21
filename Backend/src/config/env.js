@@ -59,10 +59,6 @@ const envSchema = z.object({
     SMTP_PASS: z.string().optional().default(''),
     EMAIL_FROM: z.string().default('NyayBooker <noreply@nyaybooker.com>'),
 
-    // Payment Gateway
-    RAZORPAY_KEY_ID: z.string().optional().default(''),
-    RAZORPAY_KEY_SECRET: z.string().optional().default(''),
-
     // Rate Limiting
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().default(9000000000), // 15 minutes
     RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().default(1000000000),

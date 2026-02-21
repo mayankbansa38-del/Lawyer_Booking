@@ -194,39 +194,6 @@ export function generateBookingNumber() {
     return `NB-${dateStr}-${random}`;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// HASHING UTILITIES
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Create HMAC signature
- * 
- * @param {string} data - Data to sign
- * @param {string} secret - Secret key
- * @returns {string} Hex-encoded HMAC
- */
-export function createHmac(data, secret) {
-    return crypto.createHmac('sha256', secret).update(data).digest('hex');
-}
-
-/**
- * Verify Razorpay payment signature
- * 
- * @param {string} orderId - Razorpay order ID
- * @param {string} paymentId - Razorpay payment ID
- * @param {string} signature - Razorpay signature
- * @returns {boolean} Whether signature is valid
- */
-export function verifyRazorpaySignature(orderId, paymentId, signature) {
-    const data = `${orderId}|${paymentId}`;
-    const expectedSignature = createHmac(data, env.RAZORPAY_KEY_SECRET);
-
-    return crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature)
-    );
-}
-
 export default {
     hashPassword,
     comparePassword,
@@ -238,6 +205,4 @@ export default {
     generateRandomToken,
     generateUrlSafeToken,
     generateBookingNumber,
-    createHmac,
-    verifyRazorpaySignature,
 };

@@ -341,47 +341,6 @@ export async function sendBookingCancellationEmail({ to, name, booking, reason }
 }
 
 /**
- * Send booking reminder email
- * 
- * @param {Object} options
- * @param {string} options.to - Recipient email
- * @param {string} options.name - Recipient name
- * @param {Object} options.booking - Booking details
- * @param {Object} options.lawyer - Lawyer details
- * @returns {Promise<Object>} Send result
- */
-export async function sendBookingReminderEmail({ to, name, booking, lawyer }) {
-  const bookingUrl = `${env.FRONTEND_URL}/bookings/${booking.id}`;
-
-  const html = wrapEmailTemplate(`
-    <h2>Upcoming Consultation Reminder</h2>
-    <p>Hi ${name},</p>
-    <p>This is a reminder for your upcoming consultation:</p>
-    
-    <div class="info-box">
-      <p><strong>Lawyer:</strong> ${lawyer.name}</p>
-      <p><strong>Date:</strong> ${booking.date}</p>
-      <p><strong>Time:</strong> ${booking.time}</p>
-      <p><strong>Duration:</strong> ${booking.duration} minutes</p>
-      ${booking.meetingLink ? `<p><strong>Meeting Link:</strong> <a href="${booking.meetingLink}">${booking.meetingLink}</a></p>` : ''}
-    </div>
-    
-    <p style="text-align: center;">
-      <a href="${bookingUrl}" class="button">View Booking</a>
-    </p>
-    
-    <p>Please be ready 5 minutes before the scheduled time.</p>
-  `);
-
-  return sendEmail({
-    to,
-    subject: `Reminder: Consultation Tomorrow | NyayBooker`,
-    html,
-    text: `Hi ${name},\n\nReminder: You have a consultation with ${lawyer.name} on ${booking.date} at ${booking.time}.\n\nView details: ${bookingUrl}`,
-  });
-}
-
-/**
  * Send welcome email after registration
  * 
  * @param {Object} options
@@ -545,7 +504,6 @@ export default {
   sendPasswordResetEmail,
   sendBookingConfirmationEmail,
   sendBookingCancellationEmail,
-  sendBookingReminderEmail,
   sendWelcomeEmail,
   sendPaymentConfirmationEmail,
   sendPaymentReceivedEmail,

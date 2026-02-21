@@ -303,16 +303,6 @@ export const clientAPI = {
 };
 
 export const paymentAPI = {
-    async createOrder(bookingId) {
-        const response = await apiClient.post('/payments/create-order', { bookingId });
-        return response.data;
-    },
-
-    async verify(data) {
-        const response = await apiClient.post('/payments/verify', data);
-        return response.data;
-    },
-
     async getAll(filters = {}) {
         const params = {};
         if (filters.status) params.status = filters.status;
