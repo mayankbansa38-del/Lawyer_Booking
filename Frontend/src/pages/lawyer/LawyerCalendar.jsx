@@ -242,10 +242,15 @@ export default function LawyerCalendar() {
                                                 <span>{apt.time} - {calculateEndTime(apt.time, apt.duration)}</span>
                                             </div>
 
-                                            {apt.meetingType === 'VIDEO' && apt.status === 'CONFIRMED' && (
-                                                <button className="mt-3 w-full py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                                            {apt.meetingType === 'VIDEO' && apt.status === 'CONFIRMED' && apt.meetingLink && (
+                                                <a
+                                                    href={apt.meetingLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="mt-3 block w-full py-1.5 text-xs font-semibold text-center text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                                                >
                                                     Join Meeting
-                                                </button>
+                                                </a>
                                             )}
                                         </div>
                                     </div>

@@ -32,7 +32,7 @@ router.post('/',
     handleUpload(uploadDocument),
     asyncHandler(async (req, res) => {
         const prisma = getPrismaClient();
-        const { type = 'OTHER', description, isPublic = false } = req.body;
+        const { type = 'OTHER', description, isPublic = false, caseId } = req.body;
         const file = req.file;
 
         if (!file) {
@@ -64,6 +64,7 @@ router.post('/',
                 storageUrl: url,
                 isPublic: isPublic === 'true' || isPublic === true,
                 description,
+                caseId: caseId || null,
             },
         });
 
@@ -86,7 +87,7 @@ router.post('/',
 router.get('/', authenticate, asyncHandler(async (req, res) => {
     const prisma = getPrismaClient();
     const { page, limit, skip } = parsePaginationParams(req.query);
-    const { type } = req.query;
+    const { type, caseId } = req.query;
 
     const where = {
         userId: req.user.id,
@@ -95,6 +96,9 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
 
     if (type) {
         where.type = type.toUpperCase();
+    }
+    if (caseId) {
+        where.caseId = caseId;
     }
 
     const [documents, total] = await Promise.all([

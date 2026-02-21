@@ -614,4 +614,58 @@ router.get('/:id/history', authenticate, asyncHandler(async (req, res) => {
     return sendPaginated(res, { data: transformed, total, page, limit });
 }));
 
+/**
+ * @route   POST /api/v1/cases/:id/meeting
+ * @desc    Generate a case meeting link, notify client, post message in chat
+ * @access  Private (Assigned Lawyer only)
+ */
+router.post('/:id/meeting', authenticate, asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+
+    const caseData = await prisma.case.findUnique({
+        where: { id: req.params.id },
+        include: {
+            lawyer: { select: { userId: true } },
+        },
+    });
+
+    if (!caseData) throw new NotFoundError('Case');
+
+    if (caseData.lawyer.userId !== req.user.id && req.user.role !== 'ADMIN') {
+        throw new ForbiddenError('Only the assigned lawyer can generate a meeting for this case');
+    }
+
+    if (!['OPEN', 'IN_PROGRESS', 'UNDER_REVIEW', 'PENDING_DOCS'].includes(caseData.status)) {
+        throw new BadRequestError(`Cannot start a meeting for a case with status "${caseData.status}".`);
+    }
+
+    // Generate link deterministically from case ID
+    const roomId = req.params.id.replace(/[^a-zA-Z0-9]/g, '');
+    const meetLink = `https://meet.jit.si/NyayBooker_Case_${roomId}`;
+
+    // Create a message in the case chat
+    await prisma.message.create({
+        data: {
+            content: `I have started a video meeting. Please join here:\n${meetLink}`,
+            caseId: req.params.id,
+            senderId: req.user.id,
+        }
+    });
+
+    // Notify the client
+    createNotification({
+        userId: caseData.clientId,
+        type: 'CASE',
+        title: 'Video Meeting Started',
+        message: `Your lawyer has started a video meeting for case "${caseData.title}".`,
+        actionUrl: `/user/cases/${req.params.id}`,
+        actionLabel: 'View Case',
+        metadata: { caseId: req.params.id, link: meetLink },
+    }).catch(err => logger.error('Failed to create case meeting notification', err));
+
+    logger.logBusiness('CASE_MEETING_STARTED', { caseId: req.params.id, lawyerId: caseData.lawyerId });
+
+    return sendSuccess(res, { data: { link: meetLink }, message: 'Meeting started and client notified' });
+}));
+
 export default router;

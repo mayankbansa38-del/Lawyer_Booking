@@ -53,10 +53,23 @@ export default function LawyerDocuments() {
         setUploading(true);
         try {
             const formData = new FormData();
-            formData.append('file', selectedFile);
-            formData.append('title', uploadData.title || selectedFile.name);
-            if (uploadData.caseId) formData.append('caseId', uploadData.caseId);
-            formData.append('documentType', uploadData.documentType);
+            formData.append('document', selectedFile); // Backend expects 'document'
+
+            if (uploadData.title) {
+                formData.append('description', uploadData.title);
+            }
+            if (uploadData.caseId) {
+                formData.append('caseId', uploadData.caseId);
+            }
+
+            // Map frontend document types to Prisma DocumentType enum
+            const typeMap = {
+                'Legal Document': 'CASE_DOCUMENT',
+                'Evidence': 'CASE_DOCUMENT',
+                'Court Document': 'CASE_DOCUMENT',
+                'Other': 'OTHER'
+            };
+            formData.append('type', typeMap[uploadData.documentType] || 'OTHER');
 
             await documentAPI.upload(formData);
             setShowUploadModal(false);
@@ -73,17 +86,18 @@ export default function LawyerDocuments() {
 
     const handleDownload = async (doc) => {
         try {
-            const response = await documentAPI.download(doc.id);
-            // Create blob URL and trigger download
-            const blob = new Blob([response.data], { type: response.headers?.['content-type'] || 'application/octet-stream' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = doc.originalName || doc.title || 'document';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
+            const res = await documentAPI.download(doc.id);
+            if (res.data?.url) {
+                // Open the signed URL directly. Usually browsers will download if content-disposition is attachment, or we can just open it.
+                // Supabase URLs usually display in browser. Since it's a download button, we can try to force download using an anchor tag.
+                const a = document.createElement('a');
+                a.href = res.data.url;
+                a.download = doc.originalName || doc.description || 'document';
+                a.target = '_blank'; // Fallback in case it doesn't download directly
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }
         } catch (error) {
             console.error('Error downloading document:', error);
             alert('Download failed. Please try again.');
@@ -92,10 +106,10 @@ export default function LawyerDocuments() {
 
     const handleView = async (doc) => {
         try {
-            const response = await documentAPI.download(doc.id);
-            const blob = new Blob([response.data], { type: response.headers?.['content-type'] || 'application/pdf' });
-            const url = window.URL.createObjectURL(blob);
-            window.open(url, '_blank');
+            const res = await documentAPI.download(doc.id);
+            if (res.data?.url) {
+                window.open(res.data.url, '_blank', 'noopener,noreferrer');
+            }
         } catch (error) {
             console.error('Error viewing document:', error);
             alert('Could not open document.');
@@ -114,7 +128,7 @@ export default function LawyerDocuments() {
     };
 
     const filteredDocs = documents.filter(doc => {
-        const name = doc.title || doc.originalName || '';
+        const name = doc.description || doc.originalName || '';
         const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCase = selectedCase === 'all' || doc.caseId === selectedCase;
         return matchesSearch && matchesCase;
@@ -253,8 +267,8 @@ export default function LawyerDocuments() {
                                     <FileText className="w-6 h-6 text-red-500" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-gray-900 truncate">{doc.title || doc.originalName}</h4>
-                                    <p className="text-sm text-gray-500">{doc.fileSize ? `${(doc.fileSize / 1024).toFixed(1)} KB` : '—'}</p>
+                                    <h4 className="font-medium text-gray-900 truncate">{doc.description || doc.originalName}</h4>
+                                    <p className="text-sm text-gray-500">{doc.size ? `${(doc.size / 1024).toFixed(1)} KB` : '—'}</p>
                                 </div>
                                 <button
                                     onClick={() => handleDelete(doc)}
