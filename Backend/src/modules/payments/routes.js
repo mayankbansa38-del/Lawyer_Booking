@@ -129,15 +129,49 @@ router.get('/earnings-summary', authenticate, asyncHandler(async (req, res) => {
 
     const lawyer = await prisma.lawyer.findUnique({
         where: { userId: req.user.id },
-        select: { id: true, totalEarnings: true },
+        select: { id: true },
     });
 
     if (!lawyer) {
         throw new NotFoundError('Lawyer profile');
     }
 
-    // Aggregate payment stats
-    const [completed, pending] = await Promise.all([
+    // Get today's and this month's start dates
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    // Aggregate all stats from actual payments
+    const [allTimePayments, monthlyPayments, todayPayments, completed, pending] = await Promise.all([
+        // Total earnings = SUM of all COMPLETED payments
+        prisma.payment.aggregate({
+            where: {
+                booking: { lawyerId: lawyer.id },
+                status: 'COMPLETED',
+            },
+            _sum: { amount: true },
+        }),
+        // This month earnings
+        prisma.payment.aggregate({
+            where: {
+                booking: { lawyerId: lawyer.id },
+                status: 'COMPLETED',
+                createdAt: { gte: startOfMonth },
+            },
+            _sum: { amount: true },
+        }),
+        // Today's earnings
+        prisma.payment.aggregate({
+            where: {
+                booking: { lawyerId: lawyer.id },
+                status: 'COMPLETED',
+                createdAt: { gte: startOfToday },
+            },
+            _sum: { amount: true },
+        }),
         prisma.payment.count({
             where: {
                 booking: { lawyerId: lawyer.id },
@@ -152,24 +186,11 @@ router.get('/earnings-summary', authenticate, asyncHandler(async (req, res) => {
         }),
     ]);
 
-    // Get this month's earnings
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const monthlyPayments = await prisma.payment.aggregate({
-        where: {
-            booking: { lawyerId: lawyer.id },
-            status: 'COMPLETED',
-            processedAt: { gte: startOfMonth },
-        },
-        _sum: { amount: true },
-    });
-
     return sendSuccess(res, {
         data: {
-            totalEarnings: Number(lawyer.totalEarnings),
+            totalEarnings: Number(allTimePayments._sum.amount || 0),
             monthlyEarnings: Number(monthlyPayments._sum.amount || 0),
+            todayEarnings: Number(todayPayments._sum.amount || 0),
             completedPayments: completed,
             pendingPayments: pending,
         },
