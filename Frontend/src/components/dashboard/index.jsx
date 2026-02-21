@@ -75,10 +75,12 @@ export function AppointmentCard({ appointment, showClient = true, showLawyer = f
                         <h4 className="font-semibold text-gray-900 truncate">
                             {showClient ? appointment.clientName : appointment.lawyerName}
                         </h4>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${statusColors[status]}`}>
-                            <StatusIcon className="w-3 h-3" />
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${statusColors[status]}`}>
+                                <StatusIcon className="w-3 h-3" />
+                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                            </span>
+                        </div>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{appointment.caseType}</p>
                     <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
@@ -93,6 +95,7 @@ export function AppointmentCard({ appointment, showClient = true, showLawyer = f
                     </div>
                 </div>
             </div>
+            {/* Pending: Confirm + Reject */}
             {status === 'pending' && onAction && (
                 <div className="flex gap-2 mt-4 pt-4 border-t">
                     <button
@@ -106,6 +109,28 @@ export function AppointmentCard({ appointment, showClient = true, showLawyer = f
                         className="flex-1 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors"
                     >
                         Reject
+                    </button>
+                </div>
+            )}
+            {/* Confirmed: Join Call + Cancel */}
+            {status === 'confirmed' && onAction && (
+                <div className="flex gap-2 mt-4 pt-4 border-t">
+                    {appointment.meetingLink && (
+                        <a
+                            href={appointment.meetingLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors text-center flex items-center justify-center gap-1.5"
+                        >
+                            <CheckCircle className="w-4 h-4" />
+                            Join Call
+                        </a>
+                    )}
+                    <button
+                        onClick={() => onAction('cancel', appointment.id)}
+                        className="flex-1 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                        Cancel
                     </button>
                 </div>
             )}
