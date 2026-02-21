@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Search, MapPin, Briefcase, Trophy, DollarSign, Clock, BookOpen, X, ChevronDown, Filter } from 'lucide-react';
 import { DualRangeSlider } from './DualRangeSlider';
-import { locations, specialties, availabilityOptions } from '../constants/filters';
+import { locations, specialties } from '../constants/filters';
 
 export function MobileFilterBar({ filters, setFilters, totalResults, onClear }) {
     const [isOpen, setIsOpen] = useState(false);

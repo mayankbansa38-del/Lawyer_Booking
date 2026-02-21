@@ -153,7 +153,7 @@ function ChatWindow({ caseId, messages, onSend, typingUser, loading }) {
 
 /* ──────────────────── ChatPage ──────────────────── */
 export default function ChatPage() {
-    const { socket, connected, joinCase, leaveCase, sendMessage: socketSend, sendTyping, markRead } = useSocket();
+    const { socket, connected, joinCase, leaveCase, sendMessage: socketSend, markRead } = useSocket();
     const [conversations, setConversations] = useState([]);
     const [activeCaseId, setActiveCaseId] = useState(null);
     const [messages, setMessages] = useState([]);

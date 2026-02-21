@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Briefcase, ChevronLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { caseAPI, appointmentAPI } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 
 const PRIORITIES = [
     { value: 'LOW', label: 'Low', color: 'bg-gray-100 text-gray-700' },
@@ -19,7 +18,6 @@ const PRIORITIES = [
 export default function CreateCase() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { user } = useAuth();
     const preselectedBookingId = searchParams.get('bookingId');
 
     const [bookings, setBookings] = useState([]);
@@ -53,7 +51,6 @@ export default function CreateCase() {
         fetchBookings();
     }, [preselectedBookingId]);
 
-    const selectedBooking = bookings.find(b => b.id === form.bookingId);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

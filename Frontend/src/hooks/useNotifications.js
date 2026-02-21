@@ -45,7 +45,7 @@ export const useNotifications = (params = { page: 1, limit: 10, unreadOnly: fals
 
         try {
             await notificationAPI.markAsRead(id);
-        } catch (error) {
+        } catch {
             // Revert on failure
             fetchNotifications();
         }
@@ -58,7 +58,7 @@ export const useNotifications = (params = { page: 1, limit: 10, unreadOnly: fals
 
         try {
             await notificationAPI.markAllAsRead();
-        } catch (error) {
+        } catch {
             // Revert on failure
             fetchNotifications();
         }

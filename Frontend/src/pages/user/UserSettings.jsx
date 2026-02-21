@@ -107,6 +107,7 @@ export default function UserSettings() {
                     <AvatarUpload
                         initialImage={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'user'}`}
                         size="lg" // w-32 h-32
+                        // eslint-disable-next-line no-unused-vars
                         onUploadSuccess={(url) => {
                             setMessage({ type: 'success', text: 'Profile photo updated successfully!' });
                             // Optionally update local user state if needed immediately,

@@ -24,7 +24,7 @@ const ForgotPassword = () => {
             await authApi.forgotPassword(email);
             // Always show success — backend intentionally doesn't reveal if email exists
             setSuccess(true);
-        } catch (err) {
+        } catch {
             // Non-retryable server errors only (network down, 500, etc.)
             setError("Something went wrong. Please try again later.");
         } finally {

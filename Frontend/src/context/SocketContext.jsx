@@ -13,12 +13,13 @@ export function SocketProvider({ children }) {
     const { isAuthenticated, user } = useAuth();
     const socketRef = useRef(null);
     const [connected, setConnected] = useState(false);
+    const [socket, setSocket] = useState(null);
 
     useEffect(() => {
         const token = localStorage.getItem('nyaybooker_access_token');
         if (!isAuthenticated || !user || !token) return;
 
-        const socket = io(SOCKET_URL, {
+        const sock = io(SOCKET_URL, {
             auth: { token },
             transports: ['websocket', 'polling'], // Try websocket first
             reconnection: true,
@@ -26,25 +27,27 @@ export function SocketProvider({ children }) {
             reconnectionDelay: 1000,
         });
 
-        socket.on('connect', () => {
+        sock.on('connect', () => {
             console.log('[Socket] Connected');
             setConnected(true);
         });
 
-        socket.on('disconnect', (reason) => {
+        sock.on('disconnect', (reason) => {
             console.warn('[Socket] Disconnected:', reason);
             setConnected(false);
         });
 
-        socket.on('connect_error', (err) => {
+        sock.on('connect_error', (err) => {
             console.warn('[Socket] Connection error:', err.message);
         });
 
-        socketRef.current = socket;
+        socketRef.current = sock;
+        setSocket(sock);
 
         return () => {
-            socket.disconnect();
+            sock.disconnect();
             socketRef.current = null;
+            setSocket(null);
             setConnected(false);
         };
     }, [isAuthenticated, user]);
@@ -70,7 +73,7 @@ export function SocketProvider({ children }) {
     }, []);
 
     const value = {
-        socket: socketRef.current,
+        socket,
         connected,
         joinCase,
         leaveCase,

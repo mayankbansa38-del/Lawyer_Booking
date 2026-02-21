@@ -71,27 +71,42 @@ export const isTokenExpired = (token) => {
     }
 };
 
+// Shared promise for proactive token refresh (prevents thundering herd)
+let proactiveRefreshPromise = null;
+
 // Request interceptor - add auth token (with expiry pre-check)
 apiClient.interceptors.request.use(
     async (config) => {
-        const token = getAccessToken();
+        let token = getAccessToken();
         if (token) {
             if (isTokenExpired(token)) {
-                // Token expired — try refresh before sending the request
-                const refreshToken = getRefreshToken();
-                if (refreshToken) {
-                    try {
-                        const response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-                        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-                        setTokens(accessToken, newRefreshToken);
-                        config.headers.Authorization = `Bearer ${accessToken}`;
-                    } catch {
+                // Token expired — refresh once, share the promise across concurrent requests
+                if (!proactiveRefreshPromise) {
+                    const refreshToken = getRefreshToken();
+                    if (!refreshToken) {
                         clearTokens();
                         return Promise.reject(new Error('Session expired'));
                     }
-                } else {
-                    clearTokens();
-                    return Promise.reject(new Error('Session expired'));
+                    proactiveRefreshPromise = axios
+                        .post(`${API_URL}/auth/refresh`, { refreshToken })
+                        .then((response) => {
+                            const { accessToken, refreshToken: newRT } = response.data.data;
+                            setTokens(accessToken, newRT);
+                            return accessToken;
+                        })
+                        .catch(() => {
+                            clearTokens();
+                            throw new Error('Session expired');
+                        })
+                        .finally(() => {
+                            proactiveRefreshPromise = null;
+                        });
+                }
+                try {
+                    token = await proactiveRefreshPromise;
+                    config.headers.Authorization = `Bearer ${token}`;
+                } catch (err) {
+                    return Promise.reject(err);
                 }
             } else {
                 config.headers.Authorization = `Bearer ${token}`;

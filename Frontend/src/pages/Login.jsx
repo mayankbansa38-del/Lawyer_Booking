@@ -50,7 +50,7 @@ const Login = () => {
       } else {
         setError(result.error || "Login failed. Please check your credentials.");
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -72,7 +72,7 @@ const Login = () => {
       } else {
         setError(result.error || "Google login failed.");
       }
-    } catch (err) {
+    } catch {
       setError("Google login failed. Please try again.");
     } finally {
       setIsSubmitting(false);

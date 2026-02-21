@@ -3,14 +3,12 @@
  * Premium design with stat cards and improved notification list
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Bell, Check, Mail, MailOpen, CheckCheck } from 'lucide-react';
 import { PageHeader, NotificationCard, EmptyState } from '../../components/dashboard';
-import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
 
 export default function UserNotifications() {
-    const { user } = useAuth();
     const [filter, setFilter] = useState('all');
 
     const { notifications, unreadCount, loading, markAsRead: handleMarkRead, markAllAsRead: handleMarkAllRead } = useNotifications({ limit: 50 });

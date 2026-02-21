@@ -3,14 +3,12 @@
  * Premium design with stat cards and improved notification list
  */
 
-import { useState, useEffect } from 'react';
-import { Bell, Check, Mail, MailOpen, CheckCheck } from 'lucide-react';
-import { PageHeader, NotificationCard, EmptyState } from '../../components/dashboard';
-import { useAuth } from '../../context/AuthContext';
+import { useState } from 'react';
+import { Bell, Mail, MailOpen, CheckCheck } from 'lucide-react';
+import { NotificationCard, EmptyState } from '../../components/dashboard';
 import { useNotifications } from '../../hooks/useNotifications';
 
 export default function LawyerNotifications() {
-    const { user } = useAuth();
     const [filter, setFilter] = useState('all');
 
     const { notifications, unreadCount, loading, markAsRead: handleMarkRead, markAllAsRead: handleMarkAllRead } = useNotifications({ limit: 50 });

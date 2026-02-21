@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { PageHeader, StatCard } from '../../components/dashboard';
 import { paymentAPI, lawyerAPI } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 
 // ─── Status Badge Component ──────────────────────────────────────────────────
 
@@ -277,7 +276,6 @@ function exportCSV(payments) {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function LawyerEarnings() {
-    const { user } = useAuth();
     const [payments, setPayments] = useState([]);
     const [summary, setSummary] = useState({
         totalEarnings: 0,
@@ -369,8 +367,8 @@ export default function LawyerEarnings() {
                                 key={f}
                                 onClick={() => setFilter(f)}
                                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${filter === f
-                                        ? 'bg-blue-600 text-white shadow-sm'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}
                             >
                                 {f.charAt(0).toUpperCase() + f.slice(1)}

@@ -72,6 +72,7 @@ export default function UserPayments() {
     const total = payments.filter(p => p.status === 'COMPLETED').reduce((sum, p) => sum + p.amount, 0);
     const pending = payments.filter(p => p.status === 'PENDING').reduce((sum, p) => sum + p.amount, 0);
 
+    // eslint-disable-next-line no-unused-vars
     const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-start justify-between">
@@ -177,8 +178,8 @@ export default function UserPayments() {
                                         <td className="px-5 py-4 text-sm font-semibold text-gray-900">₹{payment.amount.toLocaleString('en-IN')}</td>
                                         <td className="px-5 py-4">
                                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${payment.status === 'COMPLETED' ? 'bg-green-100 text-green-700'
-                                                    : payment.status === 'FAILED' ? 'bg-red-100 text-red-700'
-                                                        : 'bg-yellow-100 text-yellow-700'
+                                                : payment.status === 'FAILED' ? 'bg-red-100 text-red-700'
+                                                    : 'bg-yellow-100 text-yellow-700'
                                                 }`}>
                                                 {payment.status === 'COMPLETED' ? <CheckCircle className="w-3 h-3" />
                                                     : payment.status === 'FAILED' ? <XCircle className="w-3 h-3" />

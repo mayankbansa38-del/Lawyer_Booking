@@ -504,7 +504,7 @@ export default function CaseDetail() {
                                                 if (res.data?.url) {
                                                     window.open(res.data.url, '_blank', 'noopener,noreferrer');
                                                 }
-                                            } catch (err) {
+                                            } catch {
                                                 alert('Could not open document.');
                                             }
                                         }}
@@ -524,7 +524,7 @@ export default function CaseDetail() {
                                                 try {
                                                     await documentAPI.delete(d.id);
                                                     setDocuments(docs => docs.filter(doc => doc.id !== d.id));
-                                                } catch (err) {
+                                                } catch {
                                                     alert('Failed to delete document');
                                                 }
                                             }}

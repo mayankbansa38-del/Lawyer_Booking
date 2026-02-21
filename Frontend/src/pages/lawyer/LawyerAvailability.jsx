@@ -92,7 +92,7 @@ export default function LawyerAvailability() {
         try {
             await lawyerAPI.updateProfile(user?.lawyer?.id || user?.id, { availability: workingHours });
             setMessage({ type: 'success', text: 'Availability updated successfully!' });
-        } catch (error) {
+        } catch {
             setMessage({ type: 'error', text: 'Failed to update. Please try again.' });
         } finally {
             setSaving(false);

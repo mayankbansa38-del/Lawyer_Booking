@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { Calendar, Clock, ChevronLeft, ChevronRight, Video, MapPin, CreditCard, CheckCircle } from 'lucide-react';
-import { lawyerAPI, appointmentAPI } from '../../services/api';
+import { lawyerAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 // Convert 24h time to 12h format (e.g., "13:00" → "1:00 PM")
@@ -45,7 +45,7 @@ export default function BookingPage() {
         notes: ''
     });
     const [timeSlots, setTimeSlots] = useState([]);
-    const [submitting, setSubmitting] = useState(false);
+    const [submitting] = useState(false);
     const [success] = useState(false);
 
     // Generate dates for next 14 days (including today)

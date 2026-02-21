@@ -88,7 +88,7 @@ const Signup = () => {
       } else {
         setError(result.error || "Registration failed");
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred.");
     } finally {
       setIsLoading(false);
@@ -106,7 +106,7 @@ const Signup = () => {
       } else {
         setError(result.error || "Google signup failed");
       }
-    } catch (err) {
+    } catch {
       setError("Google signup failed");
     } finally {
       setIsLoading(false);

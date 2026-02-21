@@ -45,6 +45,7 @@ export function StatCard({ title, value, subtitle, icon: Icon, trend, trendValue
 /**
  * AppointmentCard - Display appointment information
  */
+// eslint-disable-next-line no-unused-vars
 export function AppointmentCard({ appointment, showClient = true, showLawyer = false, onAction }) {
     const status = appointment.status?.toLowerCase() || 'pending';
 
@@ -238,6 +239,7 @@ export function NotificationCard({ notification, onMarkRead }) {
 /**
  * EmptyState - Display when no data available
  */
+// eslint-disable-next-line no-unused-vars
 export function EmptyState({ icon: Icon, title, description, action }) {
     return (
         <div className="flex flex-col items-center justify-center py-12 text-center">

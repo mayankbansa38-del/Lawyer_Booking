@@ -9,7 +9,7 @@ import {
     CreditCard, Lock, ShieldCheck, CheckCircle, ArrowLeft,
     Calendar, Clock, Video, MapPin, User, Loader2
 } from 'lucide-react';
-import { lawyerAPI, paymentAPI } from '../../services/api';
+import { lawyerAPI, paymentAPI, casePaymentAPI } from '../../services/api';
 
 // ─── Card formatting helpers ────────────────────────────────────────────────
 
@@ -166,7 +166,7 @@ export default function CheckoutPage() {
         if (!form.expiry || form.expiry.length < 5) {
             e.expiry = 'Enter valid expiry (MM/YY)';
         } else {
-            const [month, year] = form.expiry.split('/');
+            const [month] = form.expiry.split('/');
             const monthNum = parseInt(month, 10);
             if (!monthNum || monthNum < 1 || monthNum > 12) {
                 e.expiry = 'Invalid month (01-12)';

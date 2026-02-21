@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
     Menu, X, Bell, ChevronDown, LogOut,
     Settings, Shield, Briefcase, User as UserIcon
@@ -33,7 +33,6 @@ export default function DashboardNavbar({
 
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const location = useLocation();
-    const navigate = useNavigate();
     const notificationRef = useRef(null);
 
     // Role configuration
