@@ -3,59 +3,21 @@
  * Premium design with stat cards and improved notification list
  */
 
-import { useState, useEffect } from 'react';
-import { Bell, Check, Mail, MailOpen, CheckCheck } from 'lucide-react';
-import { PageHeader, NotificationCard, EmptyState } from '../../components/dashboard';
-import { notificationAPI } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
+import { useState } from 'react';
+import { Bell, Mail, MailOpen, CheckCheck } from 'lucide-react';
+import { NotificationCard, EmptyState } from '../../components/dashboard';
+import { useNotifications } from '../../hooks/useNotifications';
 
 export default function LawyerNotifications() {
-    const { user } = useAuth();
-    const [notifications, setNotifications] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
 
-    useEffect(() => {
-        async function fetchNotifications() {
-            try {
-                if (!user?.id) return;
-                // 'lawyer' role ensures backend filters correctly if needed, 
-                // though usually user ID is enough for the notification model
-                const { data } = await notificationAPI.getAll(user.id, 'lawyer');
-                setNotifications(data);
-            } catch (error) {
-                console.error('Error fetching notifications:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchNotifications();
-    }, [user]);
+    const { notifications, unreadCount, loading, markAsRead: handleMarkRead, markAllAsRead: handleMarkAllRead } = useNotifications({ limit: 50 });
 
-    const handleMarkRead = async (id) => {
-        try {
-            await notificationAPI.markAsRead(id);
-            setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-        } catch (error) {
-            console.error('Error marking notification:', error);
-        }
-    };
-
-    const handleMarkAllRead = async () => {
-        try {
-            await Promise.all(notifications.filter(n => !n.read).map(n => notificationAPI.markAsRead(n.id)));
-            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-        } catch (error) {
-            console.error('Error marking all notifications:', error);
-        }
-    };
-
-    const unreadCount = notifications.filter(n => !n.read).length;
-    const readCount = notifications.filter(n => n.read).length;
+    const readCount = notifications.length - unreadCount;
 
     const filteredNotifications = filter === 'all' ? notifications :
-        filter === 'unread' ? notifications.filter(n => !n.read) :
-            notifications.filter(n => n.read);
+        filter === 'unread' ? notifications.filter(n => !n.isRead) :
+            notifications.filter(n => n.isRead);
 
     if (loading) {
         return <div className="flex items-center justify-center h-64"><div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;

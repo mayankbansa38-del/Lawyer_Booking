@@ -4,9 +4,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { CreditCard, Download, CheckCircle, Clock, XCircle, IndianRupee, Receipt, TrendingUp } from 'lucide-react';
+import { CreditCard, Download, CheckCircle, Clock, XCircle, IndianRupee, Receipt, TrendingUp, Calendar } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/dashboard';
-import { paymentAPI } from '../../services/api';
+import { paymentAPI, casePaymentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 export default function UserPayments() {
@@ -19,8 +19,46 @@ export default function UserPayments() {
         async function fetchPayments() {
             try {
                 if (!user?.id) return;
-                const { data } = await paymentAPI.getAll({ clientId: user.id });
-                setPayments(data);
+
+                // Fetch both booking-payments and case-payments concurrently
+                const [bookingRes, caseRes] = await Promise.allSettled([
+                    paymentAPI.getAll({ clientId: user.id }),
+                    casePaymentAPI.getMyPayments(),
+                ]);
+
+                // Transform booking payments
+                const bookingPayments = (bookingRes.status === 'fulfilled' ? bookingRes.value.data : []).map(p => ({
+                    ...p,
+                    _source: 'booking',
+                    lawyerName: p.booking?.lawyer?.user
+                        ? `${p.booking.lawyer.user.firstName} ${p.booking.lawyer.user.lastName}`
+                        : 'Unknown Lawyer',
+                    description: p.booking
+                        ? `${p.booking.meetingType} Consultation (${p.booking.bookingNumber})`
+                        : 'Legal Service',
+                    date: p.createdAt || p.processedAt,
+                    amount: Number(p.amount) || 0,
+                    status: p.status?.toUpperCase() || 'PENDING',
+                }));
+
+                // Transform case payments into the same shape
+                const casePayments = (caseRes.status === 'fulfilled' ? caseRes.value.data : []).map(cp => ({
+                    ...cp,
+                    _source: 'case',
+                    lawyerName: cp.case?.lawyer?.user
+                        ? `${cp.case.lawyer.user.firstName} ${cp.case.lawyer.user.lastName}`
+                        : 'Unknown Lawyer',
+                    description: `Case Payment: ${cp.description || cp.case?.title || 'Legal Service'}`,
+                    date: cp.createdAt,
+                    amount: (cp.amountInPaise || 0) / 100,
+                    status: cp.status === 'COMPLETED' ? 'COMPLETED' : cp.status === 'DENIED' ? 'FAILED' : 'PENDING',
+                }));
+
+                // Merge and sort by date descending
+                const merged = [...bookingPayments, ...casePayments]
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                setPayments(merged);
             } catch (error) {
                 console.error('Error fetching payments:', error);
             } finally {
@@ -30,10 +68,13 @@ export default function UserPayments() {
         fetchPayments();
     }, [user]);
 
-    const filteredPayments = filter === 'all' ? payments : payments.filter(p => p.status === filter);
-    const total = payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0);
-    const pending = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+    const filteredPayments = filter === 'all' ? payments : payments.filter(p => p.status === filter.toUpperCase());
+    const total = payments.filter(p => p.status === 'COMPLETED').reduce((sum, p) => sum + p.amount, 0);
+    const pending = payments.filter(p => p.status === 'PENDING').reduce((sum, p) => sum + p.amount, 0);
+    const today = new Date().toISOString().split('T')[0];
+    const todaySpent = payments.filter(p => p.status === 'COMPLETED' && p.date && new Date(p.date).toISOString().split('T')[0] === today).reduce((sum, p) => sum + p.amount, 0);
 
+    // eslint-disable-next-line no-unused-vars
     const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-start justify-between">
@@ -66,7 +107,14 @@ export default function UserPayments() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <StatCard
+                    title="Today Spent"
+                    value={`₹${todaySpent.toLocaleString('en-IN')}`}
+                    icon={Calendar}
+                    color="bg-purple-500"
+                    subtitle="Today"
+                />
                 <StatCard
                     title="Total Spent"
                     value={`₹${total.toLocaleString('en-IN')}`}
@@ -90,7 +138,7 @@ export default function UserPayments() {
                 />
                 <StatCard
                     title="Completed"
-                    value={payments.filter(p => p.status === 'completed').length}
+                    value={payments.filter(p => p.status === 'COMPLETED').length}
                     icon={CheckCircle}
                     color="bg-green-500"
                     subtitle="Successful payments"
@@ -138,13 +186,18 @@ export default function UserPayments() {
                                         <td className="px-5 py-4 text-sm text-gray-600">{new Date(payment.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                                         <td className="px-5 py-4 text-sm font-semibold text-gray-900">₹{payment.amount.toLocaleString('en-IN')}</td>
                                         <td className="px-5 py-4">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${payment.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                {payment.status === 'completed' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                                {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${payment.status === 'COMPLETED' ? 'bg-green-100 text-green-700'
+                                                : payment.status === 'FAILED' ? 'bg-red-100 text-red-700'
+                                                    : 'bg-yellow-100 text-yellow-700'
+                                                }`}>
+                                                {payment.status === 'COMPLETED' ? <CheckCircle className="w-3 h-3" />
+                                                    : payment.status === 'FAILED' ? <XCircle className="w-3 h-3" />
+                                                        : <Clock className="w-3 h-3" />}
+                                                {payment.status === 'COMPLETED' ? 'Completed' : payment.status === 'FAILED' ? 'Denied' : 'Pending'}
                                             </span>
                                         </td>
                                         <td className="px-5 py-4 text-right">
-                                            {payment.status === 'completed' && (
+                                            {payment.status === 'COMPLETED' && (
                                                 <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                                     <Download className="w-4 h-4" />
                                                 </button>

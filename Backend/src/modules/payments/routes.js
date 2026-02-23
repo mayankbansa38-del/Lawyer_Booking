@@ -3,7 +3,7 @@
  * NyayBooker Backend - Payments Routes
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * Payment processing routes (Razorpay integration + direct checkout).
+ * Payment processing routes (demo checkout gateway).
  * 
  * @module modules/payments/routes
  */
@@ -12,22 +12,16 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../../middleware/auth.js';
 import { paymentLimiter } from '../../middleware/rateLimiter.js';
 import { sendSuccess, sendCreated, asyncHandler } from '../../utils/response.js';
+import { Prisma } from '@prisma/client';
 import { getPrismaClient } from '../../config/database.js';
-import { NotFoundError, ForbiddenError, PaymentError } from '../../utils/errors.js';
-import { verifyRazorpaySignature, createHmac } from '../../utils/crypto.js';
+import { NotFoundError, ForbiddenError, PaymentError, ConflictError } from '../../utils/errors.js';
+import { generateBookingNumber } from '../../utils/crypto.js';
 import { sendPaymentConfirmationEmail, sendPaymentReceivedEmail } from '../../utils/email.js';
-import env from '../../config/env.js';
 import logger from '../../utils/logger.js';
-import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import { generateMeetAndUpdateBooking } from '../../services/calendar.service.js';
 
 const router = Router();
-
-// Initialize Razorpay
-const razorpay = new Razorpay({
-    key_id: env.RAZORPAY_KEY_ID,
-    key_secret: env.RAZORPAY_KEY_SECRET,
-});
 
 // ═══════════════════════════════════════════════════════════════════════════
 // LIST & SUMMARY ROUTES
@@ -127,15 +121,49 @@ router.get('/earnings-summary', authenticate, asyncHandler(async (req, res) => {
 
     const lawyer = await prisma.lawyer.findUnique({
         where: { userId: req.user.id },
-        select: { id: true, totalEarnings: true },
+        select: { id: true },
     });
 
     if (!lawyer) {
         throw new NotFoundError('Lawyer profile');
     }
 
-    // Aggregate payment stats
-    const [completed, pending] = await Promise.all([
+    // Get today's and this month's start dates
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    // Aggregate all stats from actual payments
+    const [allTimePayments, monthlyPayments, todayPayments, completed, pending] = await Promise.all([
+        // Total earnings = SUM of all COMPLETED payments
+        prisma.payment.aggregate({
+            where: {
+                booking: { lawyerId: lawyer.id },
+                status: 'COMPLETED',
+            },
+            _sum: { amount: true },
+        }),
+        // This month earnings
+        prisma.payment.aggregate({
+            where: {
+                booking: { lawyerId: lawyer.id },
+                status: 'COMPLETED',
+                createdAt: { gte: startOfMonth },
+            },
+            _sum: { amount: true },
+        }),
+        // Today's earnings
+        prisma.payment.aggregate({
+            where: {
+                booking: { lawyerId: lawyer.id },
+                status: 'COMPLETED',
+                createdAt: { gte: startOfToday },
+            },
+            _sum: { amount: true },
+        }),
         prisma.payment.count({
             where: {
                 booking: { lawyerId: lawyer.id },
@@ -150,24 +178,11 @@ router.get('/earnings-summary', authenticate, asyncHandler(async (req, res) => {
         }),
     ]);
 
-    // Get this month's earnings
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const monthlyPayments = await prisma.payment.aggregate({
-        where: {
-            booking: { lawyerId: lawyer.id },
-            status: 'COMPLETED',
-            processedAt: { gte: startOfMonth },
-        },
-        _sum: { amount: true },
-    });
-
     return sendSuccess(res, {
         data: {
-            totalEarnings: Number(lawyer.totalEarnings),
+            totalEarnings: Number(allTimePayments._sum.amount || 0),
             monthlyEarnings: Number(monthlyPayments._sum.amount || 0),
+            todayEarnings: Number(todayPayments._sum.amount || 0),
             completedPayments: completed,
             pendingPayments: pending,
         },
@@ -191,88 +206,109 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
         scheduledTime,
         duration = 60,
         meetingType = 'VIDEO',
-        amount,
         clientNotes,
         paymentMethod = 'CARD',
     } = req.body;
 
-    // Validate required fields
-    if (!lawyerId || !scheduledDate || !scheduledTime || !amount) {
-        throw new PaymentError('Missing required fields: lawyerId, scheduledDate, scheduledTime, amount');
+    // Validate required fields (amount is NOT accepted from client — zero-trust)
+    if (!lawyerId || !scheduledDate || !scheduledTime) {
+        throw new PaymentError('Missing required fields: lawyerId, scheduledDate, scheduledTime');
     }
-
-    // Verify lawyer exists and is verified
-    const lawyer = await prisma.lawyer.findUnique({
-        where: { id: lawyerId },
-        include: {
-            user: { select: { id: true, firstName: true, lastName: true, email: true } },
-        },
-    });
-
-    if (!lawyer || lawyer.verificationStatus !== 'VERIFIED') {
-        throw new NotFoundError('Verified lawyer');
-    }
-
-    // Generate booking number: NB-YYYYMMDD-XXXX
-    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const randomPart = crypto.randomBytes(2).toString('hex').toUpperCase();
-    const bookingNumber = `NB-${datePart}-${randomPart}`;
 
     // Generate simulated gateway IDs
     const gatewayOrderId = `order_sim_${crypto.randomBytes(8).toString('hex')}`;
     const gatewayPaymentId = `pay_sim_${crypto.randomBytes(8).toString('hex')}`;
 
-    // Create booking + payment + update lawyer stats in a single transaction
-    const result = await prisma.$transaction(async (tx) => {
-        // 1. Create booking (CONFIRMED since payment is immediate)
-        const booking = await tx.booking.create({
-            data: {
-                bookingNumber,
-                clientId: req.user.id,
-                lawyerId: lawyer.id,
-                scheduledDate: new Date(scheduledDate),
-                scheduledTime,
-                duration: parseInt(duration),
-                meetingType,
-                amount: parseFloat(amount),
-                currency: 'INR',
-                status: 'CONFIRMED',
-                confirmedAt: new Date(),
-                clientNotes: clientNotes || null,
-            },
+    // Serializable transaction: prevents TOCTOU race conditions on concurrent bookings
+    let result;
+    let lawyer;
+    try {
+        result = await prisma.$transaction(async (tx) => {
+            // 1. Server-side pricing: fetch authoritative rate from DB
+            lawyer = await tx.lawyer.findUnique({
+                where: { id: lawyerId },
+                include: {
+                    user: { select: { id: true, firstName: true, lastName: true, email: true } },
+                },
+            });
+
+            if (!lawyer || lawyer.verificationStatus !== 'VERIFIED') {
+                throw new NotFoundError('Verified lawyer');
+            }
+
+            // Zero-trust: compute amount from DB, never from client
+            const computedAmount = parseFloat(lawyer.consultationFee || lawyer.hourlyRate) * (parseInt(duration) / 60);
+
+            // 2. Conflict check inside transaction (defense-in-depth with DB unique constraint)
+            const conflict = await tx.booking.findFirst({
+                where: {
+                    lawyerId,
+                    scheduledDate: new Date(scheduledDate),
+                    scheduledTime,
+                    status: { in: ['PENDING', 'CONFIRMED'] },
+                },
+            });
+            if (conflict) {
+                throw new ConflictError('This time slot is no longer available');
+            }
+
+            // 3. Create booking (CONFIRMED since payment is immediate)
+            const booking = await tx.booking.create({
+                data: {
+                    bookingNumber: generateBookingNumber(),
+                    clientId: req.user.id,
+                    lawyerId: lawyer.id,
+                    scheduledDate: new Date(scheduledDate),
+                    scheduledTime,
+                    duration: parseInt(duration),
+                    meetingType,
+                    amount: computedAmount,
+                    currency: 'INR',
+                    status: 'CONFIRMED',
+                    confirmedAt: new Date(),
+                    clientNotes: clientNotes || null,
+                },
+            });
+
+            // 4. Create payment (COMPLETED since simulated)
+            const payment = await tx.payment.create({
+                data: {
+                    bookingId: booking.id,
+                    amount: computedAmount,
+                    currency: 'INR',
+                    status: 'COMPLETED',
+                    method: paymentMethod,
+                    gatewayOrderId,
+                    gatewayPaymentId,
+                    processedAt: new Date(),
+                },
+            });
+
+            // 5. Update lawyer stats atomically
+            await tx.lawyer.update({
+                where: { id: lawyer.id },
+                data: {
+                    totalBookings: { increment: 1 },
+                    totalEarnings: { increment: computedAmount },
+                },
+            });
+
+            return { booking, payment, computedAmount };
+        }, {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         });
+    } catch (err) {
+        // DB unique constraint (P2002) → 409 Conflict
+        if (err.code === 'P2002') {
+            throw new ConflictError('This time slot is no longer available');
+        }
+        throw err;
+    }
 
-        // 2. Create payment (COMPLETED since simulated)
-        const payment = await tx.payment.create({
-            data: {
-                bookingId: booking.id,
-                amount: parseFloat(amount),
-                currency: 'INR',
-                status: 'COMPLETED',
-                method: paymentMethod,
-                gatewayOrderId,
-                gatewayPaymentId,
-                processedAt: new Date(),
-            },
-        });
-
-        // 3. Update lawyer stats
-        await tx.lawyer.update({
-            where: { id: lawyer.id },
-            data: {
-                totalBookings: { increment: 1 },
-                totalEarnings: { increment: parseFloat(amount) },
-            },
-        });
-
-        return { booking, payment };
-    });
-
-    // Send emails (fire-and-forget, don't block response)
+    // Fire-and-forget: emails (don't block response)
     const clientName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'Client';
     const lawyerName = `${lawyer.user.firstName} ${lawyer.user.lastName}`;
 
-    // Email to client
     sendPaymentConfirmationEmail({
         to: req.user.email,
         name: clientName,
@@ -281,7 +317,6 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
         lawyer: { name: lawyerName },
     }).catch(err => logger.error('Failed to send client payment email', { error: err.message }));
 
-    // Email to lawyer
     sendPaymentReceivedEmail({
         to: lawyer.user.email,
         name: lawyerName,
@@ -290,14 +325,14 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
         client: { name: clientName },
     }).catch(err => logger.error('Failed to send lawyer payment email', { error: err.message }));
 
-    // Create in-app notifications for both
+    // Fire-and-forget: in-app notifications
     prisma.notification.createMany({
         data: [
             {
                 userId: req.user.id,
                 type: 'PAYMENT_RECEIVED',
                 title: 'Payment Successful',
-                message: `Your payment of ₹${parseFloat(amount).toLocaleString('en-IN')} to ${lawyerName} has been processed. Booking #${bookingNumber}`,
+                message: `Your payment of ₹${result.computedAmount.toLocaleString('en-IN')} to ${lawyerName} has been processed. Booking #${result.booking.bookingNumber}`,
                 actionUrl: '/user/payments',
                 actionLabel: 'View Payment',
             },
@@ -305,7 +340,7 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
                 userId: lawyer.user.id,
                 type: 'PAYMENT_RECEIVED',
                 title: 'New Payment Received',
-                message: `${clientName} paid ₹${parseFloat(amount).toLocaleString('en-IN')} for consultation. Booking #${bookingNumber}`,
+                message: `${clientName} paid ₹${result.computedAmount.toLocaleString('en-IN')} for consultation. Booking #${result.booking.bookingNumber}`,
                 actionUrl: '/lawyer/earnings',
                 actionLabel: 'View Earnings',
             },
@@ -315,10 +350,16 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
     logger.logBusiness('CHECKOUT_COMPLETED', {
         bookingId: result.booking.id,
         paymentId: result.payment.id,
-        amount,
+        amount: result.computedAmount,
         lawyerId: lawyer.id,
         clientId: req.user.id,
     });
+
+    // Generate meeting link for video bookings (fire-and-forget)
+    if (result.booking.meetingType === 'VIDEO') {
+        generateMeetAndUpdateBooking({ bookingId: result.booking.id })
+            .catch(err => logger.error('Meet link generation failed (checkout)', err));
+    }
 
     return sendCreated(res, {
         message: 'Payment successful! Booking confirmed.',
@@ -344,413 +385,6 @@ router.post('/checkout', authenticate, paymentLimiter, asyncHandler(async (req, 
     });
 }));
 
-// ═══════════════════════════════════════════════════════════════════════════
-// RAZORPAY ROUTES (existing)
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * @route   POST /api/v1/payments/create-order
- * @desc    Create Razorpay order for booking
- * @access  Private
- */
-router.post('/create-order', authenticate, paymentLimiter, asyncHandler(async (req, res) => {
-    const prisma = getPrismaClient();
-    const { bookingId } = req.body;
-
-    // Get booking
-    const booking = await prisma.booking.findUnique({
-        where: { id: bookingId },
-        include: { payment: true },
-    });
-
-    if (!booking) {
-        throw new NotFoundError('Booking');
-    }
-
-    if (booking.clientId !== req.user.id) {
-        throw new ForbiddenError('Not authorized');
-    }
-
-    // Check if already paid
-    if (booking.payment?.status === 'COMPLETED') {
-        throw new PaymentError('alreadyPaid');
-    }
-
-    // Create Razorpay order
-    const amountInPaise = Math.round(Number(booking.amount) * 100);
-    const order = await razorpay.orders.create({
-        amount: amountInPaise,
-        currency: booking.currency,
-        receipt: `booking_${booking.bookingNumber}`,
-        notes: {
-            bookingId: booking.id,
-            bookingNumber: booking.bookingNumber,
-        },
-    });
-
-    // Create or update payment record
-    if (booking.payment) {
-        await prisma.payment.update({
-            where: { id: booking.payment.id },
-            data: {
-                gatewayOrderId: order.id,
-                status: 'PROCESSING',
-            },
-        });
-    } else {
-        await prisma.payment.create({
-            data: {
-                bookingId: booking.id,
-                amount: booking.amount,
-                currency: booking.currency,
-                status: 'PROCESSING',
-                gatewayOrderId: order.id,
-            },
-        });
-    }
-
-    return sendCreated(res, {
-        data: {
-            orderId: order.id,
-            amount: amountInPaise,
-            currency: booking.currency,
-            key: env.RAZORPAY_KEY_ID,
-        },
-    });
-}));
-
-/**
- * @route   POST /api/v1/payments/verify
- * @desc    Verify Razorpay payment signature
- * @access  Private
- */
-router.post('/verify', authenticate, asyncHandler(async (req, res) => {
-    const prisma = getPrismaClient();
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-
-    // Verify signature
-    const isValid = verifyRazorpaySignature(
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature
-    );
-
-    if (!isValid) {
-        throw new PaymentError('failed');
-    }
-
-    // Find payment by order ID with full booking details
-    const payment = await prisma.payment.findUnique({
-        where: { gatewayOrderId: razorpay_order_id },
-        include: {
-            booking: {
-                include: {
-                    lawyer: {
-                        include: {
-                            user: { select: { id: true, firstName: true, lastName: true, email: true } },
-                        },
-                    },
-                    client: { select: { id: true, email: true, firstName: true, lastName: true } },
-                },
-            },
-        },
-    });
-
-    if (!payment) {
-        throw new NotFoundError('Payment');
-    }
-
-    if (payment.booking.clientId !== req.user.id) {
-        throw new ForbiddenError('Not authorized');
-    }
-
-    // Update payment, booking, and lawyer earnings in a single transaction
-    await prisma.$transaction([
-        prisma.payment.update({
-            where: { id: payment.id },
-            data: {
-                status: 'COMPLETED',
-                gatewayPaymentId: razorpay_payment_id,
-                gatewaySignature: razorpay_signature,
-                processedAt: new Date(),
-            },
-        }),
-        prisma.booking.update({
-            where: { id: payment.bookingId },
-            data: { status: 'CONFIRMED', confirmedAt: new Date() },
-        }),
-        prisma.lawyer.update({
-            where: { id: payment.booking.lawyerId },
-            data: {
-                totalEarnings: { increment: Number(payment.amount) },
-                totalBookings: { increment: 1 },
-            },
-        }),
-    ]);
-
-    // Send emails (fire-and-forget)
-    const clientName = `${payment.booking.client.firstName} ${payment.booking.client.lastName}`.trim();
-    const lawyerName = `${payment.booking.lawyer.user.firstName} ${payment.booking.lawyer.user.lastName}`.trim();
-
-    sendPaymentConfirmationEmail({
-        to: payment.booking.client.email,
-        name: clientName,
-        payment,
-        booking: payment.booking,
-        lawyer: { name: lawyerName },
-    }).catch(err => logger.error('Failed to send client payment email', { error: err.message }));
-
-    sendPaymentReceivedEmail({
-        to: payment.booking.lawyer.user.email,
-        name: lawyerName,
-        payment,
-        booking: payment.booking,
-        client: { name: clientName },
-    }).catch(err => logger.error('Failed to send lawyer payment email', { error: err.message }));
-
-    // In-app notifications
-    prisma.notification.createMany({
-        data: [
-            {
-                userId: payment.booking.client.id,
-                type: 'PAYMENT_RECEIVED',
-                title: 'Payment Successful',
-                message: `Your payment of ₹${Number(payment.amount).toLocaleString('en-IN')} has been verified.`,
-                actionUrl: '/user/payments',
-                actionLabel: 'View Payment',
-            },
-            {
-                userId: payment.booking.lawyer.user.id,
-                type: 'PAYMENT_RECEIVED',
-                title: 'New Payment Received',
-                message: `${clientName} paid ₹${Number(payment.amount).toLocaleString('en-IN')} for consultation.`,
-                actionUrl: '/lawyer/earnings',
-                actionLabel: 'View Earnings',
-            },
-        ],
-    }).catch(err => logger.error('Failed to create notifications', { error: err.message }));
-
-    logger.logBusiness('PAYMENT_COMPLETED', {
-        paymentId: payment.id,
-        bookingId: payment.bookingId,
-        amount: payment.amount,
-    });
-
-    return sendSuccess(res, {
-        message: 'Payment verified successfully',
-        bookingId: payment.bookingId,
-    });
-}));
-
-/**
- * @route   POST /api/v1/payments/webhook
- * @desc    Razorpay webhook handler
- * @access  Public (verified by signature)
- */
-router.post('/webhook', asyncHandler(async (req, res) => {
-    const prisma = getPrismaClient();
-
-    // Verify webhook signature using raw body bytes
-    const signature = req.headers['x-razorpay-signature'];
-    if (!signature || !req.rawBody) {
-        logger.logSecurity('WEBHOOK_MISSING_SIG_OR_BODY', { ip: req.ip });
-        return res.status(400).json({ error: 'Invalid request' });
-    }
-
-    const expectedSignature = createHmac(req.rawBody.toString('utf8'), env.RAZORPAY_KEY_SECRET);
-
-    // Timing-safe comparison
-    const sigBuf = Buffer.from(signature, 'utf8');
-    const expectedBuf = Buffer.from(expectedSignature, 'utf8');
-    if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
-        logger.logSecurity('INVALID_WEBHOOK_SIGNATURE', { ip: req.ip });
-        return res.status(400).json({ error: 'Invalid signature' });
-    }
-
-    const event = req.body.event;
-    const payload = req.body.payload;
-
-    logger.info('Razorpay webhook received', { event });
-
-    switch (event) {
-        case 'payment.captured': {
-            const payment = payload.payment.entity;
-            await handlePaymentCaptured(prisma, payment);
-            break;
-        }
-        case 'payment.failed': {
-            const payment = payload.payment.entity;
-            await handlePaymentFailed(prisma, payment);
-            break;
-        }
-        case 'refund.processed': {
-            const refund = payload.refund.entity;
-            await handleRefundProcessed(prisma, refund);
-            break;
-        }
-        default:
-            logger.info('Unhandled webhook event', { event });
-    }
-
-    return res.json({ received: true });
-}));
-
-/**
- * Handle payment captured webhook
- */
-async function handlePaymentCaptured(prisma, paymentData) {
-    const payment = await prisma.payment.findUnique({
-        where: { gatewayOrderId: paymentData.order_id },
-        include: { booking: true },
-    });
-
-    if (!payment || payment.status === 'COMPLETED') return;
-
-    await prisma.$transaction([
-        prisma.payment.update({
-            where: { id: payment.id },
-            data: {
-                status: 'COMPLETED',
-                gatewayPaymentId: paymentData.id,
-                processedAt: new Date(),
-                method: mapPaymentMethod(paymentData.method),
-            },
-        }),
-        prisma.booking.update({
-            where: { id: payment.bookingId },
-            data: { status: 'CONFIRMED', confirmedAt: new Date() },
-        }),
-        prisma.lawyer.update({
-            where: { id: payment.booking.lawyerId },
-            data: {
-                totalEarnings: { increment: Number(payment.amount) },
-                totalBookings: { increment: 1 },
-            },
-        }),
-    ]);
-
-    logger.logBusiness('PAYMENT_CAPTURED_WEBHOOK', { paymentId: payment.id });
-}
-
-/**
- * Handle payment failed webhook
- */
-async function handlePaymentFailed(prisma, paymentData) {
-    const payment = await prisma.payment.findUnique({
-        where: { gatewayOrderId: paymentData.order_id },
-    });
-
-    if (!payment) return;
-
-    await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-            status: 'FAILED',
-            failedAt: new Date(),
-            failureReason: paymentData.error_description || 'Payment failed',
-        },
-    });
-
-    logger.logBusiness('PAYMENT_FAILED_WEBHOOK', { paymentId: payment.id });
-}
-
-/**
- * Handle refund processed webhook
- */
-async function handleRefundProcessed(prisma, refundData) {
-    const payment = await prisma.payment.findFirst({
-        where: { gatewayPaymentId: refundData.payment_id },
-    });
-
-    if (!payment) return;
-
-    const refundedAmount = refundData.amount / 100;
-
-    await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-            status: refundedAmount >= Number(payment.amount) ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
-            refundedAmount,
-            refundedAt: new Date(),
-            refundId: refundData.id,
-        },
-    });
-
-    logger.logBusiness('REFUND_PROCESSED_WEBHOOK', {
-        paymentId: payment.id,
-        refundAmount: refundedAmount,
-    });
-}
-
-/**
- * Map Razorpay payment method to our enum
- */
-function mapPaymentMethod(method) {
-    const methodMap = {
-        card: 'CARD',
-        upi: 'UPI',
-        netbanking: 'NET_BANKING',
-        wallet: 'WALLET',
-    };
-    return methodMap[method] || 'CARD';
-}
-
-/**
- * @route   POST /api/v1/payments/:id/refund
- * @desc    Request refund for payment
- * @access  Private/Admin
- */
-router.post('/:id/refund', authenticate, authorize('ADMIN'), asyncHandler(async (req, res) => {
-    const prisma = getPrismaClient();
-    const { amount, reason } = req.body;
-
-    const payment = await prisma.payment.findUnique({
-        where: { id: req.params.id },
-    });
-
-    if (!payment) {
-        throw new NotFoundError('Payment');
-    }
-
-    if (payment.status !== 'COMPLETED') {
-        throw new PaymentError('notRefundable');
-    }
-
-    const refundAmount = amount || Number(payment.amount);
-    const refundAmountPaise = Math.round(refundAmount * 100);
-
-    try {
-        const refund = await razorpay.payments.refund(payment.gatewayPaymentId, {
-            amount: refundAmountPaise,
-            notes: { reason },
-        });
-
-        await prisma.payment.update({
-            where: { id: payment.id },
-            data: {
-                status: refundAmount >= Number(payment.amount) ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
-                refundedAmount: refundAmount,
-                refundedAt: new Date(),
-                refundId: refund.id,
-                refundReason: reason,
-            },
-        });
-
-        logger.logBusiness('REFUND_INITIATED', {
-            paymentId: payment.id,
-            refundId: refund.id,
-            amount: refundAmount,
-        });
-
-        return sendSuccess(res, {
-            data: { refundId: refund.id, amount: refundAmount },
-            message: 'Refund initiated successfully',
-        });
-    } catch (error) {
-        logger.error('Refund failed', { paymentId: payment.id, error: error.message });
-        throw new PaymentError('refundFailed');
-    }
-}));
 
 /**
  * @route   GET /api/v1/payments/:id
@@ -788,6 +422,7 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
                             id: true,
                             user: {
                                 select: {
+                                    id: true,
                                     firstName: true,
                                     lastName: true,
                                     email: true,
@@ -807,9 +442,8 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
 
     // Check authorization: client, lawyer, or admin
     const isClient = payment.booking.clientId === req.user.id;
-    const isLawyer = await prisma.lawyer.findFirst({
-        where: { userId: req.user.id, id: payment.booking.lawyerId },
-    });
+    // Use already-included data instead of extra DB query
+    const isLawyer = payment.booking.lawyer?.user?.email && req.user.id === payment.booking.lawyer.user.id;
     const isAdmin = req.user.role === 'ADMIN';
 
     if (!isClient && !isLawyer && !isAdmin) {

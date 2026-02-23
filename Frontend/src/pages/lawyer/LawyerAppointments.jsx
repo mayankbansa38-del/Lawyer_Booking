@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Search, User, Video, Phone, MapPin, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Search, User, Video, Phone, MapPin, ExternalLink, AlertTriangle, X } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/dashboard';
 import { appointmentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -32,6 +32,7 @@ export default function LawyerAppointments() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [actionLoading, setActionLoading] = useState(null);
+    const [cancelModal, setCancelModal] = useState({ open: false, appointmentId: null });
 
     const fetchAppointments = async () => {
         setLoading(true);
@@ -54,9 +55,8 @@ export default function LawyerAppointments() {
         setActionLoading(appointmentId);
         try {
             await appointmentAPI.confirm(appointmentId);
-            setAppointments(prev =>
-                prev.map(apt => apt.id === appointmentId ? { ...apt, status: 'CONFIRMED' } : apt)
-            );
+            // Re-fetch to get the generated meetingLink from the backend
+            await fetchAppointments();
         } catch (error) {
             console.error('Error confirming appointment:', error);
             alert('Failed to confirm appointment.');
@@ -65,8 +65,13 @@ export default function LawyerAppointments() {
         }
     };
 
-    const handleCancel = async (appointmentId) => {
-        if (!window.confirm('Cancel this appointment?')) return;
+    const handleCancel = (appointmentId) => {
+        setCancelModal({ open: true, appointmentId });
+    };
+
+    const confirmCancel = async () => {
+        const appointmentId = cancelModal.appointmentId;
+        setCancelModal({ open: false, appointmentId: null });
         setActionLoading(appointmentId);
         try {
             await appointmentAPI.cancel(appointmentId);
@@ -253,6 +258,17 @@ export default function LawyerAppointments() {
                                     )}
                                     {apt.status === 'CONFIRMED' && (
                                         <div className="flex sm:flex-col gap-2 flex-shrink-0">
+                                            {apt.meetingLink && (
+                                                <a
+                                                    href={apt.meetingLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                                >
+                                                    <ExternalLink className="w-4 h-4" />
+                                                    Join Call
+                                                </a>
+                                            )}
                                             <button
                                                 onClick={() => handleCancel(apt.id)}
                                                 disabled={isLoading}
@@ -274,6 +290,42 @@ export default function LawyerAppointments() {
                     title="No appointments found"
                     description={activeTab === 'all' ? "You don't have any appointments yet." : `No ${activeTab.toLowerCase()} appointments.`}
                 />
+            )}
+
+            {/* Cancel Confirmation Modal */}
+            {cancelModal.open && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setCancelModal({ open: false, appointmentId: null })} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+                        <button
+                            onClick={() => setCancelModal({ open: false, appointmentId: null })}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <div className="text-center">
+                            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                                <AlertTriangle className="w-7 h-7 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Cancel Appointment?</h3>
+                            <p className="text-gray-500 text-sm mb-6">Are you sure you want to cancel this appointment?</p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setCancelModal({ open: false, appointmentId: null })}
+                                    className="flex-1 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                                >
+                                    No, Keep It
+                                </button>
+                                <button
+                                    onClick={confirmCancel}
+                                    className="flex-1 py-2.5 bg-red-600 text-white text-sm font-medium rounded-xl hover:bg-red-700 transition-colors"
+                                >
+                                    Yes, Cancel It
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

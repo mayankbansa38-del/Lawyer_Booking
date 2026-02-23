@@ -64,10 +64,11 @@ export const registerSchema = {
             }),
         phone: Joi.string()
             .trim()
-            .pattern(REGEX.PHONE_INDIA)
             .optional()
-            .messages({
-                'string.pattern.base': 'Invalid phone number format',
+            .allow(null, '')
+            .when(Joi.string().min(1), {
+                then: Joi.string().trim().pattern(REGEX.PHONE_INDIA)
+                    .messages({ 'string.pattern.base': 'Invalid phone number format. Use Indian mobile format (e.g. 9876543210)' }),
             }),
         role: Joi.string()
             .valid(USER_ROLES.USER, USER_ROLES.LAWYER)

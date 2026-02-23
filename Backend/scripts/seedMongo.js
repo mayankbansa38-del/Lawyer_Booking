@@ -18,8 +18,11 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { PrismaClient } from '@prisma/client';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MONGODB SCHEMAS

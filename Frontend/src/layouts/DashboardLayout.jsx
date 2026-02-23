@@ -137,10 +137,7 @@ export default function DashboardLayout({ role = 'user' }) {
     const isAdminRole = role === 'admin';
 
     // Notification hook for navbar badge
-    const { unreadCount, notifications, markAllAsRead } = useNotifications(
-        user?.id,
-        isAdminRole ? 'admin' : role === 'lawyer' ? 'lawyer' : 'client'
-    );
+    const { unreadCount, notifications, markAllAsRead } = useNotifications({ limit: 5 });
 
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const notificationRef = useRef(null);
@@ -192,10 +189,6 @@ export default function DashboardLayout({ role = 'user' }) {
     const openSidebar = () => setSidebarOpen(true);
 
     const isActive = (path) => location.pathname === path;
-    const currentPageLabel = config.navItems.find(item => isActive(item.path))?.label || config.defaultTitle;
-
-    // Get display name - handle both name formats from API
-    const displayName = user?.firstName || user?.name?.split(' ')[0] || role.charAt(0).toUpperCase() + role.slice(1);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Render Logo Section
@@ -227,27 +220,6 @@ export default function DashboardLayout({ role = 'user' }) {
         );
     };
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Render Avatar Section
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const renderAvatar = () => {
-        if (isAdminRole) {
-            return (
-                <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-white" />
-                </div>
-            );
-        }
-
-        return (
-            <img
-                src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${config.avatarSeed}`}
-                alt={displayName}
-                className="w-9 h-9 rounded-full object-cover"
-            />
-        );
-    };
 
     // ─────────────────────────────────────────────────────────────────────────
     // Main Render
@@ -262,6 +234,8 @@ export default function DashboardLayout({ role = 'user' }) {
                     role={role}
                     user={user}
                     unreadCount={unreadCount}
+                    notifications={notifications}
+                    onMarkAllRead={markAllAsRead}
                     onLogout={handleLogout}
                 />
                 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

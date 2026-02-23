@@ -32,10 +32,7 @@ router.get('/profile', authenticate, asyncHandler(async (req, res) => {
     const prisma = getPrismaClient();
 
     if (req.user.role !== 'LAWYER') {
-        return res.status(403).json({
-            success: false,
-            message: 'Access denied. Only lawyers can access this route.',
-        });
+        throw new ForbiddenError('Access denied. Only lawyers can access this route.');
     }
 
     const lawyer = await prisma.lawyer.findUnique({
@@ -75,6 +72,7 @@ router.get('/profile', authenticate, asyncHandler(async (req, res) => {
                     },
                 },
             },
+            blockedPeriods: true,
         },
     });
 
@@ -115,7 +113,9 @@ router.get('/profile', authenticate, asyncHandler(async (req, res) => {
         casesWon: lawyer.completedBookings || 0,
         completedConsultations: lawyer.completedBookings,
         isAvailable: lawyer.isAvailable,
-        availability: lawyer.availability,
+        availability: lawyer.availability || {},
+        availabilityStatus: lawyer.isAvailable ? 'Available' : 'Busy',
+        blockedPeriods: lawyer.blockedPeriods || [],
         verificationStatus: lawyer.verificationStatus,
         specialty: lawyer.specializations.map(s => s.practiceArea.name),
         specializations: lawyer.specializations.map(s => ({
@@ -200,10 +200,11 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
 
     // Specialization filter
     if (specialization) {
+        const specs = specialization.split(',');
         where.specializations = {
             some: {
                 practiceArea: {
-                    slug: specialization,
+                    slug: { in: specs },
                 },
             },
         };
@@ -264,7 +265,7 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
                     },
                 },
                 specializations: {
-                    where: { isPrimary: true },
+
                     take: 3,
                     select: {
                         practiceArea: {
@@ -301,7 +302,7 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
         averageRating: lawyer.averageRating,
         totalReviews: lawyer.totalReviews,
         isAvailable: lawyer.isAvailable,
-        availability: lawyer.isAvailable ? 'Available' : 'Busy',
+        availabilityStatus: lawyer.isAvailable ? 'Available' : 'Busy',
         featured: lawyer.featured,
         casesWon: lawyer.completedBookings || 0,
         completedBookings: lawyer.completedBookings,
@@ -389,7 +390,8 @@ router.get('/featured', asyncHandler(async (req, res) => {
         completedBookings: lawyer.completedBookings,
         specialty: lawyer.specializations[0]?.practiceArea?.name ? [lawyer.specializations[0].practiceArea.name] : [],
         primarySpecialization: lawyer.specializations[0]?.practiceArea?.name || null,
-        availability: 'Available', // Featured are usually available
+        availability: lawyer.availability || {},
+        availabilityStatus: 'Available', // Featured are usually available
     }));
 
     return sendSuccess(res, { data: transformed });
@@ -533,6 +535,7 @@ router.get('/:slugOrId', optionalAuth, asyncHandler(async (req, res) => {
                     },
                 },
             },
+            blockedPeriods: true,
         },
     });
 
@@ -569,10 +572,11 @@ router.get('/:slugOrId', optionalAuth, asyncHandler(async (req, res) => {
         rating: lawyer.averageRating ? Math.round(lawyer.averageRating * 10) / 10 : 0,
         averageRating: lawyer.averageRating,
         totalReviews: lawyer.totalReviews,
-        casesWon: lawyer.completedBookings || 0,
         completedConsultations: lawyer.completedBookings,
         isAvailable: lawyer.isAvailable,
-        availability: lawyer.isAvailable ? 'Available' : 'Busy',
+        availability: lawyer.availability || {}, // Return actual availability object (schedule)
+        availabilityStatus: lawyer.isAvailable ? 'Available' : 'Busy', // New field for status string
+        blockedPeriods: lawyer.blockedPeriods || [],
         specialty: lawyer.specializations.map(s => s.practiceArea.name),
         specializations: lawyer.specializations.map(s => ({
             ...s.practiceArea,
@@ -625,32 +629,51 @@ router.get('/:id/availability', asyncHandler(async (req, res) => {
         return sendSuccess(res, { data: { slots: [], message: 'Lawyer is not available' } });
     }
 
-    // Get existing bookings for the date
-    const targetDate = date ? new Date(date) : new Date();
-    const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+    // Date handling
+    const targetDateStr = date || new Date().toISOString().split('T')[0];
+    const targetDate = new Date(targetDateStr);
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
 
-    const existingBookings = await prisma.booking.findMany({
-        where: {
-            lawyerId: id,
-            scheduledDate: {
-                gte: startOfDay,
-                lte: endOfDay,
+    // Fetch existing bookings AND blocked periods
+    const [existingBookings, blockedPeriods] = await Promise.all([
+        prisma.booking.findMany({
+            where: {
+                lawyerId: id,
+                scheduledDate: {
+                    gte: startOfDay,
+                    lte: endOfDay,
+                },
+                status: { in: ['PENDING', 'CONFIRMED'] },
             },
-            status: { in: ['PENDING', 'CONFIRMED'] },
-        },
-        select: {
-            scheduledTime: true,
-            duration: true,
-        },
-    });
+            select: {
+                scheduledTime: true,
+                duration: true,
+            },
+        }),
+        prisma.blockedPeriod.findMany({
+            where: {
+                lawyerId: id,
+                // Check for any overlap with the target day
+                OR: [
+                    {
+                        startDate: { lte: endOfDay },
+                        endDate: { gte: startOfDay },
+                    }
+                ]
+            },
+            select: {
+                startDate: true,
+                endDate: true,
+            }
+        })
+    ]);
 
-    // Parse availability and generate slots (simplified)
     // Parse availability and generate slots (dynamic)
     const availability = lawyer.availability || {};
-    // Fix: Handle date parsing correctly for local time
-    const targetDateObj = date ? new Date(date) : new Date();
-    const dayOfWeek = targetDateObj.getDay();
+    const dayOfWeek = targetDate.getDay();
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const daySchedule = availability[dayNames[dayOfWeek]];
 
@@ -661,40 +684,60 @@ router.get('/:id/availability', asyncHandler(async (req, res) => {
         const start = parseInt(daySchedule.start.split(':')[0]);
         const end = parseInt(daySchedule.end.split(':')[0]);
 
-        // Generate slots efficiently
+        // Generate slots
         for (let hour = start; hour < end; hour++) {
             // Basic 60 min slots matching DEFAULT_BOOKING_DURATION
-            // Format HH:00
             const time = `${hour.toString().padStart(2, '0')}:00`;
-            const slotEnd = `${(hour + 1).toString().padStart(2, '0')}:00`;
+            const slotStart = new Date(startOfDay);
+            slotStart.setHours(hour, 0, 0, 0);
 
-            // Check if this slot is already booked
+            const slotEnd = new Date(startOfDay);
+            slotEnd.setHours(hour + 1, 0, 0, 0);
+
+            // 1. Check against Bookings
             // bookedTimes set contains 'HH:MM' strings from DB
-            // Note: existingBookings returns scheduledTime which might be full ISO or Time string depending on Prisma mapping
-            // Assuming existingBookings.scheduledTime is Date object from Prisma, need to format it to HH:MM
-            // BUT, schema says scheduledTime is DateTime? Let's check schema/usage.
-            // Usually scheduledTime is DateTime. comparing time strings requires extraction.
+            // We'll construct a check later or do it here.
+            // Let's rely on string comparison for bookings as before, consistent with existing logic
 
-            availableSlots.push({
-                time,
-                endTime: slotEnd,
-                available: true // We'll filter later or just excluding booked ones
+            // 2. Check against Blocked Periods
+            // A slot is blocked if it overlaps with any blocked period
+            const isBlocked = blockedPeriods.some(bp => {
+                const bpStart = new Date(bp.startDate);
+                const bpEnd = new Date(bp.endDate);
+                // Overlap condition: (StartA < EndB) && (EndA > StartB)
+                return slotStart < bpEnd && slotEnd > bpStart;
             });
+
+            if (!isBlocked) {
+                availableSlots.push({
+                    time,
+                    endTime: `${(hour + 1).toString().padStart(2, '0')}:00`,
+                    available: true
+                });
+            }
         }
     }
 
     // Filter booked slots
     // Convert booked times to simple "HH:MM" format for comparison
     const bookedTimeStrings = new Set(existingBookings.map(b => {
-        const d = new Date(b.scheduledTime);
-        return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        // Assuming scheduledTime is saved as full ISO string or we parse it
+        // The previous code did `new Date(b.scheduledTime)`. If it's just "HH:mm" string in DB, this might fail or be weird.
+        // Prisma schema says scheduledTime is DateTime.
+        // If it's a string like "10:00", `new Date("10:00")` is invalid.
+        // It should probably be:
+        if (b.scheduledTime.includes('T')) {
+            const d = new Date(b.scheduledTime);
+            return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        }
+        return b.scheduledTime.substring(0, 5); // "10:00"
     }));
 
     availableSlots = availableSlots.filter(slot => !bookedTimeStrings.has(slot.time));
 
     return sendSuccess(res, {
         data: {
-            date: date || new Date().toISOString().split('T')[0],
+            date: targetDateStr,
             slots: availableSlots,
             bookedSlots: existingBookings.length,
         }
@@ -710,10 +753,7 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     const prisma = getPrismaClient();
 
     if (req.user.role !== 'LAWYER') {
-        return res.status(403).json({
-            success: false,
-            message: 'Access denied. Only lawyers can update their profile.',
-        });
+        throw new ForbiddenError('Access denied. Only lawyers can update their profile.');
     }
 
     const {
@@ -878,6 +918,91 @@ router.put('/availability', authenticate, asyncHandler(async (req, res) => {
     return sendSuccess(res, {
         data: lawyer,
         message: `Availability ${isAvailable ? 'enabled' : 'disabled'}`,
+    });
+}));
+
+/**
+ * @route   POST /api/v1/lawyers/blocked-dates
+ * @desc    Add a blocked period
+ * @access  Private/Lawyer
+ */
+router.post('/blocked-dates', authenticate, asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+
+    if (req.user.role !== 'LAWYER') {
+        return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
+    const { startDate, endDate, reason } = req.body;
+
+    if (!startDate || !endDate) {
+        return res.status(400).json({ success: false, message: 'Start date and end date are required.' });
+    }
+
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Ensure end date covers the full day
+    end.setHours(23, 59, 59, 999);
+
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid date format.' });
+    }
+
+    if (start > end) {
+        return res.status(400).json({ success: false, message: 'Start date cannot be after end date.' });
+    }
+
+    const lawyer = await prisma.lawyer.findUnique({ where: { userId: req.user.id } });
+
+    const blockedPeriod = await prisma.blockedPeriod.create({
+        data: {
+            lawyerId: lawyer.id,
+            startDate: start,
+            endDate: end,
+            reason
+        }
+    });
+
+    return sendSuccess(res, {
+        data: blockedPeriod,
+        message: 'Blocked period added successfully'
+    });
+}));
+
+/**
+ * @route   DELETE /api/v1/lawyers/blocked-dates/:id
+ * @desc    Remove a blocked period
+ * @access  Private/Lawyer
+ */
+router.delete('/blocked-dates/:id', authenticate, asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+
+    if (req.user.role !== 'LAWYER') {
+        return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
+    const { id } = req.params;
+
+    const blockedPeriod = await prisma.blockedPeriod.findUnique({
+        where: { id },
+        include: { lawyer: true }
+    });
+
+    if (!blockedPeriod) {
+        return res.status(404).json({ success: false, message: 'Blocked period not found.' });
+    }
+
+    if (blockedPeriod.lawyer.userId !== req.user.id) {
+        return res.status(403).json({ success: false, message: 'Unauthorized to delete this blocked period.' });
+    }
+
+    await prisma.blockedPeriod.delete({ where: { id } });
+
+    return sendSuccess(res, {
+        message: 'Blocked period removed successfully'
     });
 }));
 

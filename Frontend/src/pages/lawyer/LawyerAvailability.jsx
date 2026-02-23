@@ -24,16 +24,23 @@ export default function LawyerAvailability() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const { data } = await lawyerAPI.getById(user?.lawyer?.id || user?.id);
+                // Use getProfile to get the authenticated lawyer's own profile
+                const { data } = await lawyerAPI.getProfile();
                 setWorkingHours(data.availability || {});
+
+                // If there are blocked periods in the profile, set them
+                if (data.blockedPeriods) {
+                    setBlockedDates(data.blockedPeriods);
+                }
             } catch (error) {
                 console.error('Error fetching availability:', error);
+                setMessage({ type: 'error', text: 'Failed to load availability settings.' });
             } finally {
                 setLoading(false);
             }
         }
         fetchData();
-    }, [user]);
+    }, []);
 
     const toggleDay = (day) => {
         setWorkingHours(prev => prev[day] ? { ...prev, [day]: null } : { ...prev, [day]: { start: '09:00', end: '18:00' } });
@@ -43,15 +50,40 @@ export default function LawyerAvailability() {
         setWorkingHours(prev => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
     };
 
-    const addBlockedDate = () => {
-        if (newBlockedDate && !blockedDates.includes(newBlockedDate)) {
-            setBlockedDates(prev => [...prev, newBlockedDate]);
-            setNewBlockedDate('');
+    const addBlockedDate = async () => {
+        if (newBlockedDate) {
+            try {
+                setSaving(true);
+                const { data } = await lawyerAPI.addBlockedDate({
+                    startDate: newBlockedDate,
+                    endDate: newBlockedDate, // Single day blocking for now
+                    reason: 'Unavailable' // Default reason
+                });
+
+                setBlockedDates(prev => [...prev, data]);
+                setNewBlockedDate('');
+                setMessage({ type: 'success', text: 'Blocked date added successfully' });
+            } catch (error) {
+                console.error('Error adding blocked date:', error);
+                setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to add blocked date' });
+            } finally {
+                setSaving(false);
+            }
         }
     };
 
-    const removeBlockedDate = (date) => {
-        setBlockedDates(prev => prev.filter(d => d !== date));
+    const removeBlockedDate = async (id) => {
+        try {
+            setSaving(true);
+            await lawyerAPI.removeBlockedDate(id);
+            setBlockedDates(prev => prev.filter(d => d.id !== id));
+            setMessage({ type: 'success', text: 'Blocked date removed successfully' });
+        } catch (error) {
+            console.error('Error removing blocked date:', error);
+            setMessage({ type: 'error', text: 'Failed to remove blocked date' });
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleSave = async () => {
@@ -60,7 +92,7 @@ export default function LawyerAvailability() {
         try {
             await lawyerAPI.updateProfile(user?.lawyer?.id || user?.id, { availability: workingHours });
             setMessage({ type: 'success', text: 'Availability updated successfully!' });
-        } catch (error) {
+        } catch {
             setMessage({ type: 'error', text: 'Failed to update. Please try again.' });
         } finally {
             setSaving(false);
@@ -148,17 +180,17 @@ export default function LawyerAvailability() {
                         min={new Date().toISOString().split('T')[0]}
                         className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
-                    <button onClick={addBlockedDate} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2">
+                    <button onClick={addBlockedDate} disabled={saving || !newBlockedDate} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2 disabled:opacity-50">
                         <Plus className="w-4 h-4" /> Add
                     </button>
                 </div>
 
                 {blockedDates.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                        {blockedDates.map(date => (
-                            <span key={date} className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-sm">
-                                {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                <button onClick={() => removeBlockedDate(date)} className="hover:text-red-900">
+                        {blockedDates.map(period => (
+                            <span key={period.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-sm">
+                                {new Date(period.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                <button onClick={() => removeBlockedDate(period.id)} className="hover:text-red-900" disabled={saving}>
                                     <X className="w-4 h-4" />
                                 </button>
                             </span>

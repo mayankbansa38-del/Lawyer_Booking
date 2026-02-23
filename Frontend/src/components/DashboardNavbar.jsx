@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
     Menu, X, Bell, ChevronDown, LogOut,
     Settings, Shield, Briefcase, User as UserIcon
@@ -24,14 +24,15 @@ export default function DashboardNavbar({
     role = 'user',
     user,
     unreadCount = 0,
+    notifications = [],
     onLogout,
+    onMarkAllRead,
     onNotificationClick
 }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const location = useLocation();
-    const navigate = useNavigate();
     const notificationRef = useRef(null);
 
     // Role configuration
@@ -157,9 +158,9 @@ export default function DashboardNavbar({
                             <NotificationDropdown
                                 isOpen={isNotificationOpen}
                                 onClose={() => setIsNotificationOpen(false)}
-                                notifications={[]} // TODO: Fetch real notifications
-                                onMarkAllRead={() => console.log('Mark all read')}
-                                onNotificationClick={() => navigate('/user/notifications')}
+                                notifications={notifications}
+                                onMarkAllRead={onMarkAllRead}
+                                onNotificationClick={handleNotificationClick}
                             />
                         </div>
 

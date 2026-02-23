@@ -24,10 +24,11 @@ function formatDate(ts) {
 /* ──────────────────── ChatSidebar ──────────────────── */
 function ChatSidebar({ conversations, activeId, onSelect, loading }) {
     const [search, setSearch] = useState('');
-    const filtered = conversations.filter(c =>
-        c.title?.toLowerCase().includes(search.toLowerCase()) ||
-        c.otherParty?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = conversations.filter(c => {
+        const name = typeof c.otherParty === 'object' ? c.otherParty?.name : c.otherParty;
+        return c.title?.toLowerCase().includes(search.toLowerCase()) ||
+            (name || '').toLowerCase().includes(search.toLowerCase());
+    });
 
     return (
         <aside className="chat-sidebar">
@@ -54,10 +55,10 @@ function ChatSidebar({ conversations, activeId, onSelect, loading }) {
                     </div>
                 ) : filtered.map(c => (
                     <button key={c.caseId} className={`chat-sidebar__item ${activeId === c.caseId ? 'chat-sidebar__item--active' : ''}`} onClick={() => onSelect(c.caseId)}>
-                        <div className="chat-sidebar__avatar">{(c.otherParty || 'U')[0].toUpperCase()}</div>
+                        <div className="chat-sidebar__avatar">{((typeof c.otherParty === 'object' ? c.otherParty?.name : c.otherParty) || 'U')[0].toUpperCase()}</div>
                         <div className="chat-sidebar__info">
-                            <div className="chat-sidebar__name">{c.otherParty || 'Unknown'}</div>
-                            <div className="chat-sidebar__preview">{c.lastMessage || 'No messages'}</div>
+                            <div className="chat-sidebar__name">{(typeof c.otherParty === 'object' ? c.otherParty?.name : c.otherParty) || 'Unknown'}</div>
+                            <div className="chat-sidebar__preview">{(typeof c.lastMessage === 'object' ? c.lastMessage?.content : c.lastMessage) || 'No messages'}</div>
                         </div>
                         <div className="chat-sidebar__meta">
                             <span className="chat-sidebar__time">{c.lastMessageAt ? formatDate(c.lastMessageAt) : ''}</span>
@@ -122,7 +123,7 @@ function ChatWindow({ caseId, messages, onSend, typingUser, loading }) {
                     if (item.type === 'date') {
                         return <div key={`d-${i}`} className="chat-date-divider"><span>{item.label}</span></div>;
                     }
-                    const isOwn = item.senderId === user?.id;
+                    const isOwn = (item.sender?.id || item.senderId) === user?.id;
                     return (
                         <div key={item.id || i} className={`chat-bubble ${isOwn ? 'chat-bubble--own' : 'chat-bubble--other'}`}>
                             <div className="chat-bubble__content">{item.content}</div>
@@ -152,7 +153,7 @@ function ChatWindow({ caseId, messages, onSend, typingUser, loading }) {
 
 /* ──────────────────── ChatPage ──────────────────── */
 export default function ChatPage() {
-    const { socket, connected, joinCase, leaveCase, sendMessage: socketSend, sendTyping, markRead } = useSocket();
+    const { socket, connected, joinCase, leaveCase, sendMessage: socketSend, markRead } = useSocket();
     const [conversations, setConversations] = useState([]);
     const [activeCaseId, setActiveCaseId] = useState(null);
     const [messages, setMessages] = useState([]);

@@ -62,6 +62,8 @@ const About = lazy(() => import("./pages/About"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Signup = lazy(() => import("./pages/Signup"));
 const Login = lazy(() => import("./pages/Login"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const LawyerProfilePage = lazy(() => import("./pages/public/LawyerProfilePage"));
 const BookingPage = lazy(() => import("./pages/public/BookingPage"));
@@ -145,6 +147,8 @@ const router = createBrowserRouter([
           { path: "contact", element: withSuspense(Contact) },
           { path: "signup", element: withSuspense(Signup) },
           { path: "verify-email", element: withSuspense(VerifyEmail) },
+          { path: "forgot-password", element: withSuspense(ForgotPassword) },
+          { path: "reset-password", element: withSuspense(ResetPassword) },
           // Legacy routes (for backward compatibility)
           { path: "About", element: withSuspense(About) },
           { path: "Contact", element: withSuspense(Contact) },

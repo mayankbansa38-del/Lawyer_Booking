@@ -13,6 +13,7 @@ import jwt from 'jsonwebtoken';
 import env from '../config/env.js';
 import { getPrismaClient } from '../config/database.js';
 import logger from '../utils/logger.js';
+import { createNotification } from '../modules/notifications/routes.js';
 
 /**
  * Verify JWT token from socket handshake
@@ -162,6 +163,30 @@ export function initializeSocket(io) {
 
                 // Broadcast to everyone in the case room (including sender)
                 io.to(`case:${caseId}`).emit('message_received', payload);
+
+                // Notify the OTHER party (fire-and-forget)
+                try {
+                    const caseData = await prisma.case.findUnique({
+                        where: { id: caseId },
+                        include: { lawyer: { select: { userId: true } } },
+                    });
+                    if (caseData) {
+                        const recipientId = caseData.clientId === socket.userId
+                            ? caseData.lawyer.userId
+                            : caseData.clientId;
+                        const senderName = `${message.sender.firstName} ${message.sender.lastName}`;
+                        createNotification({
+                            userId: recipientId,
+                            type: 'MESSAGE',
+                            title: 'New Message',
+                            message: `${senderName}: ${(content || '').slice(0, 80)}`,
+                            actionUrl: `/cases/${caseId}`,
+                            actionLabel: 'View Chat',
+                        }).catch(err => logger.warn('Failed to create chat notification', { err: err.message }));
+                    }
+                } catch (notifErr) {
+                    logger.warn('Chat notification lookup failed', { err: notifErr.message });
+                }
 
                 logger.info('Message sent via socket', {
                     messageId: message.id,

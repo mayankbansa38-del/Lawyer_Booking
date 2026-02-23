@@ -1,33 +1,55 @@
 /**
- * User Cases Page - Enhanced
- * Premium design with stat cards and improved case detail panel
+ * User Cases Page
+ * Shows the user's cases with request-based workflow status tracking
  */
 
 import { useState, useEffect } from 'react';
-import { Briefcase, Calendar, ChevronRight, FileText, Scale, Clock, AlertCircle } from 'lucide-react';
-import { PageHeader, EmptyState } from '../../components/dashboard';
+import { useNavigate } from 'react-router-dom';
+import { Briefcase, Calendar, ChevronRight, Scale, Clock, AlertCircle, Plus, XCircle, CheckCircle2 } from 'lucide-react';
+import { EmptyState } from '../../components/dashboard';
 import { caseAPI } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 
-const tabs = [
+const STATUS_CONFIG = {
+    REQUESTED: { label: 'Pending Approval', color: 'bg-amber-100 text-amber-700', dotColor: 'bg-amber-500' },
+    OPEN: { label: 'Active', color: 'bg-green-100 text-green-700', dotColor: 'bg-green-500' },
+    IN_PROGRESS: { label: 'In Progress', color: 'bg-blue-100 text-blue-700', dotColor: 'bg-blue-500' },
+    PENDING_DOCS: { label: 'Pending Docs', color: 'bg-orange-100 text-orange-700', dotColor: 'bg-orange-500' },
+    UNDER_REVIEW: { label: 'Under Review', color: 'bg-purple-100 text-purple-700', dotColor: 'bg-purple-500' },
+    CLOSED: { label: 'Closed', color: 'bg-gray-100 text-gray-600', dotColor: 'bg-gray-400' },
+    RESOLVED: { label: 'Resolved', color: 'bg-emerald-100 text-emerald-700', dotColor: 'bg-emerald-500' },
+    REJECTED: { label: 'Declined', color: 'bg-red-100 text-red-700', dotColor: 'bg-red-500' },
+};
+
+const TABS = [
+    { id: 'all', label: 'All' },
+    { id: 'REQUESTED', label: 'Pending' },
     { id: 'active', label: 'Active' },
-    { id: 'pending', label: 'Pending' },
-    { id: 'closed', label: 'Closed' },
+    { id: 'CLOSED', label: 'Closed' },
+    { id: 'REJECTED', label: 'Declined' },
 ];
 
+function StatusBadge({ status }) {
+    const config = STATUS_CONFIG[status] || STATUS_CONFIG.OPEN;
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.color}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
+            {config.label}
+        </span>
+    );
+}
+
 export default function UserCases() {
-    const { user } = useAuth();
+    const navigate = useNavigate();
     const [cases, setCases] = useState([]);
-    const [activeTab, setActiveTab] = useState('active');
+    const [activeTab, setActiveTab] = useState('all');
     const [loading, setLoading] = useState(true);
     const [selectedCase, setSelectedCase] = useState(null);
 
     useEffect(() => {
         async function fetchCases() {
             try {
-                if (!user?.id) return;
-                const { data } = await caseAPI.getAll({ clientId: user.id });
-                setCases(data);
+                const { data } = await caseAPI.getAll();
+                setCases(data || []);
             } catch (error) {
                 console.error('Error fetching cases:', error);
             } finally {
@@ -35,15 +57,24 @@ export default function UserCases() {
             }
         }
         fetchCases();
-    }, [user]);
+    }, []);
 
-    const filteredCases = cases.filter(c => c.status === activeTab);
+    const filteredCases = cases.filter(c => {
+        if (activeTab === 'all') return true;
+        // "active" tab groups OPEN, IN_PROGRESS, PENDING_DOCS, UNDER_REVIEW
+        if (activeTab === 'active') return ['OPEN', 'IN_PROGRESS', 'PENDING_DOCS', 'UNDER_REVIEW'].includes(c.status);
+        return c.status === activeTab;
+    });
+
     const counts = {
-        active: cases.filter(c => c.status === 'active').length,
-        pending: cases.filter(c => c.status === 'pending').length,
-        closed: cases.filter(c => c.status === 'closed').length
+        all: cases.length,
+        REQUESTED: cases.filter(c => c.status === 'REQUESTED').length,
+        active: cases.filter(c => ['OPEN', 'IN_PROGRESS', 'PENDING_DOCS', 'UNDER_REVIEW'].includes(c.status)).length,
+        CLOSED: cases.filter(c => ['CLOSED', 'RESOLVED'].includes(c.status)).length,
+        REJECTED: cases.filter(c => c.status === 'REJECTED').length,
     };
 
+    // eslint-disable-next-line no-unused-vars
     const StatCard = ({ title, value, icon: Icon, color }) => (
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-start justify-between">
@@ -61,21 +92,31 @@ export default function UserCases() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">My Cases</h1>
-                <p className="text-gray-500 mt-1">Track your legal cases</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">My Cases</h1>
+                    <p className="text-gray-500 mt-1">Track your legal cases and requests</p>
+                </div>
+                <button
+                    onClick={() => navigate('/user/create-case')}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                    <Plus className="w-4 h-4" />
+                    Request a Case
+                </button>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <StatCard title="Pending Requests" value={counts.REQUESTED} icon={Clock} color="bg-amber-500" />
                 <StatCard title="Active Cases" value={counts.active} icon={Briefcase} color="bg-blue-500" />
-                <StatCard title="Pending" value={counts.pending} icon={Clock} color="bg-amber-500" />
-                <StatCard title="Closed" value={counts.closed} icon={Scale} color="bg-green-500" />
+                <StatCard title="Closed" value={counts.CLOSED} icon={CheckCircle2} color="bg-green-500" />
+                <StatCard title="Declined" value={counts.REJECTED} icon={XCircle} color="bg-red-500" />
             </div>
 
             {/* Tabs */}
             <div className="flex flex-wrap gap-2">
-                {tabs.map(tab => (
+                {TABS.map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>
                         {tab.label}
                         <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${activeTab === tab.id ? 'bg-white/20' : 'bg-gray-100'}`}>{counts[tab.id]}</span>
@@ -93,34 +134,36 @@ export default function UserCases() {
                             {filteredCases.map(c => (
                                 <div key={c.id} onClick={() => setSelectedCase(c)} className={`bg-white rounded-2xl shadow-sm border p-5 cursor-pointer transition-all duration-200 ${selectedCase?.id === c.id ? 'border-blue-500 ring-2 ring-blue-100 shadow-md' : 'border-gray-100 hover:shadow-md hover:border-gray-200'}`}>
                                     <div className="flex items-start justify-between">
-                                        <div>
-                                            <h4 className="font-semibold text-gray-900">{c.title}</h4>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-semibold text-gray-900 truncate">{c.title}</h4>
                                             <p className="text-sm text-gray-500 mt-0.5">{c.caseNumber}</p>
                                         </div>
-                                        <ChevronRight className={`w-5 h-5 transition-transform ${selectedCase?.id === c.id ? 'text-blue-500 rotate-90' : 'text-gray-400'}`} />
+                                        <div className="flex items-center gap-2 ml-3">
+                                            <StatusBadge status={c.status} />
+                                            <ChevronRight className={`w-5 h-5 transition-transform ${selectedCase?.id === c.id ? 'text-blue-500 rotate-90' : 'text-gray-400'}`} />
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
                                         <span className="flex items-center gap-1.5">
                                             <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
                                                 <Scale className="w-3 h-3 text-indigo-600" />
                                             </div>
-                                            {c.lawyerName}
+                                            {c.lawyer?.name || 'Assigned Lawyer'}
                                         </span>
-                                        {c.nextHearing && (
-                                            <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-lg text-blue-700 text-xs font-medium">
-                                                <Calendar className="w-3 h-3" /> Next: {new Date(c.nextHearing).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                            </span>
-                                        )}
+                                        <span className="flex items-center gap-1 text-xs text-gray-400">
+                                            <Calendar className="w-3 h-3" />
+                                            {new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        </span>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <EmptyState icon={Briefcase} title="No cases" description={`You don't have any ${activeTab} cases.`} />
+                        <EmptyState icon={Briefcase} title="No cases" description={activeTab === 'all' ? "You haven't created any case requests yet." : `No ${TABS.find(t => t.id === activeTab)?.label?.toLowerCase()} cases.`} />
                     )}
                 </div>
 
-                {/* Case Details */}
+                {/* Case Details Sidebar */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-fit sticky top-24">
                     {selectedCase ? (
                         <>
@@ -128,39 +171,54 @@ export default function UserCases() {
                                 <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
                                     <Briefcase className="w-5 h-5 text-blue-600" />
                                 </div>
-                                <div>
-                                    <h3 className="font-semibold text-gray-900">{selectedCase.title}</h3>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-gray-900 truncate">{selectedCase.title}</h3>
                                     <p className="text-sm text-gray-500">{selectedCase.caseNumber}</p>
                                 </div>
                             </div>
                             <div className="space-y-4">
                                 <div className="p-3.5 bg-gray-50 rounded-xl">
-                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Assigned Lawyer</p>
-                                    <p className="font-medium text-gray-900 mt-1">{selectedCase.lawyerName}</p>
+                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</p>
+                                    <div className="mt-1.5"><StatusBadge status={selectedCase.status} /></div>
                                 </div>
-                                {selectedCase.nextHearing && (
-                                    <div className="p-3.5 bg-blue-50 rounded-xl">
-                                        <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Next Hearing</p>
-                                        <p className="font-medium text-blue-700 mt-1">{new Date(selectedCase.nextHearing).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                                <div className="p-3.5 bg-gray-50 rounded-xl">
+                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Assigned Lawyer</p>
+                                    <p className="font-medium text-gray-900 mt-1">{selectedCase.lawyer?.name || '—'}</p>
+                                </div>
+                                <div className="p-3.5 bg-gray-50 rounded-xl">
+                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Priority</p>
+                                    <p className="font-medium text-gray-900 mt-1">{selectedCase.priority}</p>
+                                </div>
+                                {selectedCase.description && (
+                                    <div className="p-3.5 bg-gray-50 rounded-xl">
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</p>
+                                        <p className="text-sm text-gray-700 mt-1">{selectedCase.description}</p>
                                     </div>
                                 )}
-                                <div className="border-t pt-4">
-                                    <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2"><FileText className="w-4 h-4 text-gray-400" /> Timeline</h4>
-                                    <div className="space-y-3">
-                                        {selectedCase.timeline?.slice(0, 5).map((event, idx) => (
-                                            <div key={idx} className="flex gap-3">
-                                                <div className="flex flex-col items-center">
-                                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-blue-100" />
-                                                    {idx < (selectedCase.timeline?.length - 1) && <div className="w-0.5 h-full bg-gray-200 mt-1" />}
-                                                </div>
-                                                <div className="pb-3">
-                                                    <p className="text-sm font-medium text-gray-900">{event.event}</p>
-                                                    <p className="text-xs text-gray-500">{event.date}</p>
-                                                </div>
-                                            </div>
-                                        ))}
+                                {selectedCase.status === 'REQUESTED' && (
+                                    <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200">
+                                        <div className="flex items-start gap-2">
+                                            <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5" />
+                                            <p className="text-sm text-amber-700">Waiting for the lawyer to review and approve your request.</p>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
+                                {selectedCase.status === 'REJECTED' && (
+                                    <div className="p-3.5 bg-red-50 rounded-xl border border-red-200">
+                                        <div className="flex items-start gap-2">
+                                            <XCircle className="w-4 h-4 text-red-600 mt-0.5" />
+                                            <p className="text-sm text-red-700">This case request was declined by the lawyer.</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {['OPEN', 'IN_PROGRESS'].includes(selectedCase.status) && (
+                                    <button
+                                        onClick={() => navigate(`/user/cases/${selectedCase.id}`)}
+                                        className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                                    >
+                                        View Full Details
+                                    </button>
+                                )}
                             </div>
                         </>
                     ) : (

@@ -128,16 +128,6 @@ export function verifyRefreshToken(token) {
 }
 
 /**
- * Decode JWT without verification (for expired tokens)
- * 
- * @param {string} token - JWT token
- * @returns {Object|null} Decoded token payload or null
- */
-export function decodeToken(token) {
-    return jwt.decode(token);
-}
-
-/**
  * Get token expiry date
  * 
  * @param {string} expiresIn - Expiry string (e.g., '7d', '1h')
@@ -191,24 +181,6 @@ export function generateUrlSafeToken(length = 32) {
 }
 
 /**
- * Generate OTP (One-Time Password)
- * 
- * @param {number} [length=6] - OTP length
- * @returns {string} Numeric OTP
- */
-export function generateOTP(length = 6) {
-    const digits = '0123456789';
-    let otp = '';
-
-    const bytes = crypto.randomBytes(length);
-    for (let i = 0; i < length; i++) {
-        otp += digits[bytes[i] % 10];
-    }
-
-    return otp;
-}
-
-/**
  * Generate booking number
  * Format: NB-YYYYMMDD-XXXXX (e.g., NB-20260203-A7B3C)
  * 
@@ -222,71 +194,6 @@ export function generateBookingNumber() {
     return `NB-${dateStr}-${random}`;
 }
 
-/**
- * Generate slug from text
- * 
- * @param {string} text - Text to slugify
- * @param {string} [suffix] - Optional suffix (e.g., random string for uniqueness)
- * @returns {string} URL-friendly slug
- */
-export function generateSlug(text, suffix = null) {
-    let slug = text
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, '') // Remove special characters
-        .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-        .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-
-    if (suffix) {
-        slug = `${slug}-${suffix}`;
-    }
-
-    return slug;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// HASHING UTILITIES
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Create SHA256 hash
- * 
- * @param {string} data - Data to hash
- * @returns {string} Hex-encoded hash
- */
-export function sha256(data) {
-    return crypto.createHash('sha256').update(data).digest('hex');
-}
-
-/**
- * Create HMAC signature
- * 
- * @param {string} data - Data to sign
- * @param {string} secret - Secret key
- * @returns {string} Hex-encoded HMAC
- */
-export function createHmac(data, secret) {
-    return crypto.createHmac('sha256', secret).update(data).digest('hex');
-}
-
-/**
- * Verify Razorpay payment signature
- * 
- * @param {string} orderId - Razorpay order ID
- * @param {string} paymentId - Razorpay payment ID
- * @param {string} signature - Razorpay signature
- * @returns {boolean} Whether signature is valid
- */
-export function verifyRazorpaySignature(orderId, paymentId, signature) {
-    const data = `${orderId}|${paymentId}`;
-    const expectedSignature = createHmac(data, env.RAZORPAY_KEY_SECRET);
-
-    return crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature)
-    );
-}
-
 export default {
     hashPassword,
     comparePassword,
@@ -294,14 +201,8 @@ export default {
     generateRefreshToken,
     verifyAccessToken,
     verifyRefreshToken,
-    decodeToken,
     getTokenExpiryDate,
     generateRandomToken,
     generateUrlSafeToken,
-    generateOTP,
     generateBookingNumber,
-    generateSlug,
-    sha256,
-    createHmac,
-    verifyRazorpaySignature,
 };

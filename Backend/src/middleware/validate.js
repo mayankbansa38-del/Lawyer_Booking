@@ -63,39 +63,6 @@ export function validate(schema, options = {}) {
     };
 }
 
-/**
- * Validate request body only
- * 
- * @param {Object} bodySchema - Joi schema for body
- * @returns {Function} Express middleware
- */
-export function validateBody(bodySchema) {
-    return validate({ body: bodySchema });
-}
-
-/**
- * Validate request query only
- * 
- * @param {Object} querySchema - Joi schema for query
- * @returns {Function} Express middleware
- */
-export function validateQuery(querySchema) {
-    return validate({ query: querySchema });
-}
-
-/**
- * Validate request params only
- * 
- * @param {Object} paramsSchema - Joi schema for params
- * @returns {Function} Express middleware
- */
-export function validateParams(paramsSchema) {
-    return validate({ params: paramsSchema });
-}
-
 export default {
     validate,
-    validateBody,
-    validateQuery,
-    validateParams,
 };

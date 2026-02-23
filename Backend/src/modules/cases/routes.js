@@ -1,10 +1,14 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * NyayBooker Backend - Cases Routes
+ * NyayBooker Backend - Cases Routes (Refactored)
  * ═══════════════════════════════════════════════════════════════════════════
- * 
- * Case management routes — CRUD for legal cases with audit trail.
- * 
+ *
+ * Case management with request/approval workflow:
+ *   - Users REQUEST cases from completed bookings (status=REQUESTED)
+ *   - Lawyers APPROVE or REJECT requests
+ *   - Lawyers can also CREATE cases directly (status=OPEN)
+ *   - Notifications sent on every lifecycle event
+ *
  * @module modules/cases/routes
  */
 
@@ -14,6 +18,7 @@ import { sendSuccess, sendCreated, sendPaginated, asyncHandler } from '../../uti
 import { getPrismaClient } from '../../config/database.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../utils/errors.js';
 import { parsePaginationParams } from '../../utils/pagination.js';
+import { createNotification } from '../notifications/routes.js';
 import logger from '../../utils/logger.js';
 
 const router = Router();
@@ -47,28 +52,89 @@ function assertCaseAccess(userCase, user) {
     }
 }
 
+/**
+ * Standard case include for list/detail queries
+ */
+const CASE_INCLUDE_LIST = {
+    client: {
+        select: { id: true, firstName: true, lastName: true, avatar: true, email: true },
+    },
+    lawyer: {
+        select: {
+            id: true,
+            userId: true,
+            user: {
+                select: { firstName: true, lastName: true, avatar: true },
+            },
+        },
+    },
+    _count: {
+        select: { messages: true, documents: true },
+    },
+};
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ROUTES
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * @route   POST /api/v1/cases
- * @desc    Create a new case
- * @access  Private (Lawyer)
+ * @desc    Create a case request (USER) or create a case directly (LAWYER)
+ * @access  Private
+ *
+ * USER flow:  requires bookingId (must be COMPLETED) → status = REQUESTED
+ * LAWYER flow: requires clientId → status = OPEN
  */
 router.post('/', authenticate, asyncHandler(async (req, res) => {
     const prisma = getPrismaClient();
     const { title, description, clientId, priority = 'MEDIUM', bookingId } = req.body;
 
-    if (!title) {
+    if (!title || !title.trim()) {
         throw new BadRequestError('Title is required');
     }
 
     let resolvedClientId = clientId;
     let resolvedLawyerId;
+    let caseStatus;
+    let lawyerUserId; // for notifications
 
-    if (req.user.role === 'LAWYER') {
-        // Lawyer creating a case — needs clientId
+    if (req.user.role === 'USER') {
+        // ── User requests a case from a completed booking ──────────────
+        if (!bookingId) {
+            throw new BadRequestError('bookingId is required. Select a completed consultation.');
+        }
+
+        resolvedClientId = req.user.id;
+
+        const booking = await prisma.booking.findUnique({
+            where: { id: bookingId },
+            include: {
+                lawyer: { select: { id: true, userId: true, user: { select: { firstName: true, lastName: true } } } },
+            },
+        });
+
+        if (!booking || booking.clientId !== req.user.id) {
+            throw new BadRequestError('Invalid booking — this booking does not belong to you');
+        }
+
+        if (booking.status !== 'COMPLETED') {
+            throw new BadRequestError('You can only request a case after a completed consultation');
+        }
+
+        // Check no existing case is already linked to this booking
+        const existingCase = await prisma.case.findUnique({
+            where: { bookingId },
+        });
+        if (existingCase) {
+            throw new BadRequestError('A case already exists for this booking');
+        }
+
+        resolvedLawyerId = booking.lawyerId;
+        lawyerUserId = booking.lawyer.userId;
+        caseStatus = 'REQUESTED'; // Pending lawyer approval
+
+    } else if (req.user.role === 'LAWYER') {
+        // ── Lawyer creates a case directly ─────────────────────────────
         if (!clientId) {
             throw new BadRequestError('clientId is required when a lawyer creates a case');
         }
@@ -79,90 +145,205 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
         if (!lawyer) {
             throw new ForbiddenError('Lawyer profile not found');
         }
+
         resolvedLawyerId = lawyer.id;
 
-        // Verify client exists
         const client = await prisma.user.findUnique({ where: { id: clientId } });
         if (!client) throw new NotFoundError('Client');
 
-    } else if (req.user.role === 'USER') {
-        // User creating a case — needs bookingId to identify the lawyer
-        if (!bookingId) {
-            throw new BadRequestError('bookingId is required. You can create a case from a completed consultation.');
+        // Optionally link to a booking
+        if (bookingId) {
+            const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+            if (!booking || booking.lawyerId !== resolvedLawyerId || booking.clientId !== resolvedClientId) {
+                throw new BadRequestError('Invalid booking reference');
+            }
         }
 
-        resolvedClientId = req.user.id;
-
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-        });
-
-        if (!booking || booking.clientId !== req.user.id) {
-            throw new BadRequestError('Invalid booking — this booking does not belong to you');
-        }
-
-        if (booking.status !== 'COMPLETED') {
-            throw new BadRequestError('You can only create a case after a completed consultation');
-        }
-
-        resolvedLawyerId = booking.lawyerId;
+        caseStatus = 'OPEN'; // No approval needed
     } else {
         throw new ForbiddenError('Only lawyers or users can create cases');
-    }
-
-    // If bookingId provided by lawyer, verify it
-    if (bookingId && req.user.role === 'LAWYER') {
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-        });
-
-        if (!booking || booking.lawyerId !== resolvedLawyerId || booking.clientId !== resolvedClientId) {
-            throw new BadRequestError('Invalid booking reference');
-        }
     }
 
     const newCase = await prisma.case.create({
         data: {
             caseNumber: generateCaseNumber(),
-            title,
-            description,
+            title: title.trim(),
+            description: description?.trim() || null,
             priority,
+            status: caseStatus,
             clientId: resolvedClientId,
             lawyerId: resolvedLawyerId,
             bookingId: bookingId || null,
         },
-        include: {
-            client: {
-                select: { id: true, firstName: true, lastName: true, avatar: true },
-            },
-            lawyer: {
-                select: {
-                    id: true,
-                    user: {
-                        select: { firstName: true, lastName: true, avatar: true },
-                    },
-                },
-            },
-        },
+        include: CASE_INCLUDE_LIST,
     });
 
-    // Audit log
+    // ── Audit log ─────────────────────────────────────────────────────
     await createAuditEntry(prisma, {
         action: 'CREATE',
         entityType: 'Case',
         entityId: newCase.id,
         userId: req.user.id,
         caseId: newCase.id,
-        details: { title, priority },
+        details: { title, priority, status: caseStatus },
     });
+
+    // ── Notifications ─────────────────────────────────────────────────
+    if (req.user.role === 'USER' && lawyerUserId) {
+        // Notify the lawyer about the new case request
+        createNotification({
+            userId: lawyerUserId,
+            type: 'CASE',
+            title: 'New Case Request',
+            message: `${req.user.firstName} ${req.user.lastName} has requested a case: "${title}"`,
+            actionUrl: `/lawyer/cases`,
+            actionLabel: 'Review Request',
+            metadata: { caseId: newCase.id },
+        }).catch(err => logger.error('Failed to create case request notification', err));
+    } else if (req.user.role === 'LAWYER') {
+        // Notify the client that a lawyer opened a case for them
+        createNotification({
+            userId: resolvedClientId,
+            type: 'CASE',
+            title: 'New Case Opened',
+            message: `Your lawyer has opened a case: "${title}"`,
+            actionUrl: `/user/cases`,
+            actionLabel: 'View Case',
+            metadata: { caseId: newCase.id },
+        }).catch(err => logger.error('Failed to create case creation notification', err));
+    }
 
     logger.logBusiness('CASE_CREATED', {
         caseId: newCase.id,
         lawyerId: resolvedLawyerId,
         clientId: resolvedClientId,
+        status: caseStatus,
     });
 
-    return sendCreated(res, { data: newCase }, 'Case created successfully');
+    const msg = caseStatus === 'REQUESTED'
+        ? 'Case request submitted — awaiting lawyer approval'
+        : 'Case created successfully';
+
+    return sendCreated(res, { data: newCase }, msg);
+}));
+
+/**
+ * @route   PUT /api/v1/cases/:id/approve
+ * @desc    Lawyer approves a case request (REQUESTED → OPEN)
+ * @access  Private (Assigned Lawyer only)
+ */
+router.put('/:id/approve', authenticate, asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+
+    const caseData = await prisma.case.findUnique({
+        where: { id: req.params.id },
+        include: {
+            lawyer: { select: { userId: true } },
+            client: { select: { id: true, firstName: true, lastName: true } },
+        },
+    });
+
+    if (!caseData) throw new NotFoundError('Case');
+
+    if (caseData.lawyer.userId !== req.user.id && req.user.role !== 'ADMIN') {
+        throw new ForbiddenError('Only the assigned lawyer can approve this case');
+    }
+
+    if (caseData.status !== 'REQUESTED') {
+        throw new BadRequestError(`Cannot approve a case with status "${caseData.status}". Only REQUESTED cases can be approved.`);
+    }
+
+    const updated = await prisma.case.update({
+        where: { id: req.params.id },
+        data: { status: 'OPEN' },
+        include: CASE_INCLUDE_LIST,
+    });
+
+    await createAuditEntry(prisma, {
+        action: 'STATUS_CHANGE',
+        entityType: 'Case',
+        entityId: updated.id,
+        userId: req.user.id,
+        caseId: updated.id,
+        details: { status: { from: 'REQUESTED', to: 'OPEN' } },
+    });
+
+    // Notify the client
+    createNotification({
+        userId: caseData.clientId,
+        type: 'CASE',
+        title: 'Case Request Approved',
+        message: `Your case "${caseData.title}" has been approved by the lawyer.`,
+        actionUrl: `/user/cases`,
+        actionLabel: 'View Case',
+        metadata: { caseId: updated.id },
+    }).catch(err => logger.error('Failed to create case approval notification', err));
+
+    logger.logBusiness('CASE_APPROVED', { caseId: updated.id });
+
+    return sendSuccess(res, { data: updated, message: 'Case approved successfully' });
+}));
+
+/**
+ * @route   PUT /api/v1/cases/:id/reject
+ * @desc    Lawyer rejects a case request (REQUESTED → REJECTED)
+ * @access  Private (Assigned Lawyer only)
+ */
+router.put('/:id/reject', authenticate, asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+    const { reason } = req.body;
+
+    const caseData = await prisma.case.findUnique({
+        where: { id: req.params.id },
+        include: {
+            lawyer: { select: { userId: true } },
+            client: { select: { id: true, firstName: true, lastName: true } },
+        },
+    });
+
+    if (!caseData) throw new NotFoundError('Case');
+
+    if (caseData.lawyer.userId !== req.user.id && req.user.role !== 'ADMIN') {
+        throw new ForbiddenError('Only the assigned lawyer can reject this case');
+    }
+
+    if (caseData.status !== 'REQUESTED') {
+        throw new BadRequestError(`Cannot reject a case with status "${caseData.status}". Only REQUESTED cases can be rejected.`);
+    }
+
+    const updated = await prisma.case.update({
+        where: { id: req.params.id },
+        data: { status: 'REJECTED' },
+        include: CASE_INCLUDE_LIST,
+    });
+
+    await createAuditEntry(prisma, {
+        action: 'STATUS_CHANGE',
+        entityType: 'Case',
+        entityId: updated.id,
+        userId: req.user.id,
+        caseId: updated.id,
+        details: { status: { from: 'REQUESTED', to: 'REJECTED' }, reason: reason || null },
+    });
+
+    // Notify the client
+    const rejectionMsg = reason
+        ? `Your case "${caseData.title}" has been declined. Reason: ${reason}`
+        : `Your case "${caseData.title}" has been declined by the lawyer.`;
+
+    createNotification({
+        userId: caseData.clientId,
+        type: 'CASE',
+        title: 'Case Request Declined',
+        message: rejectionMsg,
+        actionUrl: `/user/cases`,
+        actionLabel: 'View Cases',
+        metadata: { caseId: updated.id, reason },
+    }).catch(err => logger.error('Failed to create case rejection notification', err));
+
+    logger.logBusiness('CASE_REJECTED', { caseId: updated.id, reason });
+
+    return sendSuccess(res, { data: updated, message: 'Case rejected' });
 }));
 
 /**
@@ -207,22 +388,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
             skip,
             take: limit,
             orderBy: { updatedAt: 'desc' },
-            include: {
-                client: {
-                    select: { id: true, firstName: true, lastName: true, avatar: true, email: true },
-                },
-                lawyer: {
-                    select: {
-                        id: true,
-                        user: {
-                            select: { firstName: true, lastName: true, avatar: true },
-                        },
-                    },
-                },
-                _count: {
-                    select: { messages: true, documents: true },
-                },
-            },
+            include: CASE_INCLUDE_LIST,
         }),
         prisma.case.count({ where }),
     ]);
@@ -377,20 +543,9 @@ router.put('/:id', authenticate, asyncHandler(async (req, res) => {
     const updated = await prisma.case.update({
         where: { id: req.params.id },
         data: updateData,
-        include: {
-            client: {
-                select: { id: true, firstName: true, lastName: true },
-            },
-            lawyer: {
-                select: {
-                    id: true,
-                    user: { select: { firstName: true, lastName: true } },
-                },
-            },
-        },
+        include: CASE_INCLUDE_LIST,
     });
 
-    // Audit the changes
     const action = changes.status ? 'STATUS_CHANGE' : 'UPDATE';
     await createAuditEntry(prisma, {
         action,
@@ -413,7 +568,6 @@ router.get('/:id/history', authenticate, asyncHandler(async (req, res) => {
     const prisma = getPrismaClient();
     const { page, limit, skip } = parsePaginationParams(req.query);
 
-    // Verify case exists and user has access
     const caseData = await prisma.case.findUnique({
         where: { id: req.params.id },
         include: {
@@ -458,6 +612,60 @@ router.get('/:id/history', authenticate, asyncHandler(async (req, res) => {
     }));
 
     return sendPaginated(res, { data: transformed, total, page, limit });
+}));
+
+/**
+ * @route   POST /api/v1/cases/:id/meeting
+ * @desc    Generate a case meeting link, notify client, post message in chat
+ * @access  Private (Assigned Lawyer only)
+ */
+router.post('/:id/meeting', authenticate, asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+
+    const caseData = await prisma.case.findUnique({
+        where: { id: req.params.id },
+        include: {
+            lawyer: { select: { userId: true } },
+        },
+    });
+
+    if (!caseData) throw new NotFoundError('Case');
+
+    if (caseData.lawyer.userId !== req.user.id && req.user.role !== 'ADMIN') {
+        throw new ForbiddenError('Only the assigned lawyer can generate a meeting for this case');
+    }
+
+    if (!['OPEN', 'IN_PROGRESS', 'UNDER_REVIEW', 'PENDING_DOCS'].includes(caseData.status)) {
+        throw new BadRequestError(`Cannot start a meeting for a case with status "${caseData.status}".`);
+    }
+
+    // Generate link deterministically from case ID
+    const roomId = req.params.id.replace(/[^a-zA-Z0-9]/g, '');
+    const meetLink = `https://meet.jit.si/NyayBooker_Case_${roomId}`;
+
+    // Create a message in the case chat
+    await prisma.message.create({
+        data: {
+            content: `I have started a video meeting. Please join here:\n${meetLink}`,
+            caseId: req.params.id,
+            senderId: req.user.id,
+        }
+    });
+
+    // Notify the client
+    createNotification({
+        userId: caseData.clientId,
+        type: 'CASE',
+        title: 'Video Meeting Started',
+        message: `Your lawyer has started a video meeting for case "${caseData.title}".`,
+        actionUrl: `/user/cases/${req.params.id}`,
+        actionLabel: 'View Case',
+        metadata: { caseId: req.params.id, link: meetLink },
+    }).catch(err => logger.error('Failed to create case meeting notification', err));
+
+    logger.logBusiness('CASE_MEETING_STARTED', { caseId: req.params.id, lawyerId: caseData.lawyerId });
+
+    return sendSuccess(res, { data: { link: meetLink }, message: 'Meeting started and client notified' });
 }));
 
 export default router;

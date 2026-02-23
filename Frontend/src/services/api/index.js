@@ -17,8 +17,12 @@ export const lawyerAPI = {
         if (filters.limit) params.limit = filters.limit;
         if (filters.page) params.page = filters.page;
         if (filters.search) params.search = filters.search;
-        if (filters.locations && filters.locations.length) params.city = filters.locations[0]; // Simple filter for now
-        if (filters.specialties && filters.specialties.length) params.specialization = filters.specialties[0];
+        if (filters.locations && filters.locations.length) {
+            const [cityParam, stateParam] = filters.locations[0].split(',').map(s => s.trim());
+            if (cityParam) params.city = cityParam;
+            if (stateParam) params.state = stateParam;
+        }
+        if (filters.specialties && filters.specialties.length) params.specialization = filters.specialties.join(',');
         if (filters.costRange) {
             params.minRate = filters.costRange[0];
             params.maxRate = filters.costRange[1];
@@ -47,7 +51,7 @@ export const lawyerAPI = {
             casesWon: lawyer.completedBookings || 0,
             specialty: lawyer.specializations ? lawyer.specializations.map(s => s.name) : [],
             avgCostPerCase: parseFloat(lawyer.hourlyRate),
-            availability: lawyer.isAvailable ? 'Available' : 'Busy',
+            availability: lawyer.availabilityStatus || (lawyer.isAvailable ? 'Available' : 'Busy'),
             rating: lawyer.averageRating || 0,
             description: lawyer.headline || lawyer.bio || 'Experienced Lawyer'
         }));
@@ -60,13 +64,19 @@ export const lawyerAPI = {
             const { data } = await apiClient.get(`/lawyers/${id}`);
             const lawyer = data.data;
 
+            // Normalize availability keys to lowercase ONCE at the API boundary.
+            // Backend stores capitalized keys (e.g., "Monday"), but CalendarView
+            // uses JS Date.getDay() which maps to lowercase day names.
+            const normalizedAvailability = Object.keys(lawyer.availability || {}).reduce((acc, key) => {
+                acc[key.toLowerCase()] = lawyer.availability[key];
+                return acc;
+            }, {});
+
             return {
                 data: {
                     ...lawyer,
                     image: lawyer.avatar,
-                    specialty: lawyer.specializations?.map(s => s.name) || [],
-                    casesWon: lawyer.completedConsultations,
-                    location: lawyer.city && lawyer.state ? `${lawyer.city}, ${lawyer.state}` : lawyer.city || lawyer.state || 'Location not available',
+                    availability: normalizedAvailability,
                 }
             };
         } catch (error) {
@@ -132,11 +142,6 @@ export const lawyerAPI = {
         };
     },
 
-    async getFeatured(limit = 6) {
-        const response = await apiClient.get('/lawyers/featured', { params: { limit } });
-        return response.data?.data || response.data || [];
-    },
-
     async getReviews(lawyerId, page = 1, limit = 10) {
         const response = await apiClient.get(`/reviews/lawyer/${lawyerId}`, { params: { page, limit } });
         return response.data;
@@ -144,6 +149,16 @@ export const lawyerAPI = {
 
     async getAvailability(lawyerId, date) {
         const response = await apiClient.get(`/lawyers/${lawyerId}/availability`, { params: { date } });
+        return response.data;
+    },
+
+    async addBlockedDate(data) {
+        const response = await apiClient.post('/lawyers/blocked-dates', data);
+        return response.data;
+    },
+
+    async removeBlockedDate(id) {
+        const response = await apiClient.delete(`/lawyers/blocked-dates/${id}`);
         return response.data;
     },
 };
@@ -221,8 +236,50 @@ export const caseAPI = {
         return response.data;
     },
 
-    async getHistory(id, page = 1, limit = 20) {
-        const response = await apiClient.get(`/cases/${id}/history`, { params: { page, limit } });
+    async approve(id) {
+        const response = await apiClient.put(`/cases/${id}/approve`);
+        return response.data;
+    },
+
+    async reject(id, reason = '') {
+        const response = await apiClient.put(`/cases/${id}/reject`, { reason });
+        return response.data;
+    },
+
+    async createMeeting(id) {
+        const response = await apiClient.post(`/cases/${id}/meeting`);
+        return response.data;
+    },
+};
+
+export const casePaymentAPI = {
+    async requestPayment(caseId, { amount, description }) {
+        const response = await apiClient.post(`/case-payments/cases/${caseId}/request`, { amount, description });
+        return response.data;
+    },
+
+    async getCasePayments(caseId) {
+        const response = await apiClient.get(`/case-payments/cases/${caseId}`);
+        return response.data;
+    },
+
+    async denyPayment(paymentId) {
+        const response = await apiClient.put(`/case-payments/${paymentId}/deny`);
+        return response.data;
+    },
+
+    async payPayment(paymentId) {
+        const response = await apiClient.post(`/case-payments/${paymentId}/pay`);
+        return response.data;
+    },
+
+    async getById(paymentId) {
+        const response = await apiClient.get(`/case-payments/${paymentId}`);
+        return response.data;
+    },
+
+    async getMyPayments() {
+        const response = await apiClient.get('/case-payments/my-payments');
         return response.data;
     },
 };
@@ -246,16 +303,6 @@ export const clientAPI = {
 };
 
 export const paymentAPI = {
-    async createOrder(bookingId) {
-        const response = await apiClient.post('/payments/create-order', { bookingId });
-        return response.data;
-    },
-
-    async verify(data) {
-        const response = await apiClient.post('/payments/verify', data);
-        return response.data;
-    },
-
     async getAll(filters = {}) {
         const params = {};
         if (filters.status) params.status = filters.status;
@@ -276,11 +323,6 @@ export const paymentAPI = {
         return response.data;
     },
 
-    async requestRefund(paymentId, data) {
-        const response = await apiClient.post(`/payments/${paymentId}/refund`, data);
-        return response.data;
-    },
-
     async getEarningsSummary() {
         const response = await apiClient.get('/payments/earnings-summary');
         return response.data;
@@ -288,8 +330,13 @@ export const paymentAPI = {
 };
 
 export const notificationAPI = {
-    async getAll() {
-        const response = await apiClient.get('/notifications');
+    async getAll(filters = {}, options = {}) {
+        const params = {};
+        if (filters.page) params.page = filters.page;
+        if (filters.limit) params.limit = filters.limit;
+        if (filters.unreadOnly !== undefined) params.unreadOnly = filters.unreadOnly;
+
+        const response = await apiClient.get('/notifications', { params, ...options });
         return response.data;
     },
 
@@ -310,11 +357,6 @@ export const notificationAPI = {
 
     async delete(id) {
         const response = await apiClient.delete(`/notifications/${id}`);
-        return response.data;
-    },
-
-    async deleteAll() {
-        const response = await apiClient.delete('/notifications');
         return response.data;
     },
 };
@@ -342,10 +384,8 @@ export const documentAPI = {
     },
 
     async download(id) {
-        const response = await apiClient.get(`/documents/${id}/download`, {
-            responseType: 'blob',
-        });
-        return response;
+        const response = await apiClient.get(`/documents/${id}/download`);
+        return response.data;
     },
 
     async update(id, data) {
@@ -421,6 +461,16 @@ export const userAPI = {
         const response = await apiClient.get(`/users/${id}`);
         return response.data;
     },
+
+    async uploadAvatar(formData) {
+        const response = await apiClient.post('/users/avatar', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
 };
 
-export default { lawyer: lawyerAPI, appointment: appointmentAPI, case: caseAPI, client: clientAPI, payment: paymentAPI, notification: notificationAPI, document: documentAPI, favorites: favoritesAPI, chat: chatAPI, user: userAPI };
+
+
+export default { lawyer: lawyerAPI, appointment: appointmentAPI, case: caseAPI, casePayment: casePaymentAPI, client: clientAPI, payment: paymentAPI, notification: notificationAPI, document: documentAPI, favorites: favoritesAPI, chat: chatAPI, user: userAPI };
+

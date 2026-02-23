@@ -19,8 +19,6 @@ export default function UserDashboard() {
     const { user } = useAuth();
     const [stats, setStats] = useState({ upcoming: 0, saved: 0, activeCases: 0, totalPayments: 0 });
     const [upcomingAppointments, setUpcomingAppointments] = useState([]);
-    const [savedLawyers, setSavedLawyers] = useState([]);
-    const [recentNotifications, setRecentNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -28,25 +26,33 @@ export default function UserDashboard() {
             if (!user?.id) return;
             try {
                 const userId = user.id;
-                const [aptsRes, favsRes, casesRes, notifsRes] = await Promise.all([
-                    appointmentAPI.getAll({ userId }),
+                const [aptsRes, favsRes, casesRes, _notifsRes] = await Promise.all([
+                    appointmentAPI.getAll(),
                     favoritesAPI.getByUser(userId),
                     caseAPI.getAll({ clientId: userId }),
                     notificationAPI.getAll(userId, 'client').catch(() => ({ data: [] }))
                 ]);
 
-                const upcoming = aptsRes.data.filter(a => a.status === 'confirmed' || a.status === 'pending');
-                const activeCases = casesRes.data.filter(c => c.status === 'active').length;
+                const upcoming = aptsRes.data
+                    .filter(a => a.status === 'CONFIRMED' || a.status === 'PENDING')
+                    .map(apt => ({
+                        ...apt,
+                        date: apt.scheduledDate,
+                        time: apt.scheduledTime,
+                        lawyerName: apt.lawyer.name,
+                        lawyerImage: apt.lawyer.avatar,
+                        caseType: apt.meetingType + ' - ' + (apt.lawyer.specialization || 'Legal Consultation'),
+                        status: apt.status
+                    }));
+                const activeCases = casesRes.data.filter(c => c.status === 'ACTIVE' || c.status === 'OPEN').length;
 
                 setStats({
                     upcoming: upcoming.length,
                     saved: favsRes.data.length,
                     activeCases,
-                    totalPayments: aptsRes.data.filter(a => a.status === 'completed').length
+                    totalPayments: aptsRes.data.filter(a => a.status === 'COMPLETED').length
                 });
                 setUpcomingAppointments(upcoming.slice(0, 3));
-                setSavedLawyers(favsRes.data.slice(0, 4));
-                setRecentNotifications((notifsRes.data || []).slice(0, 5));
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
             } finally {
@@ -57,6 +63,7 @@ export default function UserDashboard() {
     }, [user]);
 
     // Admin-style StatCard
+    // eslint-disable-next-line no-unused-vars
     const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
             <div className="flex items-start justify-between">

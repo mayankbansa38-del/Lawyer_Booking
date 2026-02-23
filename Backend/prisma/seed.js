@@ -20,28 +20,43 @@ const prisma = new PrismaClient();
 // ═══════════════════════════════════════════════════════════════════════════
 
 const PRACTICE_AREAS = [
-    { name: 'Criminal Law', slug: 'criminal-law', description: 'Defense and prosecution in criminal cases', icon: 'gavel', displayOrder: 1 },
-    { name: 'Family Law', slug: 'family-law', description: 'Divorce, custody, adoption, and family matters', icon: 'family', displayOrder: 2 },
-    { name: 'Corporate Law', slug: 'corporate-law', description: 'Business formation, contracts, and compliance', icon: 'business', displayOrder: 3 },
-    { name: 'Real Estate Law', slug: 'real-estate-law', description: 'Property transactions and disputes', icon: 'home', displayOrder: 4 },
-    { name: 'Intellectual Property', slug: 'intellectual-property', description: 'Patents, trademarks, and copyrights', icon: 'lightbulb', displayOrder: 5 },
-    { name: 'Tax Law', slug: 'tax-law', description: 'Tax planning, disputes, and compliance', icon: 'receipt', displayOrder: 6 },
-    { name: 'Immigration Law', slug: 'immigration-law', description: 'Visas, citizenship, and immigration matters', icon: 'flight', displayOrder: 7 },
-    { name: 'Labor & Employment', slug: 'labor-employment', description: 'Employment contracts and workplace disputes', icon: 'work', displayOrder: 8 },
-    { name: 'Civil Litigation', slug: 'civil-litigation', description: 'Civil disputes and lawsuits', icon: 'scale', displayOrder: 9 },
-    { name: 'Consumer Protection', slug: 'consumer-protection', description: 'Consumer rights and product liability', icon: 'shield', displayOrder: 10 },
-    { name: 'Banking & Finance', slug: 'banking-finance', description: 'Banking regulations and financial disputes', icon: 'account_balance', displayOrder: 11 },
-    { name: 'Medical & Healthcare', slug: 'medical-healthcare', description: 'Medical malpractice and healthcare law', icon: 'local_hospital', displayOrder: 12 },
+    { name: 'Criminal Lawyer', slug: 'criminal-lawyer', description: 'Defense and prosecution in criminal cases', icon: 'gavel', displayOrder: 1 },
+    { name: 'Family Lawyer', slug: 'family-lawyer', description: 'Divorce, custody, adoption, and family matters', icon: 'family', displayOrder: 2 },
+    { name: 'Corporate Lawyer', slug: 'corporate-lawyer', description: 'Business formation, contracts, and compliance', icon: 'business', displayOrder: 3 },
+    { name: 'Cyber Lawyer', slug: 'cyber-lawyer', description: 'Cyber crimes, data protection, and digital rights', icon: 'lock', displayOrder: 4 },
+    { name: 'Civil Lawyer', slug: 'civil-lawyer', description: 'Civil disputes, property, and lawsuits', icon: 'scale', displayOrder: 5 },
+    { name: 'Immigration Law', slug: 'immigration-law', description: 'Visas, citizenship, and immigration matters', icon: 'flight', displayOrder: 6 },
+    { name: 'Human Rights', slug: 'human-rights', description: 'Protection of fundamental human rights', icon: 'accessibility', displayOrder: 7 },
+    { name: 'Real Estate Law', slug: 'real-estate-law', description: 'Property transactions and disputes', icon: 'home', displayOrder: 8 },
+    { name: 'Tax Law', slug: 'tax-law', description: 'Tax planning, disputes, and compliance', icon: 'receipt', displayOrder: 9 },
 ];
 
-const ADMIN_USER = {
-    email: 'admin@nyaybooker.com',
-    password: 'Admin@123456',
-    firstName: 'System',
-    lastName: 'Administrator',
-    role: 'ADMIN',
-    isEmailVerified: true,
-};
+const ADMIN_USERS = [
+    {
+        email: 'mayank@nyaybooker.com',
+        password: 'Admin@123456',
+        firstName: 'Mayank',
+        lastName: 'Admin',
+        role: 'ADMIN',
+        isEmailVerified: true,
+    },
+    {
+        email: 'ashruf@nyaybooker.com',
+        password: 'Admin@123456',
+        firstName: 'Ashruf',
+        lastName: 'Admin',
+        role: 'ADMIN',
+        isEmailVerified: true,
+    },
+    {
+        email: 'piyush@nyaybooker.com',
+        password: 'Admin@123456',
+        firstName: 'Piyush',
+        lastName: 'Admin',
+        role: 'ADMIN',
+        isEmailVerified: true,
+    }
+];
 
 const TEST_USERS = [
     { email: 'user1@example.com', password: 'User@123456', firstName: 'Rahul', lastName: 'Sharma', phone: '+919876543210', isEmailVerified: true },
@@ -60,19 +75,21 @@ const TEST_LAWYERS = [
             avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop'
         },
         lawyer: {
-            barCouncilId: 'DL/1234/2015',
-            barCouncilState: 'Delhi',
+            barCouncilId: 'HP/1234/2015',
+            barCouncilState: 'Himachal Pradesh',
             enrollmentYear: 2015,
             bio: 'Experienced criminal defense attorney with over 9 years of practice. Specialized in bail matters, criminal appeals, and white-collar crimes. Successfully represented clients in over 500 cases.',
             headline: 'Senior Criminal Defense Advocate | High Court Practitioner',
             experience: 9,
             hourlyRate: 3000,
             consultationFee: 1500,
-            city: 'New Delhi',
-            state: 'Delhi',
+            city: 'Shimla',
+            state: 'Himachal Pradesh',
             isAvailable: true,
             verificationStatus: 'VERIFIED',
-            specializations: ['criminal-law', 'civil-litigation'],
+            specializations: ['criminal-lawyer', 'civil-lawyer'],
+            averageRating: 4.9,
+            totalReviews: 42,
         },
     },
     {
@@ -85,19 +102,21 @@ const TEST_LAWYERS = [
             avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop'
         },
         lawyer: {
-            barCouncilId: 'MH/5678/2018',
-            barCouncilState: 'Maharashtra',
+            barCouncilId: 'HP/5678/2018',
+            barCouncilState: 'Himachal Pradesh',
             enrollmentYear: 2018,
             bio: 'Passionate family law practitioner dedicated to helping families through difficult times. Expertise in divorce, custody, and adoption cases with a compassionate approach.',
             headline: 'Family Law Specialist | Mediator',
             experience: 6,
             hourlyRate: 2500,
             consultationFee: 1000,
-            city: 'Mumbai',
-            state: 'Maharashtra',
+            city: 'Hamirpur',
+            state: 'Himachal Pradesh',
             isAvailable: true,
             verificationStatus: 'VERIFIED',
-            specializations: ['family-law', 'civil-litigation'],
+            specializations: ['family-lawyer', 'civil-lawyer'],
+            averageRating: 5.0,
+            totalReviews: 28,
         },
     },
     {
@@ -107,24 +126,26 @@ const TEST_LAWYERS = [
             firstName: 'Suresh',
             lastName: 'Reddy',
             phone: '+919876543222',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop'
+            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop'
         },
         lawyer: {
-            barCouncilId: 'KA/9012/2012',
-            barCouncilState: 'Karnataka',
+            barCouncilId: 'HP/9012/2012',
+            barCouncilState: 'Himachal Pradesh',
             enrollmentYear: 2012,
             bio: 'Corporate law expert with extensive experience in startups, M&A, and venture capital transactions. Advised over 100 companies from startups to Fortune 500.',
             headline: 'Corporate & Startup Attorney | VC Legal Expert',
             experience: 12,
             hourlyRate: 5000,
             consultationFee: 2500,
-            city: 'Bangalore',
-            state: 'Karnataka',
+            city: 'Dharamshala',
+            state: 'Himachal Pradesh',
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             featured: true,
             featuredOrder: 1,
-            specializations: ['corporate-law', 'intellectual-property'],
+            specializations: ['corporate-lawyer', 'tax-law'],
+            averageRating: 4.8,
+            totalReviews: 56,
         },
     },
     {
@@ -137,19 +158,21 @@ const TEST_LAWYERS = [
             avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop'
         },
         lawyer: {
-            barCouncilId: 'TN/3456/2016',
-            barCouncilState: 'Tamil Nadu',
+            barCouncilId: 'HP/3456/2016',
+            barCouncilState: 'Himachal Pradesh',
             enrollmentYear: 2016,
             bio: 'Real estate law specialist with deep knowledge of property registration, title verification, and dispute resolution. Helped clients secure investments worth over ₹500 crores.',
             headline: 'Real Estate & Property Law Expert',
             experience: 8,
             hourlyRate: 2000,
             consultationFee: 800,
-            city: 'Chennai',
-            state: 'Tamil Nadu',
+            city: 'Solan',
+            state: 'Himachal Pradesh',
             isAvailable: true,
             verificationStatus: 'VERIFIED',
-            specializations: ['real-estate-law', 'banking-finance'],
+            specializations: ['real-estate-law', 'civil-lawyer'],
+            averageRating: 4.7,
+            totalReviews: 31,
         },
     },
     {
@@ -159,22 +182,24 @@ const TEST_LAWYERS = [
             firstName: 'Imran',
             lastName: 'Khan',
             phone: '+919876543224',
-            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop'
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop'
         },
         lawyer: {
-            barCouncilId: 'UP/7890/2019',
-            barCouncilState: 'Uttar Pradesh',
+            barCouncilId: 'HP/7890/2019',
+            barCouncilState: 'Himachal Pradesh',
             enrollmentYear: 2019,
             bio: 'Young and dynamic tax law practitioner. Specializes in GST, income tax disputes, and international taxation. Certified by ICAI.',
             headline: 'Tax Law & GST Consultant',
             experience: 5,
             hourlyRate: 1800,
             consultationFee: 500,
-            city: 'Lucknow',
-            state: 'Uttar Pradesh',
+            city: 'Mandi',
+            state: 'Himachal Pradesh',
             isAvailable: true,
             verificationStatus: 'VERIFIED',
-            specializations: ['tax-law', 'corporate-law'],
+            specializations: ['tax-law', 'corporate-lawyer'],
+            averageRating: 4.9,
+            totalReviews: 19,
         },
     },
     {
@@ -187,21 +212,23 @@ const TEST_LAWYERS = [
             avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop'
         },
         lawyer: {
-            barCouncilId: 'AP/2345/2010',
-            barCouncilState: 'Andhra Pradesh',
+            barCouncilId: 'HP/2345/2010',
+            barCouncilState: 'Himachal Pradesh',
             enrollmentYear: 2010,
             bio: 'Immigration law veteran with expertise in US, UK, Canada, and Australia visas. Former consulate consultant with over 14 years of experience.',
             headline: 'Immigration & Visa Specialist | Former Consulate Advisor',
             experience: 14,
             hourlyRate: 4000,
             consultationFee: 2000,
-            city: 'Hyderabad',
-            state: 'Telangana',
+            city: 'Kullu',
+            state: 'Himachal Pradesh',
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             featured: true,
             featuredOrder: 2,
             specializations: ['immigration-law'],
+            averageRating: 4.6,
+            totalReviews: 87,
         },
     },
 ];
@@ -217,6 +244,15 @@ async function hashPassword(password) {
 async function seedPracticeAreas() {
     console.log('🌱 Seeding practice areas...');
 
+    // 1. Delete practice areas that are NOT in our list
+    const slugList = PRACTICE_AREAS.map(p => p.slug);
+    await prisma.practiceArea.deleteMany({
+        where: {
+            slug: { notIn: slugList }
+        }
+    });
+
+    // 2. Upsert the valid ones
     for (const area of PRACTICE_AREAS) {
         await prisma.practiceArea.upsert({
             where: { slug: area.slug },
@@ -225,24 +261,26 @@ async function seedPracticeAreas() {
         });
     }
 
-    console.log(`✅ ${PRACTICE_AREAS.length} practice areas seeded`);
+    console.log(`✅ ${PRACTICE_AREAS.length} practice areas seeded and verified`);
 }
 
 async function seedAdmin() {
-    console.log('🌱 Seeding admin user...');
+    console.log('🌱 Seeding admin users...');
 
-    const hashedPassword = await hashPassword(ADMIN_USER.password);
+    for (const admin of ADMIN_USERS) {
+        const hashedPassword = await hashPassword(admin.password);
 
-    await prisma.user.upsert({
-        where: { email: ADMIN_USER.email },
-        update: {},
-        create: {
-            ...ADMIN_USER,
-            password: hashedPassword,
-        },
-    });
+        await prisma.user.upsert({
+            where: { email: admin.email },
+            update: {},
+            create: {
+                ...admin,
+                password: hashedPassword,
+            },
+        });
+    }
 
-    console.log('✅ Admin user seeded');
+    console.log(`✅ ${ADMIN_USERS.length} admin users seeded`);
 }
 
 async function seedTestUsers() {
@@ -300,6 +338,12 @@ async function seedTestLawyers() {
                 consultationFee: data.lawyer.consultationFee || data.lawyer.hourlyRate,
                 featured: data.lawyer.featured,
                 featuredOrder: data.lawyer.featuredOrder,
+                city: data.lawyer.city,
+                state: data.lawyer.state,
+                barCouncilId: data.lawyer.barCouncilId,
+                barCouncilState: data.lawyer.barCouncilState,
+                averageRating: data.lawyer.averageRating,
+                totalReviews: data.lawyer.totalReviews,
             },
             create: {
                 userId: user.id,
@@ -318,6 +362,8 @@ async function seedTestLawyers() {
                 verifiedAt: data.lawyer.verificationStatus === 'VERIFIED' ? new Date() : null,
                 featured: data.lawyer.featured || false,
                 featuredOrder: data.lawyer.featuredOrder,
+                averageRating: data.lawyer.averageRating,
+                totalReviews: data.lawyer.totalReviews,
                 availability: {
                     monday: [{ time: '09:00', duration: 60 }, { time: '10:00', duration: 60 }, { time: '14:00', duration: 60 }, { time: '15:00', duration: 60 }],
                     tuesday: [{ time: '09:00', duration: 60 }, { time: '10:00', duration: 60 }, { time: '14:00', duration: 60 }, { time: '15:00', duration: 60 }],
@@ -418,64 +464,44 @@ async function seedSampleBookingsAndReviews() {
                 },
             });
 
-            // Create review (70% chance)
-            if (Math.random() > 0.3) {
-                const ratings = [4, 4, 4, 5, 5, 5, 5, 3];
-                const rating = ratings[Math.floor(Math.random() * ratings.length)];
+            // Create review (100% chance for 5 stars)
+            const reviewTitles = [
+                'Excellent experience!',
+                'Very helpful consultation',
+                'Professional and knowledgeable',
+                'Highly recommended',
+                'Good advice received',
+                'Great advocate',
+            ];
 
-                const reviewTitles = [
-                    'Excellent experience!',
-                    'Very helpful consultation',
-                    'Professional and knowledgeable',
-                    'Highly recommended',
-                    'Good advice received',
-                    'Great advocate',
-                ];
+            const reviewContents = [
+                'The advocate was very professional and explained everything clearly. Would definitely recommend.',
+                'Got great legal advice. The consultation was worth every rupee. Very satisfied with the service.',
+                'Very knowledgeable about the subject matter. Answered all my questions patiently.',
+                'Excellent service! The lawyer took time to understand my case thoroughly.',
+                'Professional approach and practical solutions. Happy with the consultation.',
+                'The advocate provided clear guidance on my legal matter. Will consult again if needed.',
+            ];
 
-                const reviewContents = [
-                    'The advocate was very professional and explained everything clearly. Would definitely recommend.',
-                    'Got great legal advice. The consultation was worth every rupee. Very satisfied with the service.',
-                    'Very knowledgeable about the subject matter. Answered all my questions patiently.',
-                    'Excellent service! The lawyer took time to understand my case thoroughly.',
-                    'Professional approach and practical solutions. Happy with the consultation.',
-                    'The advocate provided clear guidance on my legal matter. Will consult again if needed.',
-                ];
+            await prisma.review.create({
+                data: {
+                    bookingId: booking.id,
+                    authorId: user.id,
+                    lawyerId: lawyer.id,
+                    rating: 5,
+                    title: reviewTitles[Math.floor(Math.random() * reviewTitles.length)],
+                    content: reviewContents[Math.floor(Math.random() * reviewContents.length)],
+                    isVerified: true,
+                    isPublished: true,
+                },
+            });
 
-                await prisma.review.create({
-                    data: {
-                        bookingId: booking.id,
-                        authorId: user.id,
-                        lawyerId: lawyer.id,
-                        rating,
-                        title: reviewTitles[Math.floor(Math.random() * reviewTitles.length)],
-                        content: reviewContents[Math.floor(Math.random() * reviewContents.length)],
-                        isVerified: true,
-                        isPublished: true,
-                    },
-                });
-
-                reviewsCreated++;
-            }
+            reviewsCreated++;
         }
     }
 
-    // Update lawyer ratings
-    for (const lawyer of lawyers) {
-        const aggregation = await prisma.review.aggregate({
-            where: { lawyerId: lawyer.id, isPublished: true },
-            _avg: { rating: true },
-            _count: { rating: true },
-        });
-
-        await prisma.lawyer.update({
-            where: { id: lawyer.id },
-            data: {
-                averageRating: aggregation._avg.rating || 0,
-                totalReviews: aggregation._count.rating || 0,
-                completedBookings: { increment: aggregation._count.rating },
-            },
-        });
-    }
+    // We are now using hardcoded averageRating and totalReviews for the lawyers
+    // so we don't need to dynamically calculate them here anymore.
 
     console.log(`✅ ${bookingsCreated} bookings and ${reviewsCreated} reviews seeded`);
 }

@@ -49,7 +49,7 @@ const envSchema = z.object({
     JWT_REFRESH_SECRET: z.string().min(16).default('default-refresh-secret-change-in-production'),
     JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
 
-    // Google OAuth
+    // Google OAuth + Calendar (Meet link generation)
     GOOGLE_CLIENT_ID: z.string().optional().default(''),
 
     // Email Configuration
@@ -58,10 +58,6 @@ const envSchema = z.object({
     SMTP_USER: z.string().optional().default(''),
     SMTP_PASS: z.string().optional().default(''),
     EMAIL_FROM: z.string().default('NyayBooker <noreply@nyaybooker.com>'),
-
-    // Payment Gateway
-    RAZORPAY_KEY_ID: z.string().optional().default(''),
-    RAZORPAY_KEY_SECRET: z.string().optional().default(''),
 
     // Rate Limiting
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().default(9000000000), // 15 minutes

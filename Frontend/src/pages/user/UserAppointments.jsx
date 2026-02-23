@@ -108,6 +108,7 @@ export default function UserAppointments() {
         return `${hour % 12 || 12}:${m} ${ampm}`;
     };
 
+    // eslint-disable-next-line no-unused-vars
     const StatCard = ({ title, value, icon: Icon, color }) => (
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-start justify-between">

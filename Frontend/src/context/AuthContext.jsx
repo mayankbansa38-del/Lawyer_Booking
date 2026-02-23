@@ -9,7 +9,6 @@
  */
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import * as authApi from '../services/authApi';
 import { getAccessToken, clearTokens, isTokenExpired } from '../services/apiClient';
 
@@ -46,7 +45,7 @@ export function AuthProvider({ children }) {
                         setUser(userData);
                         setIsAuthenticated(true);
                     }
-                } catch (err) {
+                } catch {
                     if (controller.signal.aborted) return; // Unmounted — skip state updates
                     clearTokens();
                     setUser(null);

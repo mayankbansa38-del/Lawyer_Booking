@@ -13,8 +13,10 @@ const AllLawyers = () => {
         locations: [],
         experienceRange: [0, 25],
         casesWonRange: [0, 350],
-        specialties: [],
-        costRange: [0, 25000],
+        specialties: location.state?.specialty && location.state.specialty !== 'All'
+            ? [location.state.specialty]
+            : [],
+        costRange: [0, 200000],
         availability: []
     });
 
@@ -38,22 +40,34 @@ const AllLawyers = () => {
     }, [location.state]);
 
     useEffect(() => {
+        let ignore = false;
+
         const fetchLawyers = async () => {
             try {
                 setLoading(true);
                 setError(null);
                 const response = await lawyerAPI.getAll(debouncedFilters);
-                setLawyers(response.data);
-                setTotalResults(response.total);
+                if (!ignore) {
+                    setLawyers(response.data);
+                    setTotalResults(response.total);
+                }
             } catch (err) {
-                console.error('Error fetching lawyers:', err);
-                setError('Failed to load lawyers. Please try again.');
+                if (!ignore) {
+                    console.error('Error fetching lawyers:', err);
+                    setError('Failed to load lawyers. Please try again.');
+                }
             } finally {
-                setLoading(false);
+                if (!ignore) {
+                    setLoading(false);
+                }
             }
         };
 
         fetchLawyers();
+
+        return () => {
+            ignore = true;
+        };
     }, [debouncedFilters]);
 
     const clearFilters = () => {

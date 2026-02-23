@@ -32,8 +32,9 @@ const Signup = () => {
       setError("Please enter a valid email address");
       return false;
     }
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters");
+    const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]|_)\S{8,}$/;
+    if (!PASSWORD_REGEX.test(formData.password)) {
+      setError("Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character");
       return false;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -42,6 +43,10 @@ const Signup = () => {
     }
     if (state === "Lawyer" && !formData.barNumber.trim()) {
       setError("Bar registration number is required for lawyers");
+      return false;
+    }
+    if (state === "Lawyer" && !formData.phone.trim()) {
+      setError("Phone number is required for lawyers");
       return false;
     }
     return true;
@@ -60,7 +65,7 @@ const Signup = () => {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          phone: formData.phone,
+          ...(formData.phone ? { phone: formData.phone } : {}),
           password: formData.password,
           confirmPassword: formData.confirmPassword,
           barCouncilId: formData.barNumber,
@@ -72,7 +77,7 @@ const Signup = () => {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          phone: formData.phone,
+          ...(formData.phone ? { phone: formData.phone } : {}),
           password: formData.password,
           confirmPassword: formData.confirmPassword,
         });
@@ -83,7 +88,7 @@ const Signup = () => {
       } else {
         setError(result.error || "Registration failed");
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred.");
     } finally {
       setIsLoading(false);
@@ -97,11 +102,11 @@ const Signup = () => {
       if (result.success) {
         const userRole = result.user.role;
         if (userRole === "LAWYER") navigate("/lawyer");
-        else navigate("/user");
+        else navigate("/");
       } else {
         setError(result.error || "Google signup failed");
       }
-    } catch (err) {
+    } catch {
       setError("Google signup failed");
     } finally {
       setIsLoading(false);
@@ -239,6 +244,7 @@ const Signup = () => {
               <label className="text-xs font-medium text-gray-700 ml-1">Phone Number</label>
               <div className="relative group">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                <span className="absolute left-9 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium select-none">+91</span>
                 <input
                   type="tel"
                   name="phone"
@@ -248,7 +254,7 @@ const Signup = () => {
                     setFormData({ ...formData, phone: value });
                     setError("");
                   }}
-                  className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
+                  className="w-full pl-16 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 text-sm text-gray-900"
                   placeholder="9876543210"
                 />
               </div>

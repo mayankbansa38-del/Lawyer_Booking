@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
     Calendar, Users, DollarSign, TrendingUp, Clock,
-    ChevronRight, Star, Briefcase
+    ChevronRight, Star, Briefcase, AlertTriangle, X
 } from 'lucide-react';
 import { StatCard, AppointmentCard, PageHeader } from '../../components/dashboard';
 import { appointmentAPI, paymentAPI, clientAPI } from '../../services/api';
@@ -24,6 +24,7 @@ export default function LawyerDashboard() {
     });
     const [recentAppointments, setRecentAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [cancelModal, setCancelModal] = useState({ open: false, appointmentId: null });
 
     useEffect(() => {
         async function fetchData() {
@@ -38,11 +39,24 @@ export default function LawyerDashboard() {
                 }
 
                 // Fetch appointments
-                const { data: appointments } = await appointmentAPI.getAll({ lawyerId });
+                const { data: rawAppointments } = await appointmentAPI.getLawyerBookings();
+
+                // Transform appointments to match Card component expected format
+                const appointments = rawAppointments.map(apt => ({
+                    ...apt,
+                    date: apt.scheduledDate,
+                    time: apt.scheduledTime,
+                    clientName: apt.client ? `${apt.client.firstName} ${apt.client.lastName}` : 'Unknown Client',
+                    clientImage: apt.client?.avatar,
+                    caseType: apt.meetingType,
+                    status: apt.status
+                }));
+
                 // Normalize dates to YYYY-MM-DD for reliable comparison
                 const today = new Date().toISOString().split('T')[0];
-                const pending = appointments.filter(a => a.status === 'pending').length;
+                const pending = appointments.filter(a => a.status === 'PENDING').length;
                 const todayApts = appointments.filter(a => {
+                    if (!a.date) return false;
                     const aptDate = typeof a.date === 'string'
                         ? a.date.split('T')[0]
                         : new Date(a.date).toISOString().split('T')[0];
@@ -61,8 +75,11 @@ export default function LawyerDashboard() {
                     clients: clients.length,
                 });
 
-                // Get recent appointments (limit 5)
-                setRecentAppointments(appointments.slice(0, 5));
+                // Get recent appointments — sort by newest first (createdAt desc)
+                const sortedByNewest = [...appointments].sort((a, b) =>
+                    new Date(b.createdAt) - new Date(a.createdAt)
+                );
+                setRecentAppointments(sortedByNewest.slice(0, 5));
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
             } finally {
@@ -75,15 +92,46 @@ export default function LawyerDashboard() {
 
     const handleAppointmentAction = async (action, appointmentId) => {
         try {
-            const status = action === 'confirm' ? 'confirmed' : 'cancelled';
-            await appointmentAPI.updateStatus(appointmentId, status);
+            if (action === 'confirm') {
+                await appointmentAPI.confirm(appointmentId);
+            } else if (action === 'cancel' || action === 'reject') {
+                setCancelModal({ open: true, appointmentId });
+                return;
+            }
+
             // Refresh appointments
             const lawyerId = user?.lawyer?.id || user?.id;
             if (!lawyerId) return;
-            const { data } = await appointmentAPI.getAll({ lawyerId });
+            const { data } = await appointmentAPI.getLawyerBookings();
             setRecentAppointments(data.slice(0, 5));
         } catch (error) {
             console.error('Error updating appointment:', error);
+        }
+    };
+
+    const confirmCancel = async () => {
+        try {
+            await appointmentAPI.cancel(cancelModal.appointmentId);
+            setCancelModal({ open: false, appointmentId: null });
+            // Refresh appointments
+            const lawyerId = user?.lawyer?.id || user?.id;
+            if (!lawyerId) return;
+            const { data: rawAppointments } = await appointmentAPI.getLawyerBookings();
+            const appointments = rawAppointments.map(apt => ({
+                ...apt,
+                date: apt.scheduledDate,
+                time: apt.scheduledTime,
+                clientName: apt.client ? `${apt.client.firstName} ${apt.client.lastName}` : 'Unknown Client',
+                clientImage: apt.client?.avatar,
+                caseType: apt.meetingType,
+                status: apt.status
+            }));
+            const sortedByNewest = [...appointments].sort((a, b) =>
+                new Date(b.createdAt) - new Date(a.createdAt)
+            );
+            setRecentAppointments(sortedByNewest.slice(0, 5));
+        } catch (error) {
+            console.error('Error cancelling appointment:', error);
         }
     };
 
@@ -238,6 +286,42 @@ export default function LawyerDashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* Cancel Confirmation Modal */}
+            {cancelModal.open && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setCancelModal({ open: false, appointmentId: null })} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in">
+                        <button
+                            onClick={() => setCancelModal({ open: false, appointmentId: null })}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <div className="text-center">
+                            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                                <AlertTriangle className="w-7 h-7 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Cancel Appointment?</h3>
+                            <p className="text-gray-500 text-sm mb-6">Are you sure you want to cancel this appointment?</p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setCancelModal({ open: false, appointmentId: null })}
+                                    className="flex-1 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                                >
+                                    No, Keep It
+                                </button>
+                                <button
+                                    onClick={confirmCancel}
+                                    className="flex-1 py-2.5 bg-red-600 text-white text-sm font-medium rounded-xl hover:bg-red-700 transition-colors"
+                                >
+                                    Yes, Cancel It
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

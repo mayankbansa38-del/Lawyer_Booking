@@ -9,6 +9,21 @@ import {
 import { lawyerAPI, favoritesAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
+// Convert 24h time to 12h format (e.g., "13:00" → "1:00 PM")
+const formatTime12h = (time) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const h = hours % 12 || 12;
+    return `${h}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
+// Format date to YYYY-MM-DD in local time
+const formatDateLocal = (date) => {
+    if (!date) return null;
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().split('T')[0];
+};
+
 export default function LawyerProfilePage() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -30,10 +45,6 @@ export default function LawyerProfilePage() {
     const [loadingSlots, setLoadingSlots] = useState(false);
 
     // Generate next 7 days for the calendar
-
-
-
-
     useEffect(() => {
         const fetchLawyer = async () => {
             try {
@@ -66,12 +77,28 @@ export default function LawyerProfilePage() {
             if (!selectedDate || !lawyer) return;
             setLoadingSlots(true);
             try {
-                // Format date as YYYY-MM-DD
-                const dateStr = selectedDate.toISOString().split('T')[0];
+                // Format date as YYYY-MM-DD (Local)
+                const dateStr = formatDateLocal(selectedDate);
                 // Use lawyerAPI service if available, else direct call matches pattern
                 // lawyerAPI.getAvailability(id, date) is available in index.js
                 const response = await lawyerAPI.getAvailability(id, dateStr);
-                setAvailableSlots(response.data.slots || []);
+                const allSlots = response.data.slots || [];
+
+                // Filter out past time slots if selected date is today
+                const now = new Date();
+                const isToday = selectedDate &&
+                    selectedDate.getFullYear() === now.getFullYear() &&
+                    selectedDate.getMonth() === now.getMonth() &&
+                    selectedDate.getDate() === now.getDate();
+
+                const filteredSlots = isToday
+                    ? allSlots.filter(slot => {
+                        const [hours, minutes] = slot.time.split(':').map(Number);
+                        return (hours * 60 + minutes) > (now.getHours() * 60 + now.getMinutes());
+                    })
+                    : allSlots;
+
+                setAvailableSlots(filteredSlots);
             } catch (err) {
                 console.error("Error fetching availability:", err);
                 setAvailableSlots([]);
@@ -134,9 +161,15 @@ export default function LawyerProfilePage() {
             return;
         }
 
+        if (!selectedTime) {
+            alert("Please select a time slot to proceed.");
+            document.getElementById('booking-calendar').scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
         navigate(`/lawyers/${id}/book`, {
             state: {
-                date: selectedDate ? selectedDate.toISOString().split('T')[0] : null,
+                date: selectedDate ? formatDateLocal(selectedDate) : null,
                 time: selectedTime
             }
         });
@@ -420,13 +453,17 @@ export default function LawyerProfilePage() {
                             {/* Availability Calendar */}
                             <div className="mb-8">
                                 <h3 className="text-xl font-bold text-gray-900 mb-6">Check Availability</h3>
+
                                 <CalendarView
                                     selectedDate={selectedDate}
                                     onDateChange={(date) => {
                                         setSelectedDate(date);
                                         setSelectedTime(null);
                                     }}
+                                    blockedDates={lawyer.blockedPeriods || []}
+                                    availability={lawyer.availability || {}}
                                 />
+
                             </div>
 
                             {/* Time Slots */}
@@ -451,7 +488,7 @@ export default function LawyerProfilePage() {
                                                             : 'bg-white text-gray-700 border-gray-200 hover:border-blue-500 hover:text-blue-600'
                                                         }`}
                                                 >
-                                                    {slot.time}
+                                                    {formatTime12h(slot.time)}
                                                 </button>
                                             ))}
                                         </div>

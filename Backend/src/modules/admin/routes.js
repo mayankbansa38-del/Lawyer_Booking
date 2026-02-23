@@ -35,7 +35,8 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
     const prisma = getPrismaClient();
 
     const now = new Date();
-    const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
     const startOfWeek = new Date(now);
     startOfWeek.setDate(startOfWeek.getDate() - 7);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -394,7 +395,7 @@ router.get('/lawyers', asyncHandler(async (req, res) => {
         isAvailable: l.isAvailable,
         hourlyRate: l.hourlyRate,
         experience: l.experience,
-        rating: l.rating,
+        rating: l.averageRating,
         totalReviews: l.totalReviews,
         totalBookings: l.totalBookings,
         completedBookings: l.completedBookings,
@@ -479,16 +480,7 @@ router.delete('/lawyers/:id', asyncHandler(async (req, res) => {
 
     if (!lawyer) throw new NotFoundError('Lawyer');
 
-    // Delete lawyer (cascades or handle manually depending on schema, usually cascading from user is safer if we want to delete USER too, but here we deleting LAWYER profile?)
-    // Wait, LawyerManagement calls delete on /admin/lawyers/:id
-    // Usually this means deleting the LAWYER attributes, but if the user remains, they revert to USER?
-    // Or we delete the whole user?
-    // In UserManagement, deleting a user deletes the lawyer. 
-    // Here, if we delete a lawyer, we probably just want to remove the lawyer profile or delete the user entirely?
-    // Let's assume we delete the LAWYER record, demoting them to USER, OR delete the whole user.
-    // Given the context of "Lawyer Management", usually we delete the lawyer profile.
-    // BUT the schema likely has a 1:1 relation. 
-    // Safest approach: Delete the Lawyer record.
+    // Delete the Lawyer record (user account remains, reverts to USER role)
 
     await prisma.lawyer.delete({ where: { id: targetId } });
 

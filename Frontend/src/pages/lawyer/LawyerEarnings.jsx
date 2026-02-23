@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { PageHeader, StatCard } from '../../components/dashboard';
 import { paymentAPI, lawyerAPI } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 
 // ─── Status Badge Component ──────────────────────────────────────────────────
 
@@ -277,7 +276,6 @@ function exportCSV(payments) {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function LawyerEarnings() {
-    const { user } = useAuth();
     const [payments, setPayments] = useState([]);
     const [summary, setSummary] = useState({
         totalEarnings: 0,
@@ -336,13 +334,13 @@ export default function LawyerEarnings() {
                 }
             />
 
-            {/* Stats — No "Pending Payouts" or "Pending Transactions" */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
-                    title="Total Earnings"
-                    value={`₹${Number(summary.totalEarnings || 0).toLocaleString('en-IN')}`}
-                    subtitle="All time"
-                    icon={DollarSign}
+                    title="Today's Earnings"
+                    value={`₹${Number(summary.todayEarnings || 0).toLocaleString('en-IN')}`}
+                    subtitle="Today"
+                    icon={Calendar}
                 />
                 <StatCard
                     title="This Month"
@@ -350,6 +348,12 @@ export default function LawyerEarnings() {
                     icon={TrendingUp}
                     trend="up"
                     trendValue={12}
+                />
+                <StatCard
+                    title="Total Earnings"
+                    value={`₹${Number(summary.totalEarnings || 0).toLocaleString('en-IN')}`}
+                    subtitle="All time"
+                    icon={DollarSign}
                 />
                 <StatCard
                     title="Completed Payments"
@@ -369,8 +373,8 @@ export default function LawyerEarnings() {
                                 key={f}
                                 onClick={() => setFilter(f)}
                                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${filter === f
-                                        ? 'bg-blue-600 text-white shadow-sm'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}
                             >
                                 {f.charAt(0).toUpperCase() + f.slice(1)}

@@ -160,7 +160,6 @@ export default function UserManagement() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filter, setFilter] = useState('all'); // all, active, inactive
-    const [selectedUser, setSelectedUser] = useState(null);
     const [showActionMenu, setShowActionMenu] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
 

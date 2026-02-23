@@ -3,8 +3,6 @@
  * NyayBooker Backend - Users Routes (Stub)
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * User management routes - To be implemented.
- * 
  * @module modules/users/routes
  */
 
@@ -38,6 +36,16 @@ router.get('/profile', authenticate, asyncHandler(async (req, res) => {
             isPhoneVerified: true,
             createdAt: true,
             updatedAt: true,
+            lawyer: {
+                select: {
+                    id: true,
+                    slug: true,
+                    isAvailable: true,
+                    availability: true,
+                    blockedPeriods: true,
+                    verificationStatus: true,
+                }
+            },
         },
     });
 
@@ -54,41 +62,45 @@ router.get('/profile', authenticate, asyncHandler(async (req, res) => {
  * @access  Private
  */
 router.post('/avatar', authenticate, asyncHandler(async (req, res) => {
-    try {
-        const { uploadAvatar, handleUpload } = await import('../../middleware/upload.js');
-        const { BadRequestError } = await import('../../utils/errors.js');
-        const { uploadToStorage } = await import('../../config/supabase.js');
+    const { uploadAvatar, handleUpload, generateFilename } = await import('../../middleware/upload.js');
+    const { BadRequestError } = await import('../../utils/errors.js');
+    const { uploadFile, BUCKETS } = await import('../../config/supabase.js');
 
-        // Wrap middleware in promise to handle async flow
-        await new Promise((resolve, reject) => {
-            handleUpload(uploadAvatar)(req, res, (err) => {
-                if (err) reject(err);
-                else resolve();
-            });
+    // Wrap middleware in promise to handle async flow
+    await new Promise((resolve, reject) => {
+        handleUpload(uploadAvatar)(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
         });
+    });
 
-        if (!req.file) {
-            throw new BadRequestError('No image file provided');
-        }
-
-        const prisma = getPrismaClient();
-
-        // Upload to storage (Supabase)
-        const avatarUrl = await uploadToStorage(req.file, 'avatars', req.user.id);
-
-        const user = await prisma.user.update({
-            where: { id: req.user.id },
-            data: { avatar: avatarUrl },
-            select: { id: true, avatar: true }
-        });
-
-        return sendSuccess(res, {
-            data: { avatar: user.avatar },
-            message: 'Profile picture updated'
-        });
-    } catch (error) {
-        throw error;
+    if (!req.file) {
+        throw new BadRequestError('No image file provided');
     }
+
+    const prisma = getPrismaClient();
+    const filename = generateFilename(req.file);
+    const filePath = `${req.user.id}/${filename}`;
+
+    // Upload to storage (Supabase)
+    const { url } = await uploadFile({
+        bucket: BUCKETS.AVATARS,
+        path: filePath,
+        file: req.file.buffer,
+        contentType: req.file.mimetype,
+        upsert: true
+    });
+
+    const user = await prisma.user.update({
+        where: { id: req.user.id },
+        data: { avatar: url },
+        select: { id: true, avatar: true }
+    });
+
+    return sendSuccess(res, {
+        data: { avatar: user.avatar },
+        message: 'Profile picture updated successfully'
+    });
 }));
 
 /**
@@ -125,84 +137,8 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
     });
 }));
 
-/**
- * @route   GET /api/v1/users/:id
- * @desc    Get user by ID (Admin only)
- * @access  Private/Admin
- */
-router.get('/:id', authenticate, authorize('ADMIN'), asyncHandler(async (req, res) => {
-    const prisma = getPrismaClient();
-
-    const user = await prisma.user.findUnique({
-        where: { id: req.params.id },
-        select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
-            avatar: true,
-            role: true,
-            isEmailVerified: true,
-            isActive: true,
-            createdAt: true,
-            updatedAt: true,
-            lawyer: true,
-        },
-    });
-
-    if (!user) {
-        throw new NotFoundError('User');
-    }
-
-    return sendSuccess(res, { data: { user } });
-}));
-
-/**
- * @route   GET /api/v1/users
- * @desc    Get all users (Admin only)
- * @access  Private/Admin
- */
-router.get('/', authenticate, authorize('ADMIN'), asyncHandler(async (req, res) => {
-    const prisma = getPrismaClient();
-    const { page = 1, limit = 20 } = req.query;
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    const [users, total] = await Promise.all([
-        prisma.user.findMany({
-            skip,
-            take: parseInt(limit),
-            select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                role: true,
-                isEmailVerified: true,
-                isActive: true,
-                createdAt: true,
-            },
-            orderBy: { createdAt: 'desc' },
-        }),
-        prisma.user.count(),
-    ]);
-
-    return sendSuccess(res, {
-        data: users,
-        meta: {
-            pagination: {
-                total,
-                page: parseInt(page),
-                limit: parseInt(limit),
-                totalPages: Math.ceil(total / parseInt(limit)),
-            },
-        },
-    });
-}));
-
 // ═══════════════════════════════════════════════════════════════════════════
-// SAVED LAWYERS (Favorites)
+// SAVED LAWYERS (Favorites) - Must be before /:id route
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
@@ -309,5 +245,83 @@ router.delete('/saved-lawyers/:lawyerId', authenticate, asyncHandler(async (req,
 
     return sendSuccess(res, { message: 'Lawyer removed from favorites' });
 }));
+
+/**
+ * @route   GET /api/v1/users/:id
+ * @desc    Get user by ID (Admin only)
+ * @access  Private/Admin
+ */
+router.get('/:id', authenticate, authorize('ADMIN'), asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+
+    const user = await prisma.user.findUnique({
+        where: { id: req.params.id },
+        select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            avatar: true,
+            role: true,
+            isEmailVerified: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+            lawyer: true,
+        },
+    });
+
+    if (!user) {
+        throw new NotFoundError('User');
+    }
+
+    return sendSuccess(res, { data: { user } });
+}));
+
+/**
+ * @route   GET /api/v1/users
+ * @desc    Get all users (Admin only)
+ * @access  Private/Admin
+ */
+router.get('/', authenticate, authorize('ADMIN'), asyncHandler(async (req, res) => {
+    const prisma = getPrismaClient();
+    const { page = 1, limit = 20 } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [users, total] = await Promise.all([
+        prisma.user.findMany({
+            skip,
+            take: parseInt(limit),
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+                isEmailVerified: true,
+                isActive: true,
+                createdAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        }),
+        prisma.user.count(),
+    ]);
+
+    return sendSuccess(res, {
+        data: users,
+        meta: {
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                totalPages: Math.ceil(total / parseInt(limit)),
+            },
+        },
+    });
+}));
+
+
 
 export default router;

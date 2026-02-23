@@ -193,32 +193,6 @@ export async function trackSearch(data) {
     }
 }
 
-/**
- * Log API request
- * 
- * @param {Object} data - Request data
- */
-export async function logApiRequest(data) {
-    try {
-        const models = getModels();
-        if (!models) return;
-
-        await models.ApiLog.create({
-            requestId: data.requestId,
-            userId: data.userId,
-            method: data.method,
-            path: data.path,
-            statusCode: data.statusCode,
-            duration: data.duration,
-            ip: data.ip,
-            userAgent: data.userAgent,
-            error: data.error,
-        });
-    } catch (error) {
-        logger.error('Failed to log API request:', error);
-    }
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // REPORTING FUNCTIONS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -732,7 +706,6 @@ export default {
     trackPageView,
     trackEvent,
     trackSearch,
-    logApiRequest,
     getDashboardMetrics,
     getPageViewsTimeSeries,
     getSearchAnalytics,

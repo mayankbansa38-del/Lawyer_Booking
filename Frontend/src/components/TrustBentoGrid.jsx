@@ -1,6 +1,7 @@
 import React from 'react';
 import { Shield, Star, Lock, Calendar, CheckCircle2, TrendingUp, Gavel, User } from 'lucide-react';
 
+// eslint-disable-next-line no-unused-vars
 const BentoCard = ({ title, description, className, children, icon: Icon }) => (
     <div className={`bg-white rounded-xl border border-zinc-200 p-6 flex flex-col justify-between hover:border-zinc-300 hover:shadow-md transition-all duration-300 group ${className}`}>
         <div>

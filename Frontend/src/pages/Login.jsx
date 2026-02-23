@@ -23,7 +23,7 @@ const Login = () => {
     if (user) {
       if (user.role === "LAWYER") navigate("/lawyer");
       else if (user.role === "ADMIN") navigate("/admin");
-      else navigate("/user");
+      else navigate("/");
     }
   }, [user, navigate]);
 
@@ -45,12 +45,12 @@ const Login = () => {
           const userRole = result.user.role;
           if (userRole === "ADMIN") navigate("/admin");
           else if (userRole === "LAWYER") navigate("/lawyer");
-          else navigate("/user");
+          else navigate("/");
         }
       } else {
         setError(result.error || "Login failed. Please check your credentials.");
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -67,12 +67,12 @@ const Login = () => {
         else {
           const userRole = result.user.role;
           if (userRole === "LAWYER") navigate("/lawyer");
-          else navigate("/user");
+          else navigate("/");
         }
       } else {
         setError(result.error || "Google login failed.");
       }
-    } catch (err) {
+    } catch {
       setError("Google login failed. Please try again.");
     } finally {
       setIsSubmitting(false);

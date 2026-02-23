@@ -31,6 +31,7 @@ import analyticsRoutes from './modules/analytics/routes.js';
 import caseRoutes from './modules/cases/routes.js';
 import chatRoutes from './modules/chat/routes.js';
 import auditRoutes from './modules/audit/routes.js';
+import casePaymentRoutes from './modules/case-payments/routes.js';
 import healthRoutes from './routes/health.js';
 
 /**
@@ -78,12 +79,6 @@ export function createApp() {
     // Body parsing — preserve raw body for webhook signature verification
     app.use(express.json({
         limit: '10mb',
-        verify: (req, _res, buf) => {
-            // Save raw body buffer for routes that need HMAC verification
-            if (req.originalUrl?.includes('/payments/webhook')) {
-                req.rawBody = buf;
-            }
-        },
     }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -120,6 +115,7 @@ export function createApp() {
     app.use(`${apiPrefix}/chat`, chatRoutes);
     app.use(`${apiPrefix}/audit`, auditRoutes);
     app.use(`${apiPrefix}/admin`, adminRoutes);
+    app.use(`${apiPrefix}/case-payments`, casePaymentRoutes);
 
     // API info endpoint
     app.get(apiPrefix, (req, res) => {

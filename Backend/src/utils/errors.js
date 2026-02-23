@@ -136,38 +136,6 @@ export class RateLimitError extends AppError {
 }
 
 /**
- * 500 Internal Server Error - Unexpected server error
- */
-export class InternalError extends AppError {
-    constructor(message = 'Internal server error') {
-        super(message, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_ERROR);
-    }
-}
-
-/**
- * Database operation error
- */
-export class DatabaseError extends AppError {
-    constructor(message = 'Database operation failed', operation = null) {
-        super(message, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.DATABASE_ERROR, { operation });
-    }
-}
-
-/**
- * External service error (Supabase, Razorpay, etc.)
- */
-export class ExternalServiceError extends AppError {
-    constructor(service, message = 'External service error') {
-        super(
-            `${service}: ${message}`,
-            HTTP_STATUS.SERVICE_UNAVAILABLE,
-            ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-            { service }
-        );
-    }
-}
-
-/**
  * Authentication-specific errors
  */
 export class AuthenticationError extends UnauthorizedError {
@@ -180,6 +148,8 @@ export class AuthenticationError extends UnauthorizedError {
             tokenMissing: 'No authentication token provided',
             emailNotVerified: 'Please verify your email first',
             accountDisabled: 'Account has been disabled',
+            emailNotRegistered: 'Email not registered',
+            invalidPassword: 'Invalid password',
         };
 
         const errorCodes = {
@@ -190,6 +160,8 @@ export class AuthenticationError extends UnauthorizedError {
             tokenMissing: ERROR_CODES.UNAUTHORIZED,
             emailNotVerified: ERROR_CODES.UNAUTHORIZED,
             accountDisabled: ERROR_CODES.FORBIDDEN,
+            emailNotRegistered: ERROR_CODES.NOT_FOUND,
+            invalidPassword: ERROR_CODES.INVALID_CREDENTIALS,
         };
 
         super(messages[type] || messages.generic, errorCodes[type] || errorCodes.generic);
@@ -290,9 +262,6 @@ export default {
     ConflictError,
     ValidationError,
     RateLimitError,
-    InternalError,
-    DatabaseError,
-    ExternalServiceError,
     AuthenticationError,
     BusinessError,
     BookingError,
