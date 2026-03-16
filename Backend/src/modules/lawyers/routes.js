@@ -153,6 +153,8 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
         specialization,
         city,
         state,
+        cities,
+        states,
         minRating,
         maxRate,
         minRate,
@@ -170,8 +172,17 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
     };
 
     // Location filters
-    if (city) where.city = { contains: city, mode: 'insensitive' };
-    if (state) where.state = { contains: state, mode: 'insensitive' };
+    if (cities) {
+        where.city = { in: cities.split(',').map(c => c.trim()) };
+    } else if (city) {
+        where.city = { contains: city, mode: 'insensitive' };
+    }
+
+    if (states) {
+        where.state = { in: states.split(',').map(s => s.trim()) };
+    } else if (state) {
+        where.state = { contains: state, mode: 'insensitive' };
+    }
 
     // Rating filter
     if (minRating) where.averageRating = { gte: parseFloat(minRating) };

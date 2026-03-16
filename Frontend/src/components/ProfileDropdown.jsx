@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
     LayoutDashboard, Settings, LogOut, ChevronDown,
     Shield, Scale, UserCircle, Bell
 } from 'lucide-react';
+import { useNotifications } from '../hooks/useNotifications';
 
 /**
- * Reusable Profile Dropdown Component
+ * Reusable ProfileDropdown Component
  * Ensures consistency between Public Navbar and Dashboard Navbar
  */
 export default function ProfileDropdown({
@@ -18,6 +19,8 @@ export default function ProfileDropdown({
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const navigate = useNavigate();
+    const { unreadCount } = useNotifications();
 
     // Role configuration mapping
     const roleConfigMap = {
@@ -204,7 +207,14 @@ export default function ProfileDropdown({
                         <button
                             onClick={() => {
                                 setIsOpen(false);
-                                if (onOpenNotifications) onOpenNotifications();
+                                if (onOpenNotifications) {
+                                    onOpenNotifications();
+                                } else {
+                                    // If no handler is provided (like in the public Navbar), navigate to the page
+                                    if (role === 'admin') navigate('/admin/notifications');
+                                    else if (role === 'lawyer') navigate('/lawyer/notifications');
+                                    else navigate('/user/notifications');
+                                }
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-amber-50/50 hover:text-amber-700 transition-all group text-left"
                         >
@@ -214,7 +224,11 @@ export default function ProfileDropdown({
                             <div className="flex-1">
                                 <p className="text-sm font-semibold">Notifications</p>
                             </div>
-                            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">2</span>
+                            {unreadCount > 0 && (
+                                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
+                            )}
                         </button>
                     </div>
 
