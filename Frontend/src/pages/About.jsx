@@ -4,13 +4,14 @@ import { Scale, Users, Award, Target, Heart, Shield, ArrowRight, CheckCircle2, Q
 import ashrufImage from "../assets/photo/ashruf.jpeg";
 import amarpaulImage from "../assets/photo/amar_paul.jpg";
 import piyushImage from "../assets/photo/piyush.jpeg";
+import mayankImage from "../assets/photo/mayank.jpeg";
 
 const About = () => {
   const team = [
-    { name: "Prof. Amar Paul Singh", role: "Project Guide", image: amarpaulImage, bio: "Mentoring the team to build scalable and efficient solutions.", phone: "9876543210", email: "amarpaul@example.com" },
-    { name: "Mayank Bansal", role: "Team Member", image: "/lawyer5.png", bio: "Architected the overall frontend and backend of the platform.", phone: "9876543211", email: "mayank@example.com" },
-    { name: "Piyush Sharma", role: "Team Member", image: piyushImage, bio: "Frontend specialist focused on creating intuitive user experiences.", phone: "9876543212", email: "piyush@example.com" },
-    { name: "Ashruf Khan", role: "Team Member", image: ashrufImage, bio: "Backend developer ensuring secure and robust system architecture.", phone: "9876543213", email: "ashruf@example.com" },
+    { name: "Prof. Amar Paul Singh", role: "Project Guide", image: amarpaulImage, bio: "Mentoring the team to build scalable and efficient solutions.", phone: "9817069876", email: "amarpaul@example.com" },
+    { name: "Mayank Bansal", role: "Team Member", image: mayankImage, bio: "Architected the overall frontend and backend of the platform.", phone: "7876789794", email: "mayankbansa38@gmail.com" },
+    { name: "Piyush Sharma", role: "Team Member", image: piyushImage, bio: "Frontend specialist focused on creating intuitive user experiences.", phone: "9317403764", email: "piyushsharma27161@gmail.com" },
+    { name: "Ashruf Khan", role: "Team Member", image: ashrufImage, bio: "Backend developer ensuring secure and robust system architecture.", phone: "9459814786", email: "ashruf2006khan@gmail.com" },
   ];
 
   const values = [

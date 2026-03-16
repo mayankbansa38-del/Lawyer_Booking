@@ -330,7 +330,7 @@ export default function DashboardLayout({ role = 'user' }) {
                             >
                                 <Bell className="w-5 h-5" />
                                 {unreadCount > 0 && (
-                                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />
+                                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full pointer-events-none" aria-hidden="true" />
                                 )}
                             </button>
 

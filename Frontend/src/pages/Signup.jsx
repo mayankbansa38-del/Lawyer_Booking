@@ -411,6 +411,8 @@ const Signup = () => {
                   text="signup_with"
                   width="100%"
                   locale="en"
+                  useOneTap={false}
+                  auto_select={false}
                 />
               </div>
             </>

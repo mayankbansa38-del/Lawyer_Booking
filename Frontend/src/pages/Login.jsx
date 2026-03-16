@@ -16,16 +16,30 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || null;
+  // Extract 'from' assuming it might be a string (our fix) or an object (old way)
+  const from = typeof location.state?.from === 'string'
+    ? location.state.from
+    : location.state?.from?.pathname || null;
+
   const redirectTo = new URLSearchParams(location.search).get("redirect");
 
+  // Determines where to send the user after login
+  const getRedirectPath = (userRole) => {
+    if (redirectTo) return redirectTo;
+    // Admins and Lawyers ALWAYS go to their dashboard upon login, 
+    // overriding the "return to previous page" logic which is meant for regular users.
+    if (userRole === "ADMIN") return "/admin";
+    if (userRole === "LAWYER") return "/lawyer";
+    if (from) return from;
+    return "/";
+  };
+
   useEffect(() => {
+    // If user is already logged in, redirect them
     if (user) {
-      if (user.role === "LAWYER") navigate("/lawyer");
-      else if (user.role === "ADMIN") navigate("/admin");
-      else navigate("/");
+      navigate(getRedirectPath(user.role), { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, from, redirectTo]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,20 +47,12 @@ const Login = () => {
     setIsSubmitting(true);
 
     try {
-      // FIX: login expects (email, password, rememberMe), not an object
       const result = await login(email, password);
 
       if (result.success) {
-        if (redirectTo) {
-          navigate(redirectTo);
-        } else if (from) {
-          navigate(from);
-        } else {
-          const userRole = result.user.role;
-          if (userRole === "ADMIN") navigate("/admin");
-          else if (userRole === "LAWYER") navigate("/lawyer");
-          else navigate("/");
-        }
+        // Redirection is handled by the useEffect watching the `user` state
+        // but we can also do it here as a fallback
+        navigate(getRedirectPath(result.user.role), { replace: true });
       } else {
         setError(result.error || "Login failed. Please check your credentials.");
       }
@@ -63,12 +69,7 @@ const Login = () => {
     try {
       const result = await googleLogin(credentialResponse.credential);
       if (result.success) {
-        if (redirectTo) navigate(redirectTo);
-        else {
-          const userRole = result.user.role;
-          if (userRole === "LAWYER") navigate("/lawyer");
-          else navigate("/");
-        }
+        navigate(getRedirectPath(result.user.role), { replace: true });
       } else {
         setError(result.error || "Google login failed.");
       }
@@ -206,6 +207,8 @@ const Login = () => {
               text="signin_with"
               width="100%"
               locale="en"
+              useOneTap={false}
+              auto_select={false}
             />
           </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import CalendarView from '../../components/CalendarView';
 import {
     Phone, Mail, MapPin, Clock, Languages, GraduationCap, Award, Star,
@@ -109,11 +109,24 @@ export default function LawyerProfilePage() {
         fetchAvailability();
     }, [id, selectedDate, lawyer]);
 
+    const location = useLocation();
 
+    // Handle scroll to hash AFTER data is loaded
+    useEffect(() => {
+        if (!loading && location.hash === '#booking-calendar') {
+            // Small timeout to allow DOM to paint the loaded content
+            setTimeout(() => {
+                const element = document.getElementById('booking-calendar');
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100);
+        }
+    }, [loading, location.hash]);
 
     const toggleFavorite = async () => {
         if (!isAuthenticated) {
-            navigate('/login', { state: { from: `/lawyers/${id}` } });
+            navigate('/login', { state: { from: location.pathname } });
             return;
         }
 
@@ -152,7 +165,7 @@ export default function LawyerProfilePage() {
 
     const handleBook = () => {
         if (!isAuthenticated) {
-            navigate('/login', { state: { from: window.location.pathname } });
+            navigate('/login', { state: { from: `${location.pathname}#booking-calendar` } });
             return;
         }
 
