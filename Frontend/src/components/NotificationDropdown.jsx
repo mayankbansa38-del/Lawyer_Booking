@@ -59,7 +59,7 @@ export default function NotificationDropdown({
             </div>
 
             {/* Content Area */}
-            <div className="max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+            <div className="max-h-[60vh] overflow-y-auto scrollbar-hide">
                 {notifications.length > 0 ? (
                     <div className="divide-y divide-gray-50">
                         {notifications.map((notif) => (

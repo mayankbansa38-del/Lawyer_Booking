@@ -113,8 +113,8 @@ export function AppointmentCard({ appointment, showClient = true, showLawyer = f
                     </button>
                 </div>
             )}
-            {/* Confirmed: Join Call + Cancel */}
-            {status === 'confirmed' && onAction && (
+            {/* Confirmed: Join Call (always visible) + Cancel (only with onAction) */}
+            {status === 'confirmed' && (appointment.meetingLink || onAction) && (
                 <div className="flex gap-2 mt-4 pt-4 border-t">
                     {appointment.meetingLink && (
                         <a
@@ -127,12 +127,14 @@ export function AppointmentCard({ appointment, showClient = true, showLawyer = f
                             Join Call
                         </a>
                     )}
-                    <button
-                        onClick={() => onAction('cancel', appointment.id)}
-                        className="flex-1 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors"
-                    >
-                        Cancel
-                    </button>
+                    {onAction && (
+                        <button
+                            onClick={() => onAction('cancel', appointment.id)}
+                            className="flex-1 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    )}
                 </div>
             )}
         </div>

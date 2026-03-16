@@ -108,6 +108,46 @@ const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
 const LawyerVerification = lazy(() => import("./pages/admin/LawyerVerification"));
 const LawyerManagement = lazy(() => import("./pages/admin/LawyerManagement"));
 
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SCROLL TO ANCHOR COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
+function ScrollToAnchor() {
+  const { pathname, hash } = useLocation();
+
+  // Handle standard "scroll to top on route change"
+  useEffect(() => {
+    if (!hash) {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname, hash]);
+
+  // Handle hash-based scrolling
+  useEffect(() => {
+    if (hash) {
+      let attempts = 0;
+      const intervalId = setInterval(() => {
+        const id = hash.replace("#", "");
+        const element = document.getElementById(id);
+
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+          clearInterval(intervalId);
+        } else if (attempts >= 10) {
+          clearInterval(intervalId); // Stop trying after 1 second (10 * 100ms)
+        }
+        attempts++;
+      }, 100);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [hash]);
+
+  return null;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ROOT LAYOUT - Provides AuthContext to all routes
 // ═══════════════════════════════════════════════════════════════════════════
@@ -116,6 +156,7 @@ function RootLayout() {
   return (
     <AuthProvider>
       <SocketProvider>
+        <ScrollToAnchor />
         <Outlet />
       </SocketProvider>
     </AuthProvider>

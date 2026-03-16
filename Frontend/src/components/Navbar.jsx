@@ -121,6 +121,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
+                  state={{ from: location }}
                   className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200"
                 >
                   <LogIn className="w-4 h-4" />
@@ -208,6 +209,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
+                  state={{ from: location }}
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center justify-center gap-2 mx-2 px-4 py-3 text-base font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
                 >
