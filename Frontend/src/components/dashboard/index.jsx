@@ -128,12 +128,20 @@ export function AppointmentCard({ appointment, showClient = true, showLawyer = f
                         </a>
                     )}
                     {onAction && (
-                        <button
-                            onClick={() => onAction('cancel', appointment.id)}
-                            className="flex-1 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors"
-                        >
-                            Cancel
-                        </button>
+                        <>
+                            <button
+                                onClick={() => onAction('complete', appointment.id)}
+                                className="flex-1 py-2 bg-green-50 text-green-700 text-sm font-medium rounded-lg hover:bg-green-100 transition-colors"
+                            >
+                                Complete
+                            </button>
+                            <button
+                                onClick={() => onAction('cancel', appointment.id)}
+                                className="flex-1 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </>
                     )}
                 </div>
             )}

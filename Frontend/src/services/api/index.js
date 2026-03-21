@@ -476,7 +476,43 @@ export const userAPI = {
     },
 };
 
+export const reviewAPI = {
+    async getMyReviews(page = 1, limit = 10) {
+        const response = await apiClient.get('/reviews/my', { params: { page, limit } });
+        return response.data;
+    },
+
+    async create(data) {
+        const response = await apiClient.post('/reviews', data);
+        return response.data;
+    },
+
+    async update(id, data) {
+        const response = await apiClient.put(`/reviews/${id}`, data);
+        return response.data;
+    },
+
+    async delete(id) {
+        const response = await apiClient.delete(`/reviews/${id}`);
+        return response.data;
+    },
+
+    async getCompletedBookingsWithoutReview() {
+        // Get completed bookings and filter those without reviews
+        const response = await apiClient.get('/bookings', { params: { status: 'COMPLETED', limit: 100 } });
+        const bookings = response.data?.data || [];
+        return { data: bookings.filter(b => !b.hasReview) };
+    },
+};
+
+export const contactAPI = {
+    async submit(data) {
+        const response = await apiClient.post('/contact/submit', data);
+        return response.data;
+    }
+};
 
 
-export default { lawyer: lawyerAPI, appointment: appointmentAPI, case: caseAPI, casePayment: casePaymentAPI, client: clientAPI, payment: paymentAPI, notification: notificationAPI, document: documentAPI, favorites: favoritesAPI, chat: chatAPI, user: userAPI };
+
+export default { lawyer: lawyerAPI, appointment: appointmentAPI, case: caseAPI, casePayment: casePaymentAPI, client: clientAPI, payment: paymentAPI, notification: notificationAPI, document: documentAPI, favorites: favoritesAPI, chat: chatAPI, user: userAPI, review: reviewAPI, contact: contactAPI };
 

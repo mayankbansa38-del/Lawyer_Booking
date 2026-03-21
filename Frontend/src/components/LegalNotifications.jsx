@@ -19,14 +19,6 @@ const notifications = [
         type: "Roster",
     },
     {
-        id: 3,
-        title: "Standard Operating Procedure for e-Filing 3.0",
-        source: "Tribunals",
-        date: "February 25, 2026",
-        icon: FileText,
-        type: "SOP",
-    },
-    {
         id: 4,
         title: "Circular regarding physical functioning of lower courts",
         source: "Supreme Court",
@@ -41,14 +33,6 @@ const notifications = [
         date: "February 15, 2026",
         icon: Scale,
         type: "Directive",
-    },
-    {
-        id: 6,
-        title: "Notification on revised court fees for tribunals",
-        source: "Tribunals",
-        date: "February 10, 2026",
-        icon: FileText,
-        type: "Notification",
     },
 ];
 
@@ -75,29 +59,17 @@ const sourceColors = {
         hoverShadow: "hover:shadow-emerald-100/60",
         hoverBorder: "hover:border-emerald-200",
     },
-    "Tribunals": {
-        bg: "bg-amber-50",
-        text: "text-amber-700",
-        border: "border-amber-100",
-        dot: "bg-amber-500",
-        iconBg: "group-hover:bg-amber-50",
-        iconText: "group-hover:text-amber-600",
-        iconBorder: "group-hover:border-amber-100",
-        hoverShadow: "hover:shadow-amber-100/60",
-        hoverBorder: "hover:border-amber-200",
-    },
 };
 
 const filterIcons = {
     "All": Bell,
     "Supreme Court": Landmark,
     "Himachal Pradesh HC": Gavel,
-    "Tribunals": FileText,
 };
 
 const LegalNotifications = () => {
     const [filter, setFilter] = useState("All");
-    const filters = ["All", "Supreme Court", "Himachal Pradesh HC", "Tribunals"];
+    const filters = ["All", "Supreme Court", "Himachal Pradesh HC"];
 
     const filteredNotifications = filter === "All"
         ? notifications
@@ -120,7 +92,7 @@ const LegalNotifications = () => {
                         Latest <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Notifications & Orders</span>
                     </h2>
                     <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-                        Stay updated with the latest court orders, circulars, and notifications from all major courts and tribunals.
+                        Stay updated with the latest court orders, circulars, and notifications from all major courts.
                     </p>
                 </div>
 

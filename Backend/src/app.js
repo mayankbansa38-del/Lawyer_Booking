@@ -32,6 +32,7 @@ import caseRoutes from './modules/cases/routes.js';
 import chatRoutes from './modules/chat/routes.js';
 import auditRoutes from './modules/audit/routes.js';
 import casePaymentRoutes from './modules/case-payments/routes.js';
+import contactRoutes from './modules/contact/routes.js';
 import healthRoutes from './routes/health.js';
 
 /**
@@ -116,6 +117,7 @@ export function createApp() {
     app.use(`${apiPrefix}/audit`, auditRoutes);
     app.use(`${apiPrefix}/admin`, adminRoutes);
     app.use(`${apiPrefix}/case-payments`, casePaymentRoutes);
+    app.use(`${apiPrefix}/contact`, contactRoutes);
 
     // API info endpoint
     app.get(apiPrefix, (req, res) => {

@@ -155,6 +155,7 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
             lawyer: {
                 id: booking.lawyer.id,
                 name: `${booking.lawyer.user.firstName} ${booking.lawyer.user.lastName}`,
+                avatar: booking.lawyer.user.avatar,
             },
         },
     }, 'Booking created successfully. Please complete payment to confirm.');
@@ -234,6 +235,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
             specialization: b.lawyer.specializations[0]?.practiceArea?.name || null,
         },
         payment: b.payment ? { status: b.payment.status } : null,
+        review: b.review ? { id: b.review.id, rating: b.review.rating } : null,
         hasReview: !!b.review,
     }));
 
@@ -366,7 +368,31 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
         throw new ForbiddenError('You do not have access to this booking');
     }
 
-    return sendSuccess(res, { data: booking });
+    const transformed = {
+        id: booking.id,
+        bookingNumber: booking.bookingNumber,
+        scheduledDate: booking.scheduledDate,
+        scheduledTime: booking.scheduledTime,
+        duration: booking.duration,
+        meetingType: booking.meetingType,
+        status: booking.status,
+        amount: booking.amount,
+        meetingLink: booking.meetingLink,
+        clientNotes: booking.clientNotes,
+        lawyerNotes: booking.lawyerNotes,
+        lawyer: {
+            id: booking.lawyer.id,
+            slug: booking.lawyer.slug,
+            name: `${booking.lawyer.user.firstName} ${booking.lawyer.user.lastName}`,
+            avatar: booking.lawyer.user.avatar,
+        },
+        client: booking.client,
+        payment: booking.payment ? { status: booking.payment.status } : null,
+        review: booking.review,
+        hasReview: !!booking.review,
+    };
+
+    return sendSuccess(res, { data: transformed });
 }));
 
 /**

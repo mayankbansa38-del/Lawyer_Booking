@@ -17,28 +17,51 @@ import logger from '../../utils/logger.js';
 const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 /**
- * Verify Google ID token and return user payload
+ * Verify Google ID token or access token and return user payload
  * 
- * @param {string} idToken - Google ID token from frontend
+ * @param {string} token - Google token from frontend
  * @returns {Promise<Object>} Google user payload
  */
-export async function verifyGoogleToken(idToken) {
+export async function verifyGoogleToken(token) {
     try {
-        const ticket = await client.verifyIdToken({
-            idToken,
-            audience: env.GOOGLE_CLIENT_ID,
-        });
+        // Try verifying as ID token first
+        try {
+            const ticket = await client.verifyIdToken({
+                idToken: token,
+                audience: env.GOOGLE_CLIENT_ID,
+            });
 
-        const payload = ticket.getPayload();
+            const payload = ticket.getPayload();
 
-        return {
-            googleId: payload.sub,
-            email: payload.email,
-            emailVerified: payload.email_verified,
-            firstName: payload.given_name || payload.name?.split(' ')[0] || 'User',
-            lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
-            picture: payload.picture,
-        };
+            return {
+                googleId: payload.sub,
+                email: payload.email,
+                emailVerified: payload.email_verified,
+                firstName: payload.given_name || payload.name?.split(' ')[0] || 'User',
+                lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
+                picture: payload.picture,
+            };
+        } catch (idTokenError) {
+            // Fallback: verify as access token
+            const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Token is neither a valid ID token nor a valid access token');
+            }
+            
+            const payload = await response.json();
+            
+            return {
+                googleId: payload.sub,
+                email: payload.email,
+                emailVerified: payload.email_verified,
+                firstName: payload.given_name || payload.name?.split(' ')[0] || 'User',
+                lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
+                picture: payload.picture,
+            };
+        }
     } catch (error) {
         logger.error('Google token verification failed:', error);
         throw new Error('Invalid Google token');

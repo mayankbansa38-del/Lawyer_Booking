@@ -164,11 +164,19 @@ export default function ProfileDropdown({
 
                     {/* Quick Stats */}
                     <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100 bg-gray-50/50">
-                        {[
-                            { label: 'Bookings', value: '12' },
-                            { label: 'Reviews', value: '4.8' },
+                        {(role === 'lawyer' ? [
+                            { label: 'Times Booked', value: user?.lawyer?.completedBookings || 0 },
+                            { label: 'Rating', value: user?.lawyer?.averageRating ? Number(user.lawyer.averageRating).toFixed(1) : '0.0' },
                             { label: 'Verified', value: user?.isEmailVerified ? 'Yes' : 'No' }
-                        ].map((stat, idx) => (
+                        ] : role === 'admin' ? [
+                            { label: 'Status', value: user?.isActive ? 'Active' : 'Offline' },
+                            { label: 'Role', value: 'Admin' },
+                            { label: 'Verified', value: user?.isEmailVerified ? 'Yes' : 'No' }
+                        ] : [
+                            { label: 'Active', value: user?.isActive ? 'Yes' : 'No' },
+                            { label: 'Status', value: 'Client' },
+                            { label: 'Verified', value: user?.isEmailVerified ? 'Yes' : 'No' }
+                        ]).map((stat, idx) => (
                             <div key={idx} className="p-3 text-center hover:bg-gray-50 transition-colors cursor-default">
                                 <p className="text-gray-900 font-bold text-sm">{stat.value}</p>
                                 <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">{stat.label}</p>

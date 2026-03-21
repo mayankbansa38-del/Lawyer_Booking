@@ -8,6 +8,7 @@ import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Search, User, Video
 import { PageHeader, EmptyState } from '../../components/dashboard';
 import { appointmentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import CancelReasonModal from '../../components/dashboard/CancelReasonModal';
 
 const tabs = [
     { id: 'all', label: 'All' },
@@ -69,12 +70,25 @@ export default function LawyerAppointments() {
         setCancelModal({ open: true, appointmentId });
     };
 
-    const confirmCancel = async () => {
+    const handleComplete = async (appointmentId) => {
+        setActionLoading(appointmentId);
+        try {
+            await appointmentAPI.complete(appointmentId);
+            await fetchAppointments();
+        } catch (error) {
+            console.error('Error completing appointment:', error);
+            alert('Failed to complete appointment.');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleConfirmCancel = async (reason) => {
         const appointmentId = cancelModal.appointmentId;
         setCancelModal({ open: false, appointmentId: null });
         setActionLoading(appointmentId);
         try {
-            await appointmentAPI.cancel(appointmentId);
+            await appointmentAPI.cancel(appointmentId, reason);
             setAppointments(prev =>
                 prev.map(apt => apt.id === appointmentId ? { ...apt, status: 'CANCELLED' } : apt)
             );
@@ -270,6 +284,14 @@ export default function LawyerAppointments() {
                                                 </a>
                                             )}
                                             <button
+                                                onClick={() => handleComplete(apt.id)}
+                                                disabled={isLoading}
+                                                className="inline-flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 text-sm rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                                            >
+                                                <CheckCircle className="w-4 h-4" />
+                                                Complete
+                                            </button>
+                                            <button
                                                 onClick={() => handleCancel(apt.id)}
                                                 disabled={isLoading}
                                                 className="inline-flex items-center gap-1.5 px-3 py-2 border border-red-200 text-red-600 text-sm rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
@@ -292,41 +314,13 @@ export default function LawyerAppointments() {
                 />
             )}
 
-            {/* Cancel Confirmation Modal */}
-            {cancelModal.open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setCancelModal({ open: false, appointmentId: null })} />
-                    <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
-                        <button
-                            onClick={() => setCancelModal({ open: false, appointmentId: null })}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                        <div className="text-center">
-                            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                                <AlertTriangle className="w-7 h-7 text-red-600" />
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">Cancel Appointment?</h3>
-                            <p className="text-gray-500 text-sm mb-6">Are you sure you want to cancel this appointment?</p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setCancelModal({ open: false, appointmentId: null })}
-                                    className="flex-1 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                                >
-                                    No, Keep It
-                                </button>
-                                <button
-                                    onClick={confirmCancel}
-                                    className="flex-1 py-2.5 bg-red-600 text-white text-sm font-medium rounded-xl hover:bg-red-700 transition-colors"
-                                >
-                                    Yes, Cancel It
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Cancel Reason Modal */}
+            <CancelReasonModal
+                isOpen={cancelModal.open}
+                onClose={() => setCancelModal({ open: false, appointmentId: null })}
+                onConfirm={handleConfirmCancel}
+                appointment={appointments.find(a => a.id === cancelModal.appointmentId)}
+            />
         </div>
     );
 }
