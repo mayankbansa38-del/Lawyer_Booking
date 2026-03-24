@@ -104,7 +104,7 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
                 duration,
                 meetingType,
                 clientNotes,
-                amount: lawyer.hourlyRate * (duration / 60),
+                amount: lawyer.consultationFee || 0,
                 status: 'PENDING',
             },
             include: {
