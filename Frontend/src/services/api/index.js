@@ -103,8 +103,8 @@ export const lawyerAPI = {
             phone: data.phone,
             bio: data.bio || data.description, // map from either bio or legacy description
             headline: data.headline,
-            hourlyRate: data.hourlyRate || data.avgCostPerCase, // hourlyRate as avg cost per case
-            consultationFee: data.consultationFee, // Explicit consultation fee
+            hourlyRate: parseFloat(data.hourlyRate || data.avgCostPerCase) || 0, // hourlyRate as avg cost per case
+            consultationFee: parseFloat(data.consultationFee) || 0, // Explicit consultation fee
             city: data.city || data.location?.split(',')[0]?.trim(),
             state: data.state || data.location?.split(',')[1]?.trim(),
             languages: data.languages,
@@ -112,6 +112,7 @@ export const lawyerAPI = {
             specializations: data.specialty, // Array of specialty names
             availability: data.availability,
         };
+
 
         const response = await apiClient.put('/lawyers/profile', payload);
         return { data: response.data.data };

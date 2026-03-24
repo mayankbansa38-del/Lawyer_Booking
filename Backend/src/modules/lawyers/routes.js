@@ -796,8 +796,8 @@ router.put('/profile', authenticate, asyncHandler(async (req, res) => {
             data: {
                 bio: bio !== undefined ? bio : undefined,
                 headline: headline !== undefined ? headline : undefined,
-                hourlyRate: hourlyRate !== undefined ? hourlyRate : undefined,
-                consultationFee: consultationFee !== undefined ? consultationFee : undefined,
+                hourlyRate: hourlyRate !== undefined ? parseFloat(hourlyRate) : undefined,
+                consultationFee: consultationFee !== undefined ? parseFloat(consultationFee) : undefined,
                 city: city !== undefined ? city : undefined,
                 state: state !== undefined ? state : undefined,
                 address: address !== undefined ? address : undefined,

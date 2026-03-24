@@ -118,6 +118,14 @@ export default function LawyerProfile() {
                 experience: experienceNum,
                 availability,
             });
+
+            // Re-fetch profile to sync displayed values with database
+            const { data: refreshedProfile } = await lawyerAPI.getProfile();
+            setProfile(refreshedProfile);
+            if (refreshedProfile.availability && typeof refreshedProfile.availability === 'object') {
+                setAvailability(prev => ({ ...prev, ...refreshedProfile.availability }));
+            }
+
             setMessage({ type: 'success', text: 'Profile updated successfully!' });
         } catch (error) {
             console.error('Error saving profile:', error);

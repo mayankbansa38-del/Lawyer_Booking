@@ -128,7 +128,7 @@ export default function BookingPage() {
             type: booking.type,
             meetingType: booking.type === 'video' ? 'VIDEO' : 'IN_PERSON',
             notes: booking.notes,
-            amount: lawyer.consultationFee || 0,
+            amount: lawyer.consultationFee || lawyer.hourlyRate || 0,
         }));
 
         // Navigate to checkout page
