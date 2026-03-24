@@ -302,6 +302,7 @@ router.get('/', searchLimiter, optionalAuth, asyncHandler(async (req, res) => {
         avatar: lawyer.user.avatar,
         headline: lawyer.headline,
         description: lawyer.headline,
+        bio: lawyer.bio,
         experience: lawyer.experience,
         hourlyRate: lawyer.hourlyRate,
         avgCostPerCase: lawyer.hourlyRate,
@@ -353,6 +354,7 @@ router.get('/featured', asyncHandler(async (req, res) => {
         select: {
             id: true,
             slug: true,
+            bio: true,
             headline: true,
             experience: true,
             hourlyRate: true,
@@ -389,6 +391,7 @@ router.get('/featured', asyncHandler(async (req, res) => {
         avatar: lawyer.user.avatar,
         headline: lawyer.headline,
         description: lawyer.headline,
+        bio: lawyer.bio,
         experience: lawyer.experience,
         hourlyRate: lawyer.hourlyRate,
         avgCostPerCase: lawyer.hourlyRate,

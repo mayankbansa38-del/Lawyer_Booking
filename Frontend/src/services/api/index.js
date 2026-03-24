@@ -101,7 +101,7 @@ export const lawyerAPI = {
             firstName,
             lastName,
             phone: data.phone,
-            bio: data.description, // 'description' mapped to 'bio'
+            bio: data.bio || data.description, // map from either bio or legacy description
             headline: data.headline,
             hourlyRate: data.hourlyRate || data.avgCostPerCase, // hourlyRate as avg cost per case
             consultationFee: data.consultationFee, // Explicit consultation fee

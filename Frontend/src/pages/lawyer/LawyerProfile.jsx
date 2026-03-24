@@ -64,17 +64,7 @@ export default function LawyerProfile() {
     }, [user]);
 
     const handleChange = (field, value) => {
-        // Handle number inputs specifically to allow clearing them (empty string)
-        if (['experience', 'consultationFee', 'hourlyRate'].includes(field)) {
-            if (value === '' || value === null) {
-                setProfile(prev => ({ ...prev, [field]: '' }));
-                return;
-            }
-            const numValue = parseInt(value);
-            setProfile(prev => ({ ...prev, [field]: isNaN(numValue) ? '' : numValue }));
-        } else {
-            setProfile(prev => ({ ...prev, [field]: value }));
-        }
+        setProfile(prev => ({ ...prev, [field]: value }));
     };
 
     const handleSpecialtyToggle = (specialty) => {
@@ -108,8 +98,12 @@ export default function LawyerProfile() {
     };
 
     const handleSave = async () => {
+        const hourlyRateNum = profile.hourlyRate === '' || profile.hourlyRate === null || profile.hourlyRate === undefined ? 0 : Number(profile.hourlyRate);
+        const consultationFeeNum = profile.consultationFee === '' || profile.consultationFee === null || profile.consultationFee === undefined ? 0 : Number(profile.consultationFee);
+        const experienceNum = profile.experience === '' || profile.experience === null || profile.experience === undefined ? 0 : Number(profile.experience);
+
         // Validation: Fees limit check (Max 1 Lakh)
-        if ((profile.consultationFee && profile.consultationFee > 100000) || (profile.hourlyRate && profile.hourlyRate > 100000)) {
+        if (consultationFeeNum > 100000 || hourlyRateNum > 100000) {
             setMessage({ type: 'error', text: 'Case limit is high. Maximum accepted amount is ₹1,00,000 (1 Lakh).' });
             return;
         }
@@ -119,6 +113,9 @@ export default function LawyerProfile() {
         try {
             await lawyerAPI.updateProfile(profile.id, {
                 ...profile,
+                hourlyRate: hourlyRateNum,
+                consultationFee: consultationFeeNum,
+                experience: experienceNum,
                 availability,
             });
             setMessage({ type: 'success', text: 'Profile updated successfully!' });
@@ -237,7 +234,7 @@ export default function LawyerProfile() {
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Bio / Description</label>
-                    <textarea value={profile.description || ''} onChange={(e) => handleChange('description', e.target.value)} rows={4} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Describe your expertise and experience..." />
+                    <textarea value={profile.bio || ''} onChange={(e) => handleChange('bio', e.target.value)} rows={4} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Describe your expertise and experience..." />
                 </div>
             </div>
 

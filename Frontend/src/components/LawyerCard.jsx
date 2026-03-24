@@ -36,7 +36,7 @@ export function LawyerCard({ lawyer }) {
         </div>
 
         <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[40px]">
-          {lawyer.description}
+          {lawyer.description || lawyer.bio || 'No description available.'}
         </p>
 
         <div className="space-y-2 mb-4 flex-1">
