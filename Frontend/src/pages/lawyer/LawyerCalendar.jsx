@@ -178,9 +178,9 @@ export default function LawyerCalendar() {
                                                                 : 'bg-blue-50 text-blue-700 border-blue-100'
                                                         }
                                                     `}
-                                                    title={`${apt.clientName} (${apt.time})`}
+                                                    title={`${apt.clientName} (${formatTime12h(apt.time)})`}
                                                 >
-                                                    {apt.clientName.split(' ')[0]} ({apt.time})
+                                                    {apt.clientName.split(' ')[0]} ({formatTime12h(apt.time)})
                                                 </div>
                                             ))}
                                             {item.appointments?.length > 3 && (
@@ -214,7 +214,7 @@ export default function LawyerCalendar() {
                                     <div key={index} className="relative pl-6 border-l-2 border-blue-100 last:border-0 pb-6 last:pb-0">
                                         <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4 border-blue-500" />
 
-                                        <span className="text-xs font-semibold text-gray-400 block mb-2">{apt.time}</span>
+                                        <span className="text-xs font-semibold text-gray-400 block mb-2">{formatTime12h(apt.time)}</span>
 
                                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:shadow-md transition-all group">
                                             <div className="flex items-center gap-2 mb-3">
@@ -239,7 +239,7 @@ export default function LawyerCalendar() {
 
                                             <div className="flex items-center gap-2 text-xs text-gray-500 pt-3 border-t border-gray-200">
                                                 <Clock className="w-3.5 h-3.5" />
-                                                <span>{apt.time} - {calculateEndTime(apt.time, apt.duration)}</span>
+                                                <span>{formatTime12h(apt.time)} - {calculateEndTime(apt.time, apt.duration)}</span>
                                             </div>
 
                                             {apt.meetingType === 'VIDEO' && apt.status === 'CONFIRMED' && apt.meetingLink && (
@@ -290,14 +290,26 @@ export default function LawyerCalendar() {
 // Helper to calculate end time
 function calculateEndTime(startTime, durationMinutes) {
     if (!startTime) return '';
-    const [time, period] = startTime.split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
-
-    if (period === 'PM' && hours !== 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
+    // startTime is expected to be "16:00" or "16:00:00"
+    const [hoursStr, minutesStr] = startTime.split(':');
+    let hours = parseInt(hoursStr, 10);
+    let minutes = parseInt(minutesStr, 10);
 
     const date = new Date();
     date.setHours(hours, minutes + durationMinutes);
 
-    return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+// Helper to format startTime to 12h
+function formatTime12h(startTime) {
+    if (!startTime) return '';
+    const [hoursStr, minutesStr] = startTime.split(':');
+    let hours = parseInt(hoursStr, 10);
+    let minutes = parseInt(minutesStr, 10);
+
+    const date = new Date();
+    date.setHours(hours, minutes);
+
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }

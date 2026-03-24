@@ -12,6 +12,18 @@ import {
     CheckCircle, XCircle, AlertCircle
 } from 'lucide-react';
 
+function formatTime12h(startTime) {
+    if (!startTime) return '';
+    const [hoursStr, minutesStr] = startTime.split(':');
+    let hours = parseInt(hoursStr, 10);
+    let minutes = parseInt(minutesStr, 10);
+
+    const date = new Date();
+    date.setHours(hours, minutes);
+
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
 /**
  * StatCard - Display statistics with trend indicator
  */
@@ -91,7 +103,7 @@ export function AppointmentCard({ appointment, showClient = true, showLawyer = f
                         </span>
                         <span className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            {appointment.time}
+                            {formatTime12h(appointment.time)}
                         </span>
                     </div>
                 </div>
