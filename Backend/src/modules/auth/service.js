@@ -231,6 +231,9 @@ export async function loginUser({ email, password, rememberMe = false }) {
                 select: {
                     id: true,
                     verificationStatus: true,
+                    completedBookings: true,
+                    averageRating: true,
+                    totalReviews: true,
                 },
             },
         },
@@ -280,6 +283,9 @@ export async function loginUser({ email, password, rememberMe = false }) {
             lawyer: user.lawyer ? {
                 id: user.lawyer.id,
                 verificationStatus: user.lawyer.verificationStatus,
+                completedBookings: user.lawyer.completedBookings,
+                averageRating: user.lawyer.averageRating,
+                totalReviews: user.lawyer.totalReviews,
             } : null,
         },
         tokens,
@@ -665,6 +671,8 @@ export async function getCurrentUser(userId) {
                     averageRating: true,
                     totalReviews: true,
                     isAvailable: true,
+                    completedBookings: true,
+                    totalBookings: true,
                 },
             },
         },

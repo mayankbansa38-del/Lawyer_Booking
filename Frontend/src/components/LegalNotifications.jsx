@@ -1,40 +1,61 @@
 import React, { useState } from 'react';
 import { Download, FileText, Scale, Gavel, Search, Bell, ChevronRight, Calendar, Landmark } from 'lucide-react';
+import causeListPdf from '../assets/Notification PDF/Causelist031320261773388784.pdf';
+import motorAccidentPdf from '../assets/Notification PDF/Motor Accident Claim.pdf';
+import lettersAdjournmentPdf from '../assets/Notification PDF/letters seeking adjournment.pdf';
+import seniorAdvocatePdf from '../assets/Notification PDF/Advocates as Senior Advocate.pdf';
+import reclaimSCStatusPdf from '../assets/Notification PDF/Reclaim SC Status.pdf';
 
 const notifications = [
     {
         id: 1,
-        title: "Guidelines for virtual hearings in civil matters",
+        title: "Circular regarding procedure/modalities relating to circulation of letters seeking adjournment",
         source: "Supreme Court",
-        date: "March 2, 2026",
+        date: "March 18, 2026",
         icon: Scale,
-        type: "Guideline",
-        description: "Official guidelines for conducting virtual hearings across all civil courts.",
-        pdfUrl: "/assets/sample-notification-1.pdf", // Place the PDF file in the public/assets/ folder
+        type: "Circular",
+        description: "Official circular detailing the new modalities for seeking adjournments via circulation of letters.",
+        pdfUrl: lettersAdjournmentPdf,
     },
     {
         id: 2,
-        title: "Revised roster for listing of regular hearing matters",
+        title: "Causelist of Lok Adalat to be held on 14th March, 2026.",
         source: "Himachal Pradesh HC",
-        date: "February 28, 2026",
-        icon: Gavel,
-        type: "Roster",
+        date: "March 13, 2026",
+        icon: FileText,
+        type: "Causelist",
+        description: "Official causelist for the upcoming Lok Adalat.",
+        pdfUrl: causeListPdf,
     },
     {
-        id: 4,
-        title: "Circular regarding physical functioning of lower courts",
+        id: 3,
+        title: "Suggestions/views of other stakeholders in the proposal of designation of Advocates as Senior Advocates",
         source: "Supreme Court",
         date: "February 20, 2026",
         icon: Landmark,
-        type: "Circular",
+        type: "Proposal",
+        description: "Request for suggestions and views regarding the designation of Advocates as Senior Advocates.",
+        pdfUrl: seniorAdvocatePdf,
+    },
+    {
+        id: 4,
+        title: "Redistribute/reattach district wise Police Stations of the Civil and Sessions Division, Kullu to the Motor Accident Claim Tribunal(s)",
+        source: "Himachal Pradesh HC",
+        date: "March 16, 2026",
+        icon: Scale,
+        type: "Directive",
+        description: "Official directive regarding redistribution of police stations to Motor Accident Claim Tribunals.",
+        pdfUrl: motorAccidentPdf,
     },
     {
         id: 5,
-        title: "Practice directions for commercial disputes resolution",
-        source: "Himachal Pradesh HC",
-        date: "February 15, 2026",
-        icon: Scale,
-        type: "Directive",
+        title: "Converted Dalit Reclaim Scheduled Caste Status After Re-Conversion",
+        source: "Supreme Court",
+        date: "March 16, 2026",
+        icon: Landmark,
+        type: "Notification",
+        description: "Supreme Court notification regarding reclaiming Scheduled Caste status after re-conversion.",
+        pdfUrl: reclaimSCStatusPdf,
     },
 ];
 
@@ -188,13 +209,6 @@ const LegalNotifications = () => {
                     })}
                 </div>
 
-                {/* Bottom CTA */}
-                <div className="mt-10 sm:mt-12 text-center">
-                    <button className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 hover:border-blue-200 rounded-full transition-all duration-300 hover:shadow-md hover:shadow-blue-100/50 group/cta">
-                        View All Notifications
-                        <ChevronRight className="w-4 h-4 group-hover/cta:translate-x-1 transition-transform" />
-                    </button>
-                </div>
             </div>
         </section>
     );
