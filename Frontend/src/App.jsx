@@ -95,6 +95,7 @@ const UserCases = lazy(() => import("./pages/user/UserCases"));
 const UserPayments = lazy(() => import("./pages/user/UserPayments"));
 const UserNotifications = lazy(() => import("./pages/user/UserNotifications"));
 const UserSettings = lazy(() => import("./pages/user/UserSettings"));
+const UserReviews = lazy(() => import("./pages/user/UserReviews"));
 const ChatPage = lazy(() => import("./pages/chat/ChatPage"));
 const CaseDetail = lazy(() => import("./pages/cases/CaseDetail"));
 const CreateCase = lazy(() => import("./pages/cases/CreateCase"));
@@ -243,6 +244,7 @@ const router = createBrowserRouter([
           { path: "payments", element: withSuspense(UserPayments) },
           { path: "notifications", element: withSuspense(UserNotifications) },
           { path: "settings", element: withSuspense(UserSettings) },
+          { path: "reviews", element: withSuspense(UserReviews) },
           { path: "chat", element: withSuspense(ChatPage) },
           { path: "cases/:id", element: withSuspense(CaseDetail) },
           { path: "create-case", element: withSuspense(CreateCase) },

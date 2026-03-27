@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from 'lucide-react';
-import lawyer_booking from "../assets/lawyer_booking.png";
-import heroSlide2 from "../assets/hero_slide_2.png";
-import heroSlide3 from "../assets/hero_slide_3.png";
-import heroSlide4 from "../assets/hero_slide_4.png";
+import lawyer_booking from "../assets/website photo/lawyer_booking.png";
+import heroSlide2 from "../assets/website photo/hero_slide_2.png";
+import heroSlide3 from "../assets/website photo/hero_slide_3.png";
+import heroSlide4 from "../assets/website photo/hero_slide_4.png";
 import Speciality from "./Speciality";
 import Cards from "./Cards";
 import LegalNotifications from "../components/LegalNotifications";
@@ -25,31 +25,31 @@ const Home = () => {
   return (
     <>
       {/* Hero Section */}
-      <section className="relative mx-4 sm:mx-6 lg:mx-12 my-6 sm:my-12 px-6 sm:px-12 lg:px-16 py-12 sm:py-16 lg:py-24 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl">
+      <section className="relative mx-4 sm:mx-6 lg:mx-12 my-4 sm:my-8 px-6 sm:px-12 lg:px-16 py-6 sm:py-10 lg:py-12 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl">
         {/* Background gradient orb */}
         <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-[radial-gradient(circle,rgba(96,165,250,0.15)_0%,transparent_70%)] animate-pulse" />
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
           {/* Left Content */}
-          <div className="flex-1 text-center lg:text-left">
+          <div className="flex-[0.85] w-full lg:max-w-[360px] text-center lg:text-left">
 
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-tight bg-gradient-to-br from-slate-50 to-blue-400 bg-clip-text text-transparent mb-6">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[3.8rem] font-black leading-tight bg-gradient-to-br from-slate-50 to-blue-400 bg-clip-text text-transparent mb-6">
               Find Your Perfect <br className="hidden sm:block" />
               Legal Expert
             </h1>
-            <p className="text-base sm:text-lg text-slate-300 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
+            <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto lg:mx-0 mb-6 leading-relaxed">
               Connect with verified, top-rated lawyers specializing in your legal needs.
               Book consultations instantly and get the justice you deserve.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link to="/lawyers" className="group px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto min-w-[180px] text-base sm:text-lg font-bold rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-900 shadow-lg shadow-amber-500/40 hover:from-amber-500 hover:to-amber-600 hover:-translate-y-1 hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+              <Link to="/lawyers" className="group px-5 sm:px-7 py-3 sm:py-3.5 w-full sm:w-auto min-w-[160px] text-base font-bold rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 text-slate-900 shadow-lg shadow-amber-500/40 hover:from-amber-500 hover:to-amber-600 hover:-translate-y-1 hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap">
                 Find a Lawyer
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link to="/about" className="px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto min-w-[180px] text-base sm:text-lg font-semibold rounded-xl border-2 border-white/20 text-white hover:bg-white/10 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap">
+              <Link to="/about" className="px-5 sm:px-7 py-3 sm:py-3.5 w-full sm:w-auto min-w-[160px] text-base font-semibold rounded-lg border-2 border-white/20 text-white hover:bg-white/10 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap">
                 Learn More
               </Link>
             </div>
@@ -57,7 +57,7 @@ const Home = () => {
           </div>
 
           {/* Right Image */}
-          <div className="flex-1 lg:flex-[1.2] flex justify-center lg:justify-end w-full max-w-md lg:max-w-4xl">
+          <div className="flex-[1.7] w-full lg:max-w-[830px] flex justify-center lg:justify-end">
             <div className="relative w-full">
               <Swiper
                 spaceBetween={0}

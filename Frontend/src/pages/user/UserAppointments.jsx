@@ -9,6 +9,7 @@ import { PageHeader, EmptyState } from '../../components/dashboard';
 import { appointmentAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
+import CancelReasonModal from '../../components/dashboard/CancelReasonModal';
 
 const tabs = [
     { id: 'upcoming', label: 'Upcoming', statuses: ['PENDING', 'CONFIRMED'] },
@@ -34,6 +35,7 @@ export default function UserAppointments() {
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [cancelModal, setCancelModal] = useState({ open: false, appointmentId: null });
 
     useEffect(() => {
         async function fetchAppointments() {
@@ -51,10 +53,14 @@ export default function UserAppointments() {
         if (user) fetchAppointments();
     }, [user]);
 
-    const handleCancel = async (appointmentId) => {
-        if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
+    const handleCancelClick = (appointmentId) => {
+        setCancelModal({ open: true, appointmentId });
+    };
+
+    const handleConfirmCancel = async (reason) => {
+        const appointmentId = cancelModal.appointmentId;
         try {
-            await appointmentAPI.cancel(appointmentId);
+            await appointmentAPI.cancel(appointmentId, reason);
             setAppointments(prev =>
                 prev.map(apt => apt.id === appointmentId ? { ...apt, status: 'CANCELLED' } : apt)
             );
@@ -234,9 +240,9 @@ export default function UserAppointments() {
                                                     Join Call
                                                 </a>
                                             )}
-                                            {apt.status === 'PENDING' && (
+                                            {(apt.status === 'PENDING' || apt.status === 'CONFIRMED') && (
                                                 <button
-                                                    onClick={() => handleCancel(apt.id)}
+                                                    onClick={() => handleCancelClick(apt.id)}
                                                     className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-red-200 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50 transition-colors"
                                                 >
                                                     <XCircle className="w-4 h-4" />
@@ -273,6 +279,13 @@ export default function UserAppointments() {
                     />
                 )}
             </div>
+
+            <CancelReasonModal
+                isOpen={cancelModal.open}
+                onClose={() => setCancelModal({ open: false, appointmentId: null })}
+                onConfirm={handleConfirmCancel}
+                appointment={appointments.find(a => a.id === cancelModal.appointmentId)}
+            />
         </div>
     );
 }

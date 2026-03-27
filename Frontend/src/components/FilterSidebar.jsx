@@ -171,12 +171,12 @@ export function FilterSidebar({ filters, setFilters, totalResults }) {
         )}
       </div>
 
-      {/* Cases Won - Collapsible */}
+      {/* Times Booked - Collapsible */}
       <div className="mb-4 border-b pb-4">
         <button onClick={() => toggleSection('casesWon')} className="flex items-center justify-between w-full text-left">
           <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <Trophy className="w-4 h-4" />
-            Cases Won
+            Times Booked
           </label>
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSections.casesWon ? 'rotate-180' : ''}`} />
         </button>

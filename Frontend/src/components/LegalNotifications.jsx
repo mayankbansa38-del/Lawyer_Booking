@@ -1,54 +1,61 @@
 import React, { useState } from 'react';
 import { Download, FileText, Scale, Gavel, Search, Bell, ChevronRight, Calendar, Landmark } from 'lucide-react';
+import causeListPdf from '../assets/Notification PDF/Causelist031320261773388784.pdf';
+import motorAccidentPdf from '../assets/Notification PDF/Motor Accident Claim.pdf';
+import lettersAdjournmentPdf from '../assets/Notification PDF/letters seeking adjournment.pdf';
+import seniorAdvocatePdf from '../assets/Notification PDF/Advocates as Senior Advocate.pdf';
+import reclaimSCStatusPdf from '../assets/Notification PDF/Reclaim SC Status.pdf';
 
 const notifications = [
     {
         id: 1,
-        title: "Guidelines for virtual hearings in civil matters",
+        title: "Circular regarding procedure/modalities relating to circulation of letters seeking adjournment",
         source: "Supreme Court",
-        date: "March 2, 2026",
+        date: "March 18, 2026",
         icon: Scale,
-        type: "Guideline",
+        type: "Circular",
+        description: "Official circular detailing the new modalities for seeking adjournments via circulation of letters.",
+        pdfUrl: lettersAdjournmentPdf,
     },
     {
         id: 2,
-        title: "Revised roster for listing of regular hearing matters",
+        title: "Causelist of Lok Adalat to be held on 14th March, 2026.",
         source: "Himachal Pradesh HC",
-        date: "February 28, 2026",
-        icon: Gavel,
-        type: "Roster",
+        date: "March 13, 2026",
+        icon: FileText,
+        type: "Causelist",
+        description: "Official causelist for the upcoming Lok Adalat.",
+        pdfUrl: causeListPdf,
     },
     {
         id: 3,
-        title: "Standard Operating Procedure for e-Filing 3.0",
-        source: "Tribunals",
-        date: "February 25, 2026",
-        icon: FileText,
-        type: "SOP",
-    },
-    {
-        id: 4,
-        title: "Circular regarding physical functioning of lower courts",
+        title: "Suggestions/views of other stakeholders in the proposal of designation of Advocates as Senior Advocates",
         source: "Supreme Court",
         date: "February 20, 2026",
         icon: Landmark,
-        type: "Circular",
+        type: "Proposal",
+        description: "Request for suggestions and views regarding the designation of Advocates as Senior Advocates.",
+        pdfUrl: seniorAdvocatePdf,
+    },
+    {
+        id: 4,
+        title: "Redistribute/reattach district wise Police Stations of the Civil and Sessions Division, Kullu to the Motor Accident Claim Tribunal(s)",
+        source: "Himachal Pradesh HC",
+        date: "March 16, 2026",
+        icon: Scale,
+        type: "Directive",
+        description: "Official directive regarding redistribution of police stations to Motor Accident Claim Tribunals.",
+        pdfUrl: motorAccidentPdf,
     },
     {
         id: 5,
-        title: "Practice directions for commercial disputes resolution",
-        source: "Himachal Pradesh HC",
-        date: "February 15, 2026",
-        icon: Scale,
-        type: "Directive",
-    },
-    {
-        id: 6,
-        title: "Notification on revised court fees for tribunals",
-        source: "Tribunals",
-        date: "February 10, 2026",
-        icon: FileText,
+        title: "Converted Dalit Reclaim Scheduled Caste Status After Re-Conversion",
+        source: "Supreme Court",
+        date: "March 16, 2026",
+        icon: Landmark,
         type: "Notification",
+        description: "Supreme Court notification regarding reclaiming Scheduled Caste status after re-conversion.",
+        pdfUrl: reclaimSCStatusPdf,
     },
 ];
 
@@ -75,29 +82,17 @@ const sourceColors = {
         hoverShadow: "hover:shadow-emerald-100/60",
         hoverBorder: "hover:border-emerald-200",
     },
-    "Tribunals": {
-        bg: "bg-amber-50",
-        text: "text-amber-700",
-        border: "border-amber-100",
-        dot: "bg-amber-500",
-        iconBg: "group-hover:bg-amber-50",
-        iconText: "group-hover:text-amber-600",
-        iconBorder: "group-hover:border-amber-100",
-        hoverShadow: "hover:shadow-amber-100/60",
-        hoverBorder: "hover:border-amber-200",
-    },
 };
 
 const filterIcons = {
     "All": Bell,
     "Supreme Court": Landmark,
     "Himachal Pradesh HC": Gavel,
-    "Tribunals": FileText,
 };
 
 const LegalNotifications = () => {
     const [filter, setFilter] = useState("All");
-    const filters = ["All", "Supreme Court", "Himachal Pradesh HC", "Tribunals"];
+    const filters = ["All", "Supreme Court", "Himachal Pradesh HC"];
 
     const filteredNotifications = filter === "All"
         ? notifications
@@ -120,7 +115,7 @@ const LegalNotifications = () => {
                         Latest <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Notifications & Orders</span>
                     </h2>
                     <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-                        Stay updated with the latest court orders, circulars, and notifications from all major courts and tribunals.
+                        Stay updated with the latest court orders, circulars, and notifications from all major courts.
                     </p>
                 </div>
 
@@ -176,6 +171,11 @@ const LegalNotifications = () => {
                                     <h3 className="text-sm sm:text-base font-bold text-slate-800 leading-snug group-hover:text-slate-900 transition-colors mb-1">
                                         {notification.title}
                                     </h3>
+                                    {notification.description && (
+                                        <p className="text-xs sm:text-sm text-slate-500 mb-2 line-clamp-2">
+                                            {notification.description}
+                                        </p>
+                                    )}
                                     <div className="flex items-center gap-1.5 text-slate-400">
                                         <Calendar className="w-3 h-3" />
                                         <span className="text-xs font-medium">{notification.date}</span>
@@ -184,24 +184,31 @@ const LegalNotifications = () => {
 
                                 {/* Right Action Button */}
                                 <div className="relative w-full sm:w-auto mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-100 flex justify-end sm:flex-shrink-0">
-                                    <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-sm hover:shadow-lg hover:shadow-blue-500/25 active:scale-95 transition-all duration-300 group-hover:from-blue-700 group-hover:to-indigo-700">
-                                        <Download className="w-4 h-4" />
-                                        <span>Download PDF</span>
-                                        <ChevronRight className="w-3.5 h-3.5 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />
-                                    </button>
+                                    <a
+                                        href={notification.pdfUrl || "#"}
+                                        target={notification.pdfUrl ? "_blank" : undefined}
+                                        rel={notification.pdfUrl ? "noopener noreferrer" : undefined}
+                                        onClick={(e) => {
+                                            if (!notification.pdfUrl) {
+                                                e.preventDefault();
+                                                alert("PDF document is currently unavailable.");
+                                            }
+                                        }}
+                                        className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 font-semibold text-xs sm:text-sm rounded-xl transition-all duration-300 ${notification.pdfUrl
+                                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:shadow-lg hover:shadow-blue-500/25 active:scale-95 group-hover:from-blue-700 group-hover:to-indigo-700"
+                                            : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                            }`}
+                                    >
+                                        <FileText className="w-4 h-4" />
+                                        <span>View PDF</span>
+                                        {notification.pdfUrl && <ChevronRight className="w-3.5 h-3.5 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300" />}
+                                    </a>
                                 </div>
                             </div>
                         );
                     })}
                 </div>
 
-                {/* Bottom CTA */}
-                <div className="mt-10 sm:mt-12 text-center">
-                    <button className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 hover:border-blue-200 rounded-full transition-all duration-300 hover:shadow-md hover:shadow-blue-100/50 group/cta">
-                        View All Notifications
-                        <ChevronRight className="w-4 h-4 group-hover/cta:translate-x-1 transition-transform" />
-                    </button>
-                </div>
             </div>
         </section>
     );

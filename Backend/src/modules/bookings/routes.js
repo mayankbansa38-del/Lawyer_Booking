@@ -49,12 +49,24 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
         throw new BookingError('lawyerUnavailable');
     }
 
+    // Normalize date to prevent timezone/time-component mismatch bugs
+    const targetDate = new Date(scheduledDate);
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const timePrefix = scheduledTime.substring(0, 5); // Ensure "HH:MM"
+
     // Check for booking conflicts
     const existingBooking = await prisma.booking.findFirst({
         where: {
             lawyerId,
-            scheduledDate: new Date(scheduledDate),
-            scheduledTime,
+            scheduledDate: {
+                gte: startOfDay,
+                lte: endOfDay,
+            },
+            scheduledTime: { startsWith: timePrefix },
             status: { in: ['PENDING', 'CONFIRMED'] },
         },
     });
@@ -67,8 +79,11 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
     const userConflict = await prisma.booking.findFirst({
         where: {
             clientId: req.user.id,
-            scheduledDate: new Date(scheduledDate),
-            scheduledTime,
+            scheduledDate: {
+                gte: startOfDay,
+                lte: endOfDay,
+            },
+            scheduledTime: { startsWith: timePrefix },
             status: { in: ['PENDING', 'CONFIRMED'] },
         },
     });
@@ -84,8 +99,8 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
                 bookingNumber: generateBookingNumber(),
                 clientId: req.user.id,
                 lawyerId,
-                scheduledDate: new Date(scheduledDate),
-                scheduledTime,
+                scheduledDate: startOfDay, // Save normalized date
+                scheduledTime: timePrefix, // Save clean HH:MM
                 duration,
                 meetingType,
                 clientNotes,
@@ -155,6 +170,7 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
             lawyer: {
                 id: booking.lawyer.id,
                 name: `${booking.lawyer.user.firstName} ${booking.lawyer.user.lastName}`,
+                avatar: booking.lawyer.user.avatar,
             },
         },
     }, 'Booking created successfully. Please complete payment to confirm.');
@@ -234,6 +250,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
             specialization: b.lawyer.specializations[0]?.practiceArea?.name || null,
         },
         payment: b.payment ? { status: b.payment.status } : null,
+        review: b.review ? { id: b.review.id, rating: b.review.rating } : null,
         hasReview: !!b.review,
     }));
 
@@ -366,7 +383,31 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
         throw new ForbiddenError('You do not have access to this booking');
     }
 
-    return sendSuccess(res, { data: booking });
+    const transformed = {
+        id: booking.id,
+        bookingNumber: booking.bookingNumber,
+        scheduledDate: booking.scheduledDate,
+        scheduledTime: booking.scheduledTime,
+        duration: booking.duration,
+        meetingType: booking.meetingType,
+        status: booking.status,
+        amount: booking.amount,
+        meetingLink: booking.meetingLink,
+        clientNotes: booking.clientNotes,
+        lawyerNotes: booking.lawyerNotes,
+        lawyer: {
+            id: booking.lawyer.id,
+            slug: booking.lawyer.slug,
+            name: `${booking.lawyer.user.firstName} ${booking.lawyer.user.lastName}`,
+            avatar: booking.lawyer.user.avatar,
+        },
+        client: booking.client,
+        payment: booking.payment ? { status: booking.payment.status } : null,
+        review: booking.review,
+        hasReview: !!booking.review,
+    };
+
+    return sendSuccess(res, { data: transformed });
 }));
 
 /**

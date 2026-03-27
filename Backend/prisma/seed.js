@@ -88,8 +88,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['criminal-lawyer', 'civil-lawyer'],
-            averageRating: 4.9,
-            totalReviews: 42,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -115,8 +115,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['family-lawyer', 'civil-lawyer'],
-            averageRating: 5.0,
-            totalReviews: 28,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -144,8 +144,8 @@ const TEST_LAWYERS = [
             featured: true,
             featuredOrder: 1,
             specializations: ['corporate-lawyer', 'tax-law'],
-            averageRating: 4.8,
-            totalReviews: 56,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -171,8 +171,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['real-estate-law', 'civil-lawyer'],
-            averageRating: 4.7,
-            totalReviews: 31,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -198,8 +198,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['tax-law', 'corporate-lawyer'],
-            averageRating: 4.9,
-            totalReviews: 19,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -227,8 +227,8 @@ const TEST_LAWYERS = [
             featured: true,
             featuredOrder: 2,
             specializations: ['immigration-law'],
-            averageRating: 4.6,
-            totalReviews: 87,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -254,8 +254,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['criminal-lawyer', 'real-estate-law'],
-            averageRating: 4.8,
-            totalReviews: 35,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -281,8 +281,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['family-lawyer', 'civil-lawyer'],
-            averageRating: 4.7,
-            totalReviews: 24,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     // ── 2nd Lawyer per District ──────────────────────────────────────────
@@ -309,8 +309,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['civil-lawyer', 'real-estate-law'],
-            averageRating: 4.8,
-            totalReviews: 45,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -336,8 +336,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['criminal-lawyer', 'human-rights'],
-            averageRating: 4.6,
-            totalReviews: 22,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -363,8 +363,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['cyber-lawyer', 'criminal-lawyer'],
-            averageRating: 4.9,
-            totalReviews: 38,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -390,8 +390,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['corporate-lawyer', 'tax-law'],
-            averageRating: 4.5,
-            totalReviews: 18,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -417,8 +417,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['human-rights', 'family-lawyer'],
-            averageRating: 4.9,
-            totalReviews: 33,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -444,8 +444,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['real-estate-law', 'civil-lawyer'],
-            averageRating: 4.7,
-            totalReviews: 29,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -471,8 +471,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['family-lawyer', 'immigration-law'],
-            averageRating: 4.6,
-            totalReviews: 21,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
     {
@@ -498,8 +498,8 @@ const TEST_LAWYERS = [
             isAvailable: true,
             verificationStatus: 'VERIFIED',
             specializations: ['cyber-lawyer', 'criminal-lawyer'],
-            averageRating: 4.8,
-            totalReviews: 41,
+            averageRating: 0,
+            totalReviews: 0,
         },
     },
 ];
@@ -735,44 +735,26 @@ async function seedSampleBookingsAndReviews() {
                 },
             });
 
-            // Create review (100% chance for 5 stars)
-            const reviewTitles = [
-                'Excellent experience!',
-                'Very helpful consultation',
-                'Professional and knowledgeable',
-                'Highly recommended',
-                'Good advice received',
-                'Great advocate',
-            ];
-
-            const reviewContents = [
-                'The advocate was very professional and explained everything clearly. Would definitely recommend.',
-                'Got great legal advice. The consultation was worth every rupee. Very satisfied with the service.',
-                'Very knowledgeable about the subject matter. Answered all my questions patiently.',
-                'Excellent service! The lawyer took time to understand my case thoroughly.',
-                'Professional approach and practical solutions. Happy with the consultation.',
-                'The advocate provided clear guidance on my legal matter. Will consult again if needed.',
-            ];
-
-            await prisma.review.create({
-                data: {
-                    bookingId: booking.id,
-                    authorId: user.id,
-                    lawyerId: lawyer.id,
-                    rating: 5,
-                    title: reviewTitles[Math.floor(Math.random() * reviewTitles.length)],
-                    content: reviewContents[Math.floor(Math.random() * reviewContents.length)],
-                    isVerified: true,
-                    isPublished: true,
-                },
-            });
-
-            reviewsCreated++;
+            // Not generating any reviews automatically to ensure starting state is clean for this feature
         }
     }
 
-    // We are now using hardcoded averageRating and totalReviews for the lawyers
-    // so we don't need to dynamically calculate them here anymore.
+    // Recalculate actual averageRating and totalReviews from real reviews
+    for (const lawyer of lawyers) {
+        const aggregation = await prisma.review.aggregate({
+            where: { lawyerId: lawyer.id, isPublished: true },
+            _avg: { rating: true },
+            _count: { rating: true },
+        });
+
+        await prisma.lawyer.update({
+            where: { id: lawyer.id },
+            data: {
+                averageRating: aggregation._avg.rating || 0,
+                totalReviews: aggregation._count.rating || 0,
+            },
+        });
+    }
 
     console.log(`✅ ${bookingsCreated} bookings and ${reviewsCreated} reviews seeded`);
 }

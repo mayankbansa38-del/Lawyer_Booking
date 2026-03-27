@@ -27,7 +27,7 @@ export function LawyerCard({ lawyer }) {
             <h3 className="text-xl font-semibold text-gray-900 mb-1 truncate" title={lawyer.name}>{lawyer.name}</h3>
             <div className="flex items-center gap-1 mb-2">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 shrink-0" />
-              <span className="text-sm font-medium text-gray-700">{lawyer.rating}</span>
+              <span className="text-sm font-medium text-gray-700">{Number(lawyer.rating || 0).toFixed(1)}</span>
             </div>
             <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${availabilityColor[lawyer.availability]}`}>
               {lawyer.availability}
@@ -36,7 +36,7 @@ export function LawyerCard({ lawyer }) {
         </div>
 
         <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[40px]">
-          {lawyer.description}
+          {lawyer.description || lawyer.bio || 'No description available.'}
         </p>
 
         <div className="space-y-2 mb-4 flex-1">
@@ -52,7 +52,7 @@ export function LawyerCard({ lawyer }) {
 
           <div className="flex items-center gap-2 text-sm text-gray-700">
             <Trophy className="w-4 h-4 text-gray-400 shrink-0" />
-            <span>{lawyer.casesWon} cases won</span>
+            <span>{lawyer.casesWon} times booked</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-700">

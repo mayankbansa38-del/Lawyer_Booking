@@ -282,7 +282,7 @@ export default function LawyerProfilePage() {
                                         <CheckCircle className="w-5 h-5 text-green-500" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500 font-medium">Cases Won</p>
+                                        <p className="text-sm text-gray-500 font-medium">Times Booked</p>
                                         <p className="text-base font-bold text-gray-900">{lawyer.casesWon || 'N/A'}</p>
                                     </div>
                                 </div>

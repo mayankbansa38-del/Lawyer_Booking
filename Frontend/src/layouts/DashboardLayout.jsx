@@ -18,7 +18,7 @@ import {
     User, Calendar, Users, Briefcase, DollarSign,
     FileText, Clock, Settings,
     // User icons
-    Heart, CreditCard,
+    Heart, CreditCard, Star,
     // Admin icons
     Scale, CheckCircle, Shield
 } from 'lucide-react';
@@ -62,6 +62,7 @@ const ROLE_CONFIG = {
             { path: '/user/appointments', icon: Calendar, label: 'Appointments' },
             { path: '/user/cases', icon: Briefcase, label: 'My Cases' },
             { path: '/user/payments', icon: CreditCard, label: 'Payments' },
+            { path: '/user/reviews', icon: Star, label: 'My Reviews' },
             { path: '/user/settings', icon: Settings, label: 'Settings' },
         ],
         roleLabel: 'Client',

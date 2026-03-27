@@ -94,6 +94,8 @@ export default function LawyerDashboard() {
         try {
             if (action === 'confirm') {
                 await appointmentAPI.confirm(appointmentId);
+            } else if (action === 'complete') {
+                await appointmentAPI.complete(appointmentId);
             } else if (action === 'cancel' || action === 'reject') {
                 setCancelModal({ open: true, appointmentId });
                 return;
@@ -273,8 +275,8 @@ export default function LawyerDashboard() {
                                 </span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-blue-100">Cases Won</span>
-                                <span className="font-semibold">145</span>
+                                <span className="text-blue-100">Times Booked</span>
+                                <span className="font-semibold">{stats.appointments.total}</span>
                             </div>
                         </div>
                         <Link
