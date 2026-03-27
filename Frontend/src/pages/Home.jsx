@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from 'lucide-react';
-import lawyer_booking from "../assets/website photo/lawyer_booking.png";
-import heroSlide2 from "../assets/website photo/hero_slide_2.png";
-import heroSlide3 from "../assets/website photo/hero_slide_3.png";
-import heroSlide4 from "../assets/website photo/hero_slide_4.png";
+import lawyer_booking from "../assets/Website Photo/lawyer_booking.png";
+import heroSlide2 from "../assets/Website Photo/hero_slide_2.png";
+import heroSlide3 from "../assets/Website Photo/hero_slide_3.png";
+import heroSlide4 from "../assets/Website Photo/hero_slide_4.png";
 import Speciality from "./Speciality";
 import Cards from "./Cards";
 import LegalNotifications from "../components/LegalNotifications";
